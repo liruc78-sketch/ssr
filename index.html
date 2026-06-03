@@ -1674,6 +1674,11 @@ createApp({
 
         // Deposit methods
         const openDepositPage = async () => {
+            if (!currentUser.value) {
+                showToast('Please connect your wallet first', 'error');
+                openModal('modal-wallet');
+                return;
+            }
             depositStep.value = 1;
             depositUsdtAmt.value = null;
             depositPaid.value = false;
@@ -1701,6 +1706,12 @@ createApp({
         };
 
         const generateDepositOrder = async () => {
+            if (!currentUser.value) {
+                showToast('Please connect your wallet first', 'error');
+                closeDepositPage();
+                openModal('modal-wallet');
+                return;
+            }
             const coin = DEPOSIT_COINS.find(c => c.id === depositCoin.value);
             const baseAmt = parseFloat(depositUsdtAmt.value);
             if (!baseAmt || baseAmt < (coin?.minAmt || 10)) {
