@@ -151,9 +151,6 @@
         .tag-won { background: rgba(34,197,94,0.12); color: var(--green); }
         .tag-lost { background: rgba(239,68,68,0.12); color: var(--red); }
         .empty-msg { color: var(--text-dim); font-size: 0.88em; padding: 16px 0; }
-        .chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
-        .chart-panel h2 { font-family: 'Space Mono', monospace; font-size: 0.95em; color: var(--text-dim); border-bottom: 1px solid var(--border); padding: 14px 20px 10px; letter-spacing: 0.05em; text-transform: uppercase; }
-        .chart-area { height: 220px; position: relative; }
 
         /* Market Page */
         .market-page { display: flex; flex-direction: column; min-height: calc(100vh - 140px); }
@@ -1188,7 +1185,7 @@
                             :class="{ 'cp-item-active': coin.id === selectedCoin }"
                             v-for="coin in filteredCoins"
                             :key="coin.id"
-                            @click="selectedCoin = coin.id; showCoinPicker = false; searchQuery = ''; loadTradeChart()">
+                            @click="selectedCoin = coin.id; showCoinPicker = false; searchQuery = ''">
                             <img :src="coin.image" class="cp-item-icon" alt="" @error="$event.target.style.display='none'">
                             <div class="cp-item-info">
                                 <span class="cp-item-name">{{ coin.name }}</span>
@@ -1208,10 +1205,6 @@
         </div>
         <!-- Right side -->
         <div class="right-panel" v-show="!showWalletPage">
-            <div class="chart-panel" v-if="selectedCoin">
-                <h2>{{ selectedCoin }} / USD — Price Chart</h2>
-                <div class="chart-area" ref="tradeChartContainer"></div>
-            </div>
             <div class="panel">
                 <h2>Active Positions</h2>
                 <div v-if="!currentUser" class="empty-msg">Please log in to view positions</div>
@@ -1537,10 +1530,8 @@ createApp({
         const editDisplayName   = ref('');
         const editUsername      = ref('');
         const savingProfile     = ref(false);
-        const tradeChartContainer = ref(null);
         const showTradeModal    = ref(false);
         const selectedTrade     = ref(null);
-        let tradeChartInst = null, tradeLineSeries = null;
 
         const showMarketDetail = ref(false);
 
@@ -2221,27 +2212,6 @@ createApp({
             } finally { trading.value = false; }
         };
 
-        // Trade page chart
-        const loadTradeChart = async () => {
-            if (!selectedCoin.value || !tradeChartContainer.value) return;
-            try {
-                const res = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoin.value}/market_chart?vs_currency=usd&days=7&x_cg_demo_api_key=${CG_KEY}`);
-                const data = await res.json();
-                const lineData = (data.prices || []).map(d => ({ time: Math.floor(d[0]/1000), value: d[1] }));
-                if (!tradeChartInst) {
-                    tradeChartInst = LightweightCharts.createChart(tradeChartContainer.value, {
-                        width: tradeChartContainer.value.clientWidth, height: 220,
-                        layout: { background: { color: 'transparent' }, textColor: '#64748b' },
-                        grid: { vertLines: { color: '#2a3247' }, horzLines: { color: '#2a3247' } },
-                        timeScale: { timeVisible: true, secondsVisible: false },
-                        rightPriceScale: { borderColor: '#2a3247' },
-                    });
-                    tradeLineSeries = tradeChartInst.addAreaSeries({ lineColor: '#3b82f6', topColor: 'rgba(59,130,246,0.3)', bottomColor: 'rgba(59,130,246,0)', lineWidth: 2 });
-                }
-                if (lineData.length) { tradeLineSeries.setData(lineData); tradeChartInst.timeScale().fitContent(); }
-            } catch (e) { console.error('Chart load failed:', e); }
-        };
-
         // Load coins (for trade page)
         const loadCoins = async () => {
             try {
@@ -2647,7 +2617,6 @@ createApp({
 
             await loadCoins();
             await nextTick();
-            await loadTradeChart();
 
             // Periodic refresh
             setInterval(fetchPortfolio, 8000);
@@ -2663,7 +2632,6 @@ createApp({
             }, 60000);
 
             window.addEventListener('resize', () => {
-                if (tradeChartInst && tradeChartContainer.value) tradeChartInst.resize(tradeChartContainer.value.clientWidth, 220);
                 if (mAreaChart && marketAreaContainer.value) mAreaChart.resize(marketAreaContainer.value.clientWidth, marketAreaContainer.value.clientHeight);
                 if (mCandleChart && marketCandleContainer.value) mCandleChart.resize(marketCandleContainer.value.clientWidth, marketCandleContainer.value.clientHeight);
             });
@@ -2682,8 +2650,8 @@ createApp({
             showCoinPicker, selectedCoinData,
             tradeDuration, TRADE_TIERS, currentTier, payoutRate, estimatedPayout, tierUnlocked, selectDuration,
             editDisplayName, editUsername, savingProfile, shortAddress, userInitial, winRate,
-            tradeChartContainer, connectWallet, handleAccountClick, disconnect, saveProfile,
-            openPosition, loadTradeChart, showTradeModal, selectedTrade, showTradeDetails, formatDate,
+            connectWallet, handleAccountClick, disconnect, saveProfile,
+            openPosition, showTradeModal, selectedTrade, showTradeDetails, formatDate,
             estimatedFee, totalCost, openModal, closeModal,
             showWalletPage, showWithdrawModal, showWithdrawDetailModal, selectedWithdraw, withdrawAddress, withdrawAmount, withdrawing, transactionHistory, showAllHistory, displayedHistory, withdrawFee, withdrawTotal, submitWithdraw, showTxDetails,
             // Deposit
