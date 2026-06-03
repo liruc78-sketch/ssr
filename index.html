@@ -2066,6 +2066,27 @@ createApp({
             }
         };
 
+        // Server-side fallback settler — sweeps any Active positions whose deadline has
+        // passed (e.g. user reloaded or closed the tab before the per-position setTimeout fired).
+        let sweepInFlight = false;
+        const sweepExpiredPositions = async () => {
+            if (sweepInFlight || !currentUser.value) return;
+            sweepInFlight = true;
+            try {
+                const res = await fetch(`${EDGE_BASE}/trade-settle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+                    body: JSON.stringify({}),
+                });
+                const out = await res.json().catch(() => ({}));
+                if (out?.swept > 0) await fetchPortfolio();
+            } catch (e) {
+                console.warn('sweep failed:', e);
+            } finally {
+                sweepInFlight = false;
+            }
+        };
+
         // Transaction history logic
         const loadTransactionHistory = async () => {
             if (!currentUser.value) return;
@@ -2210,6 +2231,7 @@ createApp({
                 const { data: newPos, error } = await sbClient.from('positions').insert({
                     user_id: currentUser.value.id, coin_id: selectedCoin.value,
                     type, amount, entry_price: currentPrice, status: 'Active',
+                    duration_seconds: tier.seconds,
                 }).select().single();
                 if (error) throw error;
 
@@ -2645,6 +2667,14 @@ createApp({
 
             // Periodic refresh
             setInterval(fetchPortfolio, 8000);
+            // Periodic settlement sweep — clears positions whose client-side
+            // setTimeout never fired (tab closed, sleep, etc.).
+            setInterval(sweepExpiredPositions, 15000);
+            // Also run a sweep on load + whenever the tab becomes visible again.
+            sweepExpiredPositions();
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) sweepExpiredPositions();
+            });
             setInterval(async () => {
                 try {
                     const data = await cgFetch('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1');
