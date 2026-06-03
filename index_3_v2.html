@@ -22,6 +22,20 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" type="image/svg+xml" href="crypto-ssr-icon.svg">
     <link rel="apple-touch-icon" href="icon-180.png">
+    <meta name="description" content="Crypto.ssr — Web3 price prediction trading. Connect your wallet, predict short-term crypto price movements, and track live markets and news in one place.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Crypto.ssr">
+    <meta property="og:title" content="Crypto.ssr — Web3 Trading Platform">
+    <meta property="og:description" content="Connect your wallet, predict short-term crypto price movements, and track live markets and news in one place.">
+    <meta property="og:url" content="https://liruc78-sketch.github.io/ssr/">
+    <meta property="og:image" content="https://liruc78-sketch.github.io/ssr/logo-full-1360.png">
+    <meta property="og:image:width" content="1360">
+    <meta property="og:image:height" content="880">
+    <meta property="og:image:alt" content="Crypto.ssr">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Crypto.ssr — Web3 Trading Platform">
+    <meta name="twitter:description" content="Connect your wallet, predict short-term crypto price movements, and track live markets and news in one place.">
+    <meta name="twitter:image" content="https://liruc78-sketch.github.io/ssr/logo-full-1360.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -557,7 +571,7 @@
             .account-btn .wallet-addr { display: none; }
         }
         /* ============================================================
-           入场过场动画(首次访问播放一次,自动跟随当前主题)
+           Intro overlay animation (plays once per session, follows theme)
            ============================================================ */
         #ssr-intro {
             position: fixed; inset: 0; z-index: 99999;
@@ -566,7 +580,7 @@
             opacity: 1;
             transition: opacity .7s ease;
         }
-        /* 浅色主题:白色背景 + 加深银色 S / .ssr 文字,保证白底可读 */
+        /* Light theme: white background + darker silver S / .ssr text for contrast */
         html[data-theme="light"] #ssr-intro { background: #ffffff; }
         html[data-theme="light"] #ssr-intro .spath { stroke: url(#introSGLight); }
         html[data-theme="light"] #ssr-intro .scap  { fill: #64748B; }
@@ -601,8 +615,8 @@
 </head>
 <body>
 
-<!-- ===== 入场过场动画(首次会话播放一次) ===== -->
-<div id="ssr-intro" aria-label="Crypto.ssr 加载中">
+<!-- ===== Intro overlay animation (plays once per session) ===== -->
+<div id="ssr-intro" aria-label="Crypto.ssr loading">
     <svg viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg" role="img">
         <title>Crypto.ssr</title>
         <defs>
@@ -634,7 +648,7 @@
         try {
             if (sessionStorage.getItem('ssrIntroShown')) { intro.remove(); return; }
             sessionStorage.setItem('ssrIntroShown', '1');
-        } catch (e) { /* sessionStorage 不可用时,正常播放一次 */ }
+        } catch (e) { /* sessionStorage unavailable: just play once */ }
         var HOLD = 3000;
         setTimeout(function () {
             intro.classList.add('done');
