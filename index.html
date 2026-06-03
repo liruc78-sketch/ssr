@@ -1,0 +1,2711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto.ssr</title>
+    <script>
+        (function () {
+            var t = 'light';
+            try { t = localStorage.getItem('theme') || 'light'; } catch (e) {}
+            document.documentElement.setAttribute('data-theme', t);
+            var color = t === 'dark' ? '#0D1016' : '#f5f7fa';
+            var m = document.createElement('meta');
+            m.name = 'theme-color';
+            m.content = color;
+            document.head.appendChild(m);
+        })();
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.0.1/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="crypto-ssr-icon.svg">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Global variables */
+        :root {
+            /* Light theme — default */
+            --bg: #f5f7fa; --surface: #ffffff; --surface2: #eef2f7;
+            --border: #e2e8f0; --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.10);
+            --green: #16a34a; --red: #dc2626; --text: #0f172a;
+            --text-dim: #64748b; --gold: #d97706;
+            /* market palette */
+            --m-bg: #ffffff; --m-surface: #f8fafc; --m-surface2: #e2e8f0;
+            --m-accent: #2563eb; --m-green: #16a34a; --m-red: #dc2626;
+            color-scheme: light;
+        }
+        [data-theme="dark"] {
+            --bg: #0d0f14; --surface: #161b26; --surface2: #1e2535;
+            --border: #2a3247; --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.18);
+            --green: #22c55e; --red: #ef4444; --text: #e2e8f0;
+            --text-dim: #64748b; --gold: #f59e0b;
+            --m-bg: #131722; --m-surface: #1e222d; --m-surface2: #2a2e39;
+            --m-accent: #38acff; --m-green: #26a69a; --m-red: #ef5350;
+            color-scheme: dark;
+        }
+        body { transition: background-color 0.25s ease, color 0.25s ease; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 68px; min-height: 100vh; }
+        #app { max-width: 1000px; margin: 0 auto; padding: 0 12px; }
+
+        /* Navbar */
+        .navbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .navbar-brand { display: flex; align-items: center; gap: 8px; font-family: 'Space Mono', monospace; font-size: 1.1em; letter-spacing: 0.02em; text-decoration: none; }
+        .navbar-brand .brand-mark { width: 30px; height: 30px; flex: 0 0 30px; display: block; filter: drop-shadow(0 2px 6px rgba(58,138,240,0.25)); }
+        .navbar-brand .brand-word { display: inline-flex; align-items: baseline; line-height: 1; position: relative; padding-bottom: 4px; }
+        .navbar-brand .brand-word .b-blue { color: var(--accent); font-weight: 700; }
+        .navbar-brand .brand-word .b-ssr  { color: var(--text-dim); font-weight: 500; }
+        .navbar-brand .brand-word::after {
+            content: ""; position: absolute; left: 0; right: 28%; bottom: 0;
+            height: 2px; border-radius: 2px;
+            background: linear-gradient(90deg, #E0A21E, #FFD24A);
+            opacity: 0.85;
+        }
+        .navbar-right { display: flex; align-items: center; gap: 10px; }
+        .theme-toggle {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; padding: 0;
+            background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+            cursor: pointer; transition: all 0.2s; color: var(--text);
+        }
+        .theme-toggle:hover { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+        .theme-toggle svg { width: 18px; height: 18px; display: block; }
+        .account-btn { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; cursor: pointer; transition: all 0.2s; color: var(--text); font-size: 0.88em; font-family: 'Inter', sans-serif; }
+        .account-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .account-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .account-btn .dot.offline { background: var(--text-dim); box-shadow: none; }
+        .wallet-addr { font-family: 'Space Mono', monospace; font-size: 0.8em; color: var(--accent); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px 28px; width: 100%; max-width: 420px; box-shadow: 0 24px 60px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto; }
+        .modal h2 { font-family: 'Space Mono', monospace; font-size: 1.1em; margin-bottom: 8px; color: var(--text); }
+        .modal p { color: var(--text-dim); font-size: 0.88em; margin-bottom: 24px; line-height: 1.5; }
+        .wallet-option { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+        .wallet-option:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .wallet-icon { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg,#3375BB,#0C87EA); display:flex;align-items:center;justify-content:center;font-size:1.3em; }
+        .wallet-option-info strong { display: block; font-size: 0.95em; margin-bottom: 2px; }
+        .wallet-option-info span { font-size: 0.78em; color: var(--text-dim); }
+        .modal-close { width: 100%; margin-top: 16px; background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; padding: 10px; cursor: pointer; font-size: 0.88em; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .modal-close:hover { border-color: var(--red); color: var(--red); }
+        .profile-section { margin-bottom: 20px; }
+        .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 1.6em; font-weight: bold; margin: 0 auto 14px; }
+        .profile-wallet { text-align: center; font-family: 'Space Mono', monospace; font-size: 0.78em; color: var(--text-dim); margin-bottom: 20px; word-break: break-all; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.82em; color: var(--text-dim); margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.92em; transition: border-color 0.2s; }
+        .form-group input:focus { outline: none; border-color: var(--accent); }
+        .btn-primary { width: 100%; padding: 11px; background: var(--accent); border: none; border-radius: 8px; color: white; font-size: 0.92em; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-danger { width: 100%; padding: 10px; margin-top: 10px; background: none; border: 1px solid var(--red); border-radius: 8px; color: var(--red); font-size: 0.88em; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .btn-danger:hover { background: rgba(239,68,68,0.1); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
+        .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+        .stat-box .val { font-family: 'Space Mono', monospace; font-size: 1.1em; font-weight: 700; }
+        .stat-box .lbl { font-size: 0.74em; color: var(--text-dim); margin-top: 3px; }
+        .val.green { color: var(--green); } .val.red { color: var(--red); } .val.gold { color: var(--gold); }
+        .detail-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; border-bottom: 1px dashed var(--border); padding-bottom: 8px; }
+        .detail-row span:first-child { color: var(--text-dim); }
+        .detail-row span:last-child { font-family: 'Space Mono', monospace; font-weight: 500; }
+        .detail-row .green { color: var(--green); }
+        .detail-row .red { color: var(--red); }
+        .clickable-row { cursor: pointer; transition: background 0.2s; }
+        .clickable-row:hover { background: rgba(255,255,255,0.04); }
+
+        /* Trade Page */
+        .trade-page { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .trade-page > div { min-width: 0; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; overflow: hidden; }
+        .panel h2 { font-family: 'Space Mono', monospace; font-size: 0.95em; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; letter-spacing: 0.05em; text-transform: uppercase; }
+        .balance-row { display: flex; justify-content: space-between; align-items: center; }
+        .balance-row span { color: var(--text-dim); font-size: 0.9em; }
+        .balance-row strong { font-family: 'Space Mono', monospace; font-size: 1.2em; color: var(--gold); }
+        .trade-form label { display: block; font-size: 0.82em; color: var(--text-dim); margin-bottom: 5px; }
+        .trade-form input, .trade-form select { width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9em; margin-bottom: 10px; transition: border-color 0.2s; }
+        .trade-form input:focus, .trade-form select:focus { outline: none; border-color: var(--accent); }
+        .trade-form select option { background: var(--surface2); }
+        .fee-info { display: flex; justify-content: space-between; font-size: 0.78em; color: var(--text-dim); margin-bottom: 12px; padding: 0 4px; }
+        .fee-info strong { color: var(--text); font-family: 'Space Mono', monospace; }
+        .trade-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .trade-btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95em; font-weight: 700; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+        .btn-up { background: var(--green); color: #fff; }
+        .btn-up:hover { background: #16a34a; transform: translateY(-1px); }
+        .btn-down { background: var(--red); color: #fff; }
+        .btn-down:hover { background: #dc2626; transform: translateY(-1px); }
+        .trade-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .trade-status { margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 0.84em; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); }
+        .login-prompt { text-align: center; padding: 20px 0; color: var(--text-dim); font-size: 0.88em; }
+        .login-prompt button { margin-top: 10px; padding: 10px 20px; background: var(--accent); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 0.9em; font-family: 'Inter', sans-serif; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th { padding: 8px 10px; text-align: left; color: var(--text-dim); font-weight: 400; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 8px 10px; border-bottom: 1px solid rgba(42,50,71,0.5); white-space: nowrap; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.82em; font-weight: 600; }
+        .tag-up { background: rgba(34,197,94,0.12); color: var(--green); }
+        .tag-down { background: rgba(239,68,68,0.12); color: var(--red); }
+        .tag-active { background: rgba(59,130,246,0.12); color: var(--accent); }
+        .tag-won { background: rgba(34,197,94,0.12); color: var(--green); }
+        .tag-lost { background: rgba(239,68,68,0.12); color: var(--red); }
+        .empty-msg { color: var(--text-dim); font-size: 0.88em; padding: 16px 0; }
+        .chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+        .chart-panel h2 { font-family: 'Space Mono', monospace; font-size: 0.95em; color: var(--text-dim); border-bottom: 1px solid var(--border); padding: 14px 20px 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+        .chart-area { height: 220px; position: relative; }
+
+        /* Market Page */
+        .market-page { display: flex; flex-direction: column; min-height: calc(100vh - 140px); }
+        .market-search-bar { margin-bottom: 4px; }
+        .market-search-bar input { width: 100%; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.95em; transition: border-color 0.2s; }
+        .market-search-bar input:focus { outline: none; border-color: var(--accent); }
+        .market-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px; }
+        .coin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .coin-card-header { display: flex; align-items: center; gap: 12px; }
+        .coin-icon { width: 32px; height: 32px; border-radius: 50%; }
+        .coin-info { flex: 1; }
+        .coin-info h3 { font-size: 1.05em; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+        .coin-symbol { font-size: 0.75em; color: var(--text-dim); text-transform: uppercase; font-weight: normal; }
+        .coin-stats { display: flex; justify-content: space-between; font-size: 0.9em; background: var(--surface2); padding: 12px; border-radius: 8px; }
+        .coin-stat-item { display: flex; flex-direction: column; }
+        .coin-stat-label { font-size: 0.75em; color: var(--text-dim); margin-bottom: 4px; }
+        .coin-card-actions { display: flex; gap: 10px; margin-top: 4px; }
+        .btn-outline { flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.9em; cursor: pointer; transition: all 0.2s; text-align: center; font-family: 'Inter', sans-serif; }
+        .btn-outline:hover { background: var(--surface2); border-color: var(--text-dim); }
+
+        .market-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; color: var(--text); cursor: pointer; font-size: 0.9em; margin-bottom: 16px; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .btn-back:hover { background: var(--border); }
+        .detail-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .detail-stat-box { background: var(--surface); border: 1px solid var(--border); padding: 14px; border-radius: 12px; }
+        .detail-stat-box .lbl { font-size: 0.75em; color: var(--text-dim); margin-bottom: 6px; }
+        .detail-stat-box .val { font-size: 1.05em; font-family: 'Space Mono', monospace; font-weight: bold; }
+        .font-mono { font-family: 'Space Mono', monospace; }
+
+        .m-chart-container { display: flex; flex-direction: column; background: var(--m-bg); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .time-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: var(--m-surface); flex-shrink: 0; border-bottom: 1px solid var(--border); }
+        .time-group { display: flex; gap: 6px; }
+        .time-btn { background: none; border: none; color: var(--text); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.82em; transition: all 0.15s; }
+        .time-btn.active { background: var(--m-accent); color: white; }
+        .type-group { display: flex; gap: 4px; background: var(--m-bg); padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
+        .type-btn { background: transparent; border: none; color: var(--text-dim); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75em; transition: all 0.15s; }
+        .type-btn.active { background: var(--m-surface2); color: var(--text); }
+        .chart-view { position: relative; height: 450px; width: 100%; }
+        .chart-wrapper { position: absolute; inset: 0; opacity: 0; pointer-events: none; z-index: 1; }
+        .chart-wrapper.active { opacity: 1; pointer-events: auto; z-index: 2; }
+        .chart-header { position: absolute; top: 10px; left: 20px; z-index: 10; font-size: 1.1em; font-weight: bold; text-transform: capitalize; font-family: 'Space Mono', monospace; color: var(--text-dim); }
+        .chart-tooltip { width: 150px; position: absolute; display: none; padding: 12px; box-sizing: border-box; font-size: 0.85em; color: #fff; background-color: #1e222d; border: 1px solid #2a2e39; text-align: left; z-index: 1000; pointer-events: none; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); font-family: 'Inter', sans-serif; }
+        .chart-tooltip .tt-date { color: var(--text-dim); margin-bottom: 6px; font-size: 0.9em; }
+        .chart-tooltip .tt-price { font-family: 'Space Mono', monospace; font-weight: bold; font-size: 1.05em; color: #3b82f6; }
+        .loading-coins { text-align: center; padding: 20px; color: var(--text-dim); font-size: 0.85em; }
+
+        /* Coin Picker */
+        .coin-picker-trigger {
+            display: flex; align-items: center; gap: 10px;
+            width: 100%; padding: 10px 12px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 8px; cursor: pointer; transition: all 0.2s;
+            margin-bottom: 10px; color: var(--text);
+        }
+        .coin-picker-trigger:hover { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+        .cp-trigger-icon { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
+        .cp-trigger-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+        .cp-trigger-name { font-size: 0.92em; font-weight: 600; }
+        .cp-trigger-symbol { font-size: 0.72em; color: var(--text-dim); text-transform: uppercase; }
+        .cp-trigger-price { font-size: 0.82em; font-family: 'Space Mono', monospace; }
+        .cp-trigger-chevron { width: 18px; height: 18px; color: var(--text-dim); flex-shrink: 0; }
+        .cp-green { color: var(--green); }
+        .cp-red { color: var(--red); }
+
+        .coin-picker-overlay {
+            position: fixed; inset: 0; z-index: 3000;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+            display: flex; align-items: flex-end; justify-content: center;
+        }
+        @media (min-width: 600px) {
+            .coin-picker-overlay { align-items: center; }
+            .coin-picker-sheet { border-radius: 20px !important; max-height: 80vh !important; }
+        }
+        .coin-picker-sheet {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px 20px 0 0;
+            width: 100%; max-width: 520px;
+            max-height: 88vh; display: flex; flex-direction: column;
+            box-shadow: 0 -8px 60px rgba(0,0,0,0.6);
+            animation: cpSlideUp 0.22s cubic-bezier(.22,1,.36,1);
+        }
+        @keyframes cpSlideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .coin-picker-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .cp-back-btn {
+            width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--text); cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;
+        }
+        .cp-back-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+        .cp-back-btn svg { width: 16px; height: 16px; }
+        .cp-title { font-family: 'Space Mono', monospace; font-size: 0.95em; color: var(--text); font-weight: bold; letter-spacing: 0.04em; }
+        .cp-search-wrap {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+            position: relative;
+        }
+        .cp-search-icon { width: 16px; height: 16px; color: var(--text-dim); flex-shrink: 0; }
+        .cp-search-input {
+            flex: 1; background: none; border: none; outline: none;
+            color: var(--text); font-size: 0.95em; font-family: 'Inter', sans-serif;
+        }
+        .cp-search-input::placeholder { color: var(--text-dim); }
+        .cp-search-clear { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.85em; padding: 2px 4px; }
+        .cp-list { overflow-y: auto; flex: 1; padding: 6px 0 20px; }
+        .cp-empty { text-align: center; color: var(--text-dim); padding: 32px; font-size: 0.88em; }
+        .cp-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; cursor: pointer; transition: background 0.15s;
+            position: relative;
+        }
+        .cp-item:hover { background: rgba(255,255,255,0.04); }
+        .cp-item-active { background: rgba(59,130,246,0.1); }
+        .cp-item-icon { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; background: var(--surface2); }
+        .cp-item-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .cp-item-name { font-size: 0.93em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cp-item-symbol { font-size: 0.73em; color: var(--text-dim); text-transform: uppercase; font-family: 'Space Mono', monospace; }
+        .cp-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+        .cp-item-price { font-size: 0.88em; font-family: 'Space Mono', monospace; color: var(--text); }
+        .cp-item-change { font-size: 0.76em; font-family: 'Space Mono', monospace; }
+        .cp-check { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; margin-left: 4px; }
+
+        /* Duration Selector */
+        .duration-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 6px; margin-bottom: 10px;
+        }
+        .duration-cell {
+            position: relative; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 8px 4px; border-radius: 8px; cursor: pointer;
+            border: 1.5px solid var(--border); background: var(--surface2);
+            transition: all 0.18s; min-height: 58px; text-align: center;
+        }
+        .duration-cell:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .dur-active { border-color: var(--accent) !important; background: rgba(59,130,246,0.15) !important; box-shadow: 0 0 0 1px var(--accent); }
+        .dur-locked { opacity: 0.6; }
+        .dur-label { font-size: 0.82em; font-weight: 700; color: var(--text); font-family: 'Space Mono', monospace; }
+        .dur-payout { font-size: 0.72em; color: var(--green); font-family: 'Space Mono', monospace; margin-top: 2px; }
+        .dur-active .dur-label { color: var(--accent); }
+        .dur-lock {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 2px;
+            background: rgba(13,15,20,0.55); border-radius: 7px;
+        }
+        .dur-lock svg { width: 13px; height: 13px; color: var(--gold); fill: var(--gold); }
+        .dur-lock span { font-size: 0.62em; color: var(--gold); font-family: 'Space Mono', monospace; white-space: nowrap; }
+
+        .tier-info-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;
+        }
+        .tier-info-item { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+        .tib-label { font-size: 0.70em; color: var(--text-dim); }
+        .tib-val { font-size: 0.88em; font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); }
+        .tib-green { color: var(--green); }
+        .tib-gold { color: var(--gold); }
+        .tier-info-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+        .tier-lock-hint {
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+            background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+            border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+            font-size: 0.78em; color: var(--gold); line-height: 1.4;
+        }
+        .tier-lock-hint strong { color: #fff; }
+
+        /* Wallet Page */
+        .clickable-panel { cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+        .clickable-panel:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .wallet-page { display: flex; flex-direction: column; min-height: calc(100vh - 140px); padding-bottom: 20px; }
+        .wallet-header-card { background: linear-gradient(135deg, var(--surface2), var(--surface)); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 20px; }
+        .wallet-header-card .lbl { color: var(--text-dim); font-size: 0.9em; margin-bottom: 8px; }
+        .wallet-header-card .bal { font-family: 'Space Mono', monospace; font-size: 2.2em; font-weight: bold; color: var(--gold); margin-bottom: 20px; }
+        .wallet-actions { display: flex; gap: 12px; justify-content: center; }
+        .btn-action { flex: 1; max-width: 140px; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .btn-deposit { background: var(--accent); color: white; }
+        .btn-deposit:hover { background: #2563eb; }
+        .btn-withdraw { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-withdraw:hover { background: var(--surface2); border-color: var(--text-dim); }
+        .tx-list { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .tx-list-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: bold; font-size: 0.95em; }
+        .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .tx-item:last-child { border-bottom: none; }
+        .tx-info { display: flex; flex-direction: column; gap: 4px; }
+        .tx-title { font-size: 0.9em; font-weight: 500; }
+        .tx-time { font-size: 0.75em; color: var(--text-dim); }
+        .tx-amount { font-family: 'Space Mono', monospace; font-weight: bold; }
+        .tx-amount.green { color: var(--green); }
+        .tx-amount.red { color: var(--red); }
+        .tx-status { font-size: 0.75em; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; text-align: center; }
+        .status-pending { background: rgba(245,158,11,0.15); color: var(--gold); }
+        .status-completed { background: rgba(34,197,94,0.15); color: var(--green); }
+        .status-rejected { background: rgba(239,68,68,0.15); color: var(--red); }
+        .load-more-btn { text-align: center; padding: 12px; color: var(--accent); font-size: 0.85em; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s; }
+        .load-more-btn:hover { background: rgba(255,255,255,0.02); }
+        .load-more-btn { text-align: center; padding: 12px; color: var(--accent); font-size: 0.85em; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s; }
+        .load-more-btn:hover { background: rgba(255,255,255,0.02); }
+
+        /* Deposit */
+        .deposit-steps { display: flex; align-items: center; justify-content: center; margin-bottom: 28px; gap: 12px; }
+        .d-step { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-dim); font-size: 0.82em; }
+        .d-step.active { color: var(--accent); }
+        .d-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85em; }
+        .d-step.active .d-step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .d-step-line { width: 80px; height: 2px; background: var(--border); margin-bottom: 18px; }
+        .d-step-line.done { background: var(--accent); }
+        .deposit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+        .deposit-card-title { font-size: 0.88em; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; font-family: 'Space Mono', monospace; }
+        .deposit-form-group { margin-bottom: 14px; }
+        .deposit-form-group label { display: block; font-size: 0.8em; color: var(--text-dim); margin-bottom: 6px; }
+        .deposit-form-group input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.92em; transition: border-color 0.2s; }
+        .deposit-form-group input:focus { outline: none; border-color: var(--accent); }
+        .deposit-rate-box { padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--accent); font-family: 'Space Mono', monospace; font-size: 0.88em; font-weight: bold; }
+        .deposit-qr-box { text-align: center; margin-bottom: 20px; }
+        .deposit-qr-box img { width: 180px; height: 180px; border-radius: 8px; border: 2px solid var(--border); padding: 8px; background: #fff; }
+        .deposit-addr-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .deposit-addr-text { font-family: 'Space Mono', monospace; font-size: 0.72em; color: var(--text-dim); word-break: break-all; }
+        .deposit-copy-btn { color: var(--accent); cursor: pointer; font-size: 0.78em; white-space: nowrap; margin-left: 10px; padding: 4px 10px; border: 1px solid var(--accent); border-radius: 6px; transition: all 0.2s; flex-shrink: 0; }
+        .deposit-copy-btn:hover { background: var(--accent-glow); }
+        .deposit-amount-highlight { text-align: center; font-size: 1.15em; font-weight: bold; color: var(--red); margin-bottom: 16px; padding: 12px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; }
+        .deposit-info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85em; }
+        .deposit-info-row:last-child { border-bottom: none; }
+        .deposit-info-label { color: var(--text-dim); }
+        .deposit-info-value { color: var(--text); font-weight: 500; font-family: 'Space Mono', monospace; font-size: 0.92em; }
+        .deposit-info-value.red { color: var(--red); }
+        .deposit-countdown-box { text-align: center; margin: 20px 0; }
+        .deposit-countdown-label { font-size: 0.8em; color: var(--text-dim); margin-bottom: 6px; }
+        .deposit-countdown-time { font-size: 2em; font-weight: bold; color: var(--accent); font-family: 'Space Mono', monospace; }
+        .deposit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .deposit-grid { grid-template-columns: 1fr; } }
+        .deposit-instructions { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 4px; }
+        .deposit-inst-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.82em; color: var(--text-dim); line-height: 1.6; }
+        @media (max-width: 600px) { .deposit-inst-list { grid-template-columns: 1fr; } }
+        .btn-cancel-deposit { width: 100%; padding: 11px; background: transparent; border: 1px solid var(--red); border-radius: 8px; color: var(--red); font-size: 0.88em; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; margin-top: 12px; }
+        .btn-cancel-deposit:hover { background: rgba(239,68,68,0.1); }
+        .deposit-badge-paid { display: inline-block; padding: 4px 12px; background: rgba(34,197,94,0.15); border: 1px solid var(--green); border-radius: 20px; color: var(--green); font-size: 0.82em; font-weight: 600; }
+        .deposit-badge-pending { display: inline-block; padding: 4px 12px; background: rgba(245,158,11,0.15); border: 1px solid var(--gold); border-radius: 20px; color: var(--gold); font-size: 0.82em; font-weight: 600; }
+
+        /* Deposit Coin/Network Selector */
+        .deposit-coin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+        @media (max-width: 500px) { .deposit-coin-grid { grid-template-columns: repeat(2, 1fr); } }
+        .deposit-coin-cell {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 12px 6px; border: 1.5px solid var(--border); border-radius: 10px;
+            background: var(--surface2); cursor: pointer; transition: all 0.18s; text-align: center;
+        }
+        .deposit-coin-cell:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .dcell-active { border-color: var(--accent) !important; background: rgba(59,130,246,0.15) !important; box-shadow: 0 0 0 1px var(--accent); }
+        .dcell-icon { width: 32px; height: 32px; object-fit: contain; display: block; }
+        .dcell-name { font-size: 0.85em; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--text); }
+        .dcell-full { font-size: 0.68em; color: var(--text-dim); }
+
+        .deposit-network-list { display: flex; flex-direction: column; gap: 6px; }
+        .deposit-network-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+            background: var(--surface2); cursor: pointer; transition: all 0.18s;
+        }
+        .deposit-network-item:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .dnet-active { border-color: var(--accent) !important; background: rgba(59,130,246,0.12) !important; }
+        .dnet-left { display: flex; flex-direction: column; gap: 2px; }
+        .dnet-name { font-size: 0.9em; font-weight: 600; color: var(--text); }
+        .dnet-desc { font-size: 0.72em; color: var(--text-dim); }
+        .dnet-check { color: var(--accent); font-weight: bold; font-size: 1.1em; }
+
+        .deposit-pending-notice {
+            padding: 10px 14px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+            border-radius: 8px; color: var(--gold); font-size: 0.82em; margin-bottom: 10px;
+        }
+        .deposit-addr-pending {
+            text-align: center; padding: 24px 16px; color: var(--text-dim); font-size: 0.9em;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .deposit-spinner {
+            width: 32px; height: 32px; border: 3px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        .deposit-coin-badge {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+        }
+        .deposit-coin-badge span { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 1.05em; color: var(--accent); }
+        .deposit-net-badge {
+            padding: 3px 10px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 20px; font-size: 0.75em !important; color: var(--text-dim) !important; font-weight: 400 !important;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; background: var(--surface); border-top: 1px solid var(--border); z-index: 1000; }
+        .bottom-nav a { flex: 1; text-align: center; padding: 16px 0; color: var(--text-dim); text-decoration: none; font-size: 0.9em; transition: color 0.2s; cursor: pointer; }
+        .bottom-nav a.active { color: var(--accent); font-weight: 600; }
+
+        /* Toast / Spinner */
+        .connecting { display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-size: 0.88em; padding: 16px; justify-content: center; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .toast { position: fixed; top: 20px; right: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-size: 0.85em; z-index: 3000; box-shadow: 0 8px 24px rgba(0,0,0,0.4); transform: translateX(120%); transition: transform 0.3s ease; max-width: 300px; }
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-color: var(--green); }
+        .toast.error { border-color: var(--red); }
+
+
+        /* News Page */
+        .news-page { display: flex; flex-direction: column; min-height: calc(100vh - 140px); padding-bottom: 20px; }
+        .news-header { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .news-search-row { margin-bottom: 10px; }
+        .news-search-wrap { display: flex; gap: 10px; }
+        .news-search-input { flex: 1; padding: 11px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9em; transition: border-color 0.2s; }
+        .news-search-input:focus { outline: none; border-color: var(--accent); }
+        .news-search-btn { padding: 11px 18px; background: var(--accent); border: none; border-radius: 8px; color: white; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 72px; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; }
+        .news-search-btn:hover:not(:disabled) { background: #2563eb; }
+        .news-search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .news-hot-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .news-tag-label { font-size: 0.78em; color: var(--text-dim); }
+        .news-hot-tag { padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--text-dim); font-size: 0.78em; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .news-hot-tag:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+        .news-loading { display: flex; justify-content: center; padding: 60px 0; }
+        .news-loading-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .news-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .news-loading-text { font-size: 0.95em; color: var(--text); }
+        .news-loading-sub { font-size: 0.8em; color: var(--text-dim); text-align: center; }
+
+        .news-list { display: flex; flex-direction: column; gap: 12px; }
+        .news-sentiment-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .sentiment-label { font-size: 0.78em; color: var(--text-dim); white-space: nowrap; }
+        .sentiment-meter { flex: 1; min-width: 80px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+        .sentiment-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+        .sentiment-text { font-size: 0.85em; font-weight: 600; white-space: nowrap; }
+        .sentiment-summary { font-size: 0.78em; color: var(--text-dim); width: 100%; margin-top: 2px; }
+
+        .news-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+        .news-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59,130,246,0.1); }
+        .news-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+        .news-card-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .news-source { font-size: 0.78em; color: var(--accent); font-weight: 500; }
+        .news-dot { color: var(--text-dim); font-size: 0.78em; }
+        .news-time { font-size: 0.75em; color: var(--text-dim); }
+        .news-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+        .news-coin-tag { padding: 2px 7px; background: var(--accent-glow); border: 1px solid rgba(59,130,246,0.3); border-radius: 4px; font-size: 0.72em; color: var(--accent); font-family: 'Space Mono', monospace; }
+        .news-card-title { font-size: 0.95em; font-weight: 600; margin-bottom: 6px; line-height: 1.4; color: var(--text); }
+        .news-card-summary { font-size: 0.82em; color: var(--text-dim); line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-card-footer { display: flex; justify-content: space-between; align-items: center; }
+        .news-read-more { font-size: 0.78em; color: var(--accent); }
+
+        .news-impact-badge { padding: 2px 7px; border-radius: 4px; font-size: 0.72em; font-weight: 600; }
+        .impact-high { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+        .impact-medium { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+        .impact-low { background: rgba(100,116,139,0.15); color: var(--text-dim); border: 1px solid rgba(100,116,139,0.3); }
+
+        .news-sentiment-chip { padding: 3px 9px; border-radius: 20px; font-size: 0.75em; font-weight: 500; }
+        .chip-bullish { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+        .chip-bearish { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+        .chip-neutral { background: rgba(100,116,139,0.12); color: var(--text-dim); border: 1px solid rgba(100,116,139,0.3); }
+
+        .news-refresh-row { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 0; }
+        .news-refresh-btn { padding: 10px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); font-size: 0.85em; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .news-refresh-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+        .news-update-time { font-size: 0.75em; color: var(--text-dim); }
+
+        /* News Pagination */
+        .news-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 16px 0 8px; flex-wrap: wrap; }
+        .page-btn { min-width: 36px; height: 36px; padding: 0 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); font-size: 0.85em; cursor: pointer; transition: all 0.2s; font-family: 'Space Mono', monospace; display: flex; align-items: center; justify-content: center; }
+        .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+        .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .page-info { font-size: 0.78em; color: var(--text-dim); text-align: center; padding-bottom: 4px; }
+
+        .news-empty { display: flex; flex-direction: column; align-items: center; padding: 80px 20px; gap: 12px; text-align: center; }
+        .news-empty-icon { font-size: 3em; }
+        .news-empty-title { font-size: 1em; font-weight: 600; color: var(--text); }
+        .news-empty-sub { font-size: 0.85em; color: var(--text-dim); max-width: 280px; line-height: 1.5; }
+        .news-start-btn { margin-top: 8px; padding: 12px 28px; background: var(--accent); border: none; border-radius: 8px; color: white; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .news-start-btn:hover { background: #2563eb; transform: translateY(-1px); }
+
+        .news-detail-modal { max-width: 520px; max-height: 85vh; overflow-y: auto; }
+        .news-translate-bar { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
+        .news-translate-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--accent); font-size: 0.82em; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .news-translate-btn:hover:not(:disabled) { background: var(--accent-glow); border-color: var(--accent); }
+        .news-translate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .translate-hint { font-size: 0.75em; color: var(--text-dim); }
+        .news-translated-body { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 10px; }
+        .translated-label { font-size: 0.75em; color: var(--accent); margin-bottom: 8px; font-weight: 600; }
+        .translated-text { font-size: 0.88em; color: var(--text); line-height: 1.7; }
+        .news-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .news-detail-meta { display: flex; align-items: center; gap: 4px; }
+        .news-detail-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+        .news-detail-body { font-size: 0.88em; color: var(--text-dim); line-height: 1.7; margin-bottom: 14px; white-space: pre-line; }
+        .news-detail-analysis { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 4px; }
+        .analysis-title { font-size: 0.85em; font-weight: 600; margin-bottom: 8px; color: var(--accent); }
+        .analysis-body { font-size: 0.82em; color: var(--text-dim); line-height: 1.6; }
+
+                @media (max-width: 768px) {
+            .trade-page { grid-template-columns: 1fr; }
+            .navbar-brand { font-size: 0.95em; gap: 6px; }
+            .navbar-brand .brand-mark { width: 26px; height: 26px; flex-basis: 26px; }
+            .market-page { min-height: calc(100vh - 160px); }
+            .chart-view { height: 60vh; }
+            .account-btn { padding: 6px 10px; font-size: 0.8em; max-width: 65vw; }
+            .account-btn span:not(.dot):not(.wallet-addr) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .account-btn .wallet-addr { display: none; }
+        }
+        /* ============================================================
+           入场过场动画(首次访问播放一次,自动跟随当前主题)
+           ============================================================ */
+        #ssr-intro {
+            position: fixed; inset: 0; z-index: 99999;
+            background: #0D1016;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 1;
+            transition: opacity .7s ease;
+        }
+        /* 浅色主题:白色背景 + 加深银色 S / .ssr 文字,保证白底可读 */
+        html[data-theme="light"] #ssr-intro { background: #ffffff; }
+        html[data-theme="light"] #ssr-intro .spath { stroke: url(#introSGLight); }
+        html[data-theme="light"] #ssr-intro .scap  { fill: #64748B; }
+        html[data-theme="light"] #ssr-intro .t-dim { fill: #94A3B8; }
+        #ssr-intro.done { opacity: 0; pointer-events: none; }
+        #ssr-intro svg { width: min(420px, 78vw); height: auto; }
+        #ssr-intro .cring,
+        #ssr-intro .spath,
+        #ssr-intro .uline { stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; }
+        #ssr-intro .scap,
+        #ssr-intro .word,
+        #ssr-intro .glow  { opacity: 0; }
+        #ssr-intro .cube  { opacity: 0; transform: scale(0); transform-box: fill-box; transform-origin: center; }
+        #ssr-intro .word  { transform-box: fill-box; transform-origin: center; }
+        @keyframes ssr-draw { to { stroke-dashoffset: 0; } }
+        @keyframes ssr-fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes ssr-pop  { from { opacity: 0; transform: scale(0) } 60% { opacity: 1; transform: scale(1.15) } to { opacity: 1; transform: scale(1) } }
+        @keyframes ssr-rise { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+        #ssr-intro .cring { animation: ssr-fade .25s ease forwards,        ssr-draw 1s ease .1s forwards; }
+        #ssr-intro .spath { animation: ssr-fade .25s ease .6s forwards,    ssr-draw .8s ease .65s forwards; }
+        #ssr-intro .scap  { animation: ssr-fade .4s  ease 1.35s forwards; }
+        #ssr-intro .cube  { animation: ssr-pop  .55s cubic-bezier(.2,.8,.3,1.2) 1.25s forwards; }
+        #ssr-intro .glow  { animation: ssr-fade .6s  ease 1.4s forwards; }
+        #ssr-intro .word  { animation: ssr-rise .6s  ease 1.7s forwards; }
+        #ssr-intro .uline { animation: ssr-fade .2s  ease 1.95s forwards, ssr-draw .7s ease 2s forwards; }
+        @media (prefers-reduced-motion: reduce) {
+            #ssr-intro .cring, #ssr-intro .spath, #ssr-intro .uline { stroke-dashoffset: 0; opacity: 1; animation: none; }
+            #ssr-intro .scap, #ssr-intro .word, #ssr-intro .glow { opacity: 1; animation: none; }
+            #ssr-intro .cube { opacity: 1; transform: scale(1); animation: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== 入场过场动画(首次会话播放一次) ===== -->
+<div id="ssr-intro" aria-label="Crypto.ssr 加载中">
+    <svg viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg" role="img">
+        <title>Crypto.ssr</title>
+        <defs>
+            <linearGradient id="introBG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A8AF0"/><stop offset="1" stop-color="#1450A8"/></linearGradient>
+            <linearGradient id="introSG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2F4F7"/><stop offset="0.5" stop-color="#C3C9D2"/><stop offset="1" stop-color="#969DA8"/></linearGradient>
+            <linearGradient id="introSGLight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#94A3B8"/><stop offset="0.5" stop-color="#64748B"/><stop offset="1" stop-color="#475569"/></linearGradient>
+            <radialGradient id="introGG" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#E0A21E" stop-opacity="0.45"/><stop offset="1" stop-color="#E0A21E" stop-opacity="0"/></radialGradient>
+        </defs>
+        <ellipse class="glow" cx="300" cy="252" rx="150" ry="14" fill="url(#introGG)"/>
+        <path class="cring" pathLength="100" d="M340.15 117.66 A70 70 0 1 0 340.15 232.34" fill="none" stroke="url(#introBG)" stroke-width="22" stroke-linecap="round"/>
+        <g transform="translate(300,176) scale(1.05)">
+            <path class="spath" pathLength="100" d="M13 -16 C11 -23 4 -26 -2 -25 C-11 -24 -15 -18 -14 -11 C-13 -1 13 -3 14 8 C15 19 7 26 -2 26 C-10 26 -15 21 -15 14" fill="none" stroke="url(#introSG)" stroke-width="8" stroke-linecap="round"/>
+            <circle class="scap" cx="13" cy="-16" r="3" fill="#EDEFF2"/>
+            <circle class="scap" cx="-15" cy="14" r="3" fill="#EDEFF2"/>
+            <g class="cube">
+                <polygon points="0,-9 9,-4.5 0,0 -9,-4.5" fill="#FFD24A"/>
+                <polygon points="-9,-4.5 0,0 0,11 -9,6.5" fill="#C8860E"/>
+                <polygon points="9,-4.5 0,0 0,11 9,6.5" fill="#E5A81C"/>
+            </g>
+        </g>
+        <text class="word" x="300" y="330" text-anchor="middle" style="font-size:40px;font-weight:500;font-family:'Inter','PingFang SC','Microsoft YaHei',system-ui,sans-serif"><tspan fill="#3A8AF0">Crypto</tspan><tspan class="t-dim" fill="#C7CDD6">.ssr</tspan></text>
+        <line class="uline" pathLength="100" x1="192" y1="345" x2="328" y2="345" stroke="#E0A21E" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+</div>
+<script>
+    (function () {
+        var intro = document.getElementById('ssr-intro');
+        if (!intro) return;
+        try {
+            if (sessionStorage.getItem('ssrIntroShown')) { intro.remove(); return; }
+            sessionStorage.setItem('ssrIntroShown', '1');
+        } catch (e) { /* sessionStorage 不可用时,正常播放一次 */ }
+        var HOLD = 3000;
+        setTimeout(function () {
+            intro.classList.add('done');
+            intro.addEventListener('transitionend', function () { intro.remove(); }, { once: true });
+        }, HOLD);
+    })();
+</script>
+
+<div id="app">
+    <div class="toast" :class="[toast.type, { show: toast.visible }]">{{ toast.msg }}</div>
+
+    <!-- Connect Wallet Modal -->
+    <div class="modal-overlay" v-if="showWalletModal" @click.self="closeModal">
+        <div class="modal">
+            <h2>Connect Wallet</h2>
+            <p>Connect your Web3 wallet to start trading. Your assets and history will be permanently saved to your account.</p>
+            <div class="wallet-option" @click="connectWallet" v-if="!isConnecting">
+                <div class="wallet-icon">💎</div>
+                <div class="wallet-option-info">
+                    <strong>Trust Wallet / MetaMask</strong>
+                    <span>Connect via browser extension or DApp browser</span>
+                </div>
+            </div>
+            <div class="connecting" v-if="isConnecting">
+                <div class="spinner"></div>
+                Connecting wallet...
+            </div>
+            <button class="modal-close" @click="closeModal">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" v-if="showProfileModal" @click.self="closeModal">
+        <div class="modal">
+            <h2>Account Info</h2>
+            <div class="profile-section">
+                <div class="profile-avatar">{{ userInitial }}</div>
+                <div class="profile-wallet">{{ currentUser?.walletAddress }}</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="val gold">${{ portfolio.usdBalance.toFixed(2) }}</div>
+                        <div class="lbl">Current Balance</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="val" :class="portfolio.totalPnl >= 0 ? 'green' : 'red'">
+                            {{ portfolio.totalPnl >= 0 ? '+' : '' }}${{ portfolio.totalPnl.toFixed(2) }}
+                        </div>
+                        <div class="lbl">Total P&L</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="val">{{ portfolio.totalTrades }}</div>
+                        <div class="lbl">Total Trades</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="val green">{{ winRate }}%</div>
+                        <div class="lbl">Win Rate</div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Display Name</label>
+                <input v-model="editDisplayName" placeholder="Enter display name">
+            </div>
+            <div class="form-group">
+                <label>Username</label>
+                <input v-model="editUsername" placeholder="Set a unique username">
+            </div>
+            <button class="btn-primary" @click="saveProfile" :disabled="savingProfile">
+                {{ savingProfile ? 'Saving...' : 'Save Changes' }}
+            </button>
+            <button class="btn-danger" @click="disconnect">Disconnect</button>
+        </div>
+    </div>
+
+    <!-- Trade Detail Modal -->
+    <div class="modal-overlay" v-if="showTradeModal" @click.self="closeModal">
+        <div class="modal">
+            <h2>Trade Details</h2>
+            <div class="detail-list" v-if="selectedTrade">
+                <div class="detail-row"><span>Order ID</span><span>{{ selectedTrade.id.split('-')[0] }}...</span></div>
+                <div class="detail-row"><span>Pair</span><span style="text-transform: uppercase;">{{ selectedTrade.coinId }} / USD</span></div>
+                <div class="detail-row"><span>Direction</span>
+                    <span :class="selectedTrade.type==='up' ? 'green' : 'red'">{{ selectedTrade.type==='up' ? 'Up ▲' : 'Down ▼' }}</span>
+                </div>
+                <div class="detail-row"><span>Stake Amount</span><span>${{ selectedTrade.amount.toFixed(2) }}</span></div>
+                <div class="detail-row"><span>Trading Fee</span><span>${{ (selectedTrade.amount * 0.002 + 0.5).toFixed(2) }}</span></div>
+                <div class="detail-row"><span>Total Deducted</span><span>${{ (selectedTrade.amount + selectedTrade.amount * 0.002 + 0.5).toFixed(2) }}</span></div>
+                <div class="detail-row"><span>Entry Price</span><span>${{ selectedTrade.entryPrice.toFixed(4) }}</span></div>
+                <div class="detail-row"><span>Settlement Price</span><span>${{ selectedTrade.settlementPrice?.toFixed(4) ?? '-' }}</span></div>
+                <div class="detail-row"><span>Open Time</span><span>{{ formatDate(selectedTrade.createdAt) }}</span></div>
+                <div class="detail-row"><span>Settlement Time</span><span>{{ formatDate(selectedTrade.settledAt) }}</span></div>
+                <div class="detail-row"><span>Result</span>
+                    <span :class="selectedTrade.status==='Won' ? 'green' : 'red'">{{ selectedTrade.status==='Won' ? 'Won' : 'Lost' }}</span>
+                </div>
+                <div class="detail-row"><span>Net P&L (incl. fees)</span>
+                    <span :class="selectedTrade.status==='Won' ? 'green' : 'red'">
+                        {{ selectedTrade.status==='Won' ? '+' : '-' }}${{ selectedTrade.status==='Won' ? (selectedTrade.payout - selectedTrade.amount - (selectedTrade.amount * 0.002 + 0.5)).toFixed(2) : (selectedTrade.amount + (selectedTrade.amount * 0.002 + 0.5)).toFixed(2) }}
+                    </span>
+                </div>
+            </div>
+            <button class="btn-primary" @click="closeModal">Close</button>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div class="modal-overlay" v-if="showWithdrawModal" @click.self="closeModal">
+        <div class="modal">
+            <h2>Submit Withdrawal</h2>
+            <p>Withdrawal requests are manually reviewed and typically processed within 24 hours.</p>
+            <div class="form-group">
+                <label>Withdrawal Network</label>
+                <select class="form-control" style="width:100%; padding:10px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; margin-bottom:10px;">
+                    <option>ERC20 (Ethereum)</option>
+                    <option>TRC20 (Tron)</option>
+                    <option>BEP20 (BSC)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Receiving Wallet Address</label>
+                <input v-model="withdrawAddress" placeholder="Enter your wallet address">
+            </div>
+            <div class="form-group">
+                <label>Withdrawal Amount (USD)</label>
+                <input type="number" v-model="withdrawAmount" placeholder="Min withdrawal $10">
+            </div>
+            <div class="fee-info" v-if="withdrawAmount > 0">
+                <span>Fee (1% + $2): <strong>${{ withdrawFee.toFixed(2) }}</strong></span>
+                <span>Total Deducted: <strong>${{ withdrawTotal.toFixed(2) }}</strong></span>
+            </div>
+            <button class="btn-primary" @click="submitWithdraw" :disabled="withdrawing">
+                {{ withdrawing ? 'Submitting...' : 'Confirm Withdrawal' }}
+            </button>
+            <button class="modal-close" @click="closeModal">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Withdraw Detail Modal -->
+    <div class="modal-overlay" v-if="showWithdrawDetailModal" @click.self="closeModal">
+        <div class="modal">
+            <h2>Withdrawal Details</h2>
+            <div class="detail-list" v-if="selectedWithdraw">
+                <div class="detail-row"><span>Order ID</span><span>{{ selectedWithdraw.id.split('-')[0] }}...</span></div>
+                <div class="detail-row"><span>Type</span><span>Withdraw</span></div>
+                <div class="detail-row"><span>Withdrawal Amount</span><span>${{ selectedWithdraw.amount.toFixed(2) }}</span></div>
+                <div class="detail-row"><span>Fee</span><span>${{ selectedWithdraw.fee.toFixed(2) }}</span></div>
+                <div class="detail-row"><span>Total Deducted</span><span>${{ (selectedWithdraw.amount + selectedWithdraw.fee).toFixed(2) }}</span></div>
+                <div class="detail-row"><span>Receiving Address</span><span style="font-size:0.8em; word-break:break-all;">{{ selectedWithdraw.wallet_address }}</span></div>
+                <div class="detail-row"><span>Submitted At</span><span>{{ formatDate(selectedWithdraw.created_at) }}</span></div>
+                <div class="detail-row"><span>Status</span>
+                    <span :class="selectedWithdraw.status === 'completed' ? 'green' : (selectedWithdraw.status === 'rejected' ? 'red' : 'gold')">
+                        {{ selectedWithdraw.status === 'pending' ? 'Under Review' : (selectedWithdraw.status === 'completed' ? 'Completed' : 'Rejected (funds returned)') }}
+                    </span>
+                </div>
+            </div>
+            <button class="btn-primary" @click="closeModal">Close</button>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <div class="navbar">
+        <a href="#" class="navbar-brand" @click.prevent="activeTab='trade'" aria-label="Crypto.ssr Home">
+            <svg class="brand-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+                <defs>
+                    <linearGradient id="navBG" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#3A8AF0"/><stop offset="1" stop-color="#1450A8"/>
+                    </linearGradient>
+                    <linearGradient id="navSG" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#F2F4F7"/><stop offset="0.5" stop-color="#C3C9D2"/><stop offset="1" stop-color="#969DA8"/>
+                    </linearGradient>
+                </defs>
+                <rect x="0" y="0" width="512" height="512" rx="112" fill="#0D1016"/>
+                <g transform="translate(-371,-129) scale(2.2)">
+                    <path d="M340.15 117.66 A70 70 0 1 0 340.15 232.34" fill="none" stroke="url(#navBG)" stroke-width="22" stroke-linecap="round"/>
+                    <g transform="translate(300,176) scale(1.05)">
+                        <path d="M13 -16 C11 -23 4 -26 -2 -25 C-11 -24 -15 -18 -14 -11 C-13 -1 13 -3 14 8 C15 19 7 26 -2 26 C-10 26 -15 21 -15 14" fill="none" stroke="url(#navSG)" stroke-width="8" stroke-linecap="round"/>
+                        <circle cx="13" cy="-16" r="3" fill="#EDEFF2"/><circle cx="-15" cy="14" r="3" fill="#EDEFF2"/>
+                        <polygon points="0,-9 9,-4.5 0,0 -9,-4.5" fill="#FFD24A"/>
+                        <polygon points="-9,-4.5 0,0 0,11 -9,6.5" fill="#C8860E"/>
+                        <polygon points="9,-4.5 0,0 0,11 9,6.5" fill="#E5A81C"/>
+                    </g>
+                </g>
+            </svg>
+            <span class="brand-word"><span class="b-blue">Crypto</span><span class="b-ssr">.ssr</span></span>
+        </a>
+        <div class="navbar-right">
+            <button class="theme-toggle" @click="toggleTheme"
+                :title="theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+                :aria-label="theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+                <svg v-if="theme === 'dark'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="12" y1="2" x2="12" y2="4"/>
+                    <line x1="12" y1="20" x2="12" y2="22"/>
+                    <line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/>
+                    <line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/>
+                    <line x1="2" y1="12" x2="4" y2="12"/>
+                    <line x1="20" y1="12" x2="22" y2="12"/>
+                    <line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/>
+                    <line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+            <button class="account-btn" @click="handleAccountClick">
+                <span class="dot" :class="{ offline: !currentUser }"></span>
+                <template v-if="currentUser">
+                    <span>{{ currentUser.displayName || currentUser.username }}</span>
+                    <span class="wallet-addr">{{ shortAddress }}</span>
+                </template>
+                <template v-else><span>Connect Wallet</span></template>
+            </button>
+        </div>
+    </div>
+
+    <!-- Trade Page -->
+    <div v-show="activeTab === 'trade'" class="trade-page">
+
+        <!-- Deposit Page (overlay over wallet page) -->
+        <div v-show="showDepositPage" class="wallet-page">
+            <button class="btn-back" @click="closeDepositPage">← Back to Wallet</button>
+
+            <!-- Step 1: Create Order -->
+            <div v-show="depositStep === 1">
+                <div class="deposit-steps">
+                    <div class="d-step active">
+                        <div class="d-step-num">1</div>
+                        <div>Create Order</div>
+                    </div>
+                    <div class="d-step-line"></div>
+                    <div class="d-step">
+                        <div class="d-step-num">2</div>
+                        <div>Payment Confirmation</div>
+                    </div>
+                </div>
+                <div class="deposit-card" style="max-width:520px; margin: 0 auto;">
+                    <div class="deposit-card-title">Select Deposit Coin</div>
+
+                    <!-- Coin selection -->
+                    <div class="deposit-form-group">
+                        <label>Deposit Coin</label>
+                        <div class="deposit-coin-grid">
+                            <div v-for="coin in DEPOSIT_COINS" :key="coin.id"
+                                class="deposit-coin-cell"
+                                :class="{ 'dcell-active': depositCoin === coin.id }"
+                                @click="depositCoin = coin.id; depositNetwork = coin.networks[0].id; depositCoinSymbol = coin.symbol; depositNetworkLabel = coin.networks[0].label">
+                                <img :src="coin.icon" :alt="coin.symbol" class="dcell-icon" loading="lazy">
+                                <span class="dcell-name">{{ coin.symbol }}</span>
+                                <span class="dcell-full">{{ coin.name }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network selection -->
+                    <div class="deposit-form-group" v-if="depositCoin">
+                        <label>Deposit Network</label>
+                        <div class="deposit-network-list">
+                            <div v-for="net in DEPOSIT_COINS.find(c=>c.id===depositCoin).networks"
+                                :key="net.id"
+                                class="deposit-network-item"
+                                :class="{ 'dnet-active': depositNetwork === net.id }"
+                                @click="depositNetwork = net.id; depositNetworkLabel = net.label">
+                                <div class="dnet-left">
+                                    <span class="dnet-name">{{ net.label }}</span>
+                                    <span class="dnet-desc">{{ net.desc }}</span>
+                                </div>
+                                <div class="dnet-check" v-if="depositNetwork === net.id">✓</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exchange rate reference -->
+                    <div class="deposit-form-group" v-if="depositCoin">
+                        <label>Exchange Rate</label>
+                        <div class="deposit-rate-box">
+                            1 {{ depositCoinSymbol }} ≈ ${{ DEPOSIT_COINS.find(c=>c.id===depositCoin)?.rate }} USD (real-time credit)
+                        </div>
+                    </div>
+
+                    <!-- Amount input -->
+                    <div class="deposit-form-group" v-if="depositCoin && depositNetwork">
+                        <label>Deposit Amount (min {{ DEPOSIT_COINS.find(c=>c.id===depositCoin)?.minAmt }} {{ depositCoinSymbol }})</label>
+                        <input type="number" v-model="depositUsdtAmt"
+                            :placeholder="'e.g. ' + DEPOSIT_COINS.find(c=>c.id===depositCoin)?.minAmt"
+                            :min="DEPOSIT_COINS.find(c=>c.id===depositCoin)?.minAmt" step="any">
+                    </div>
+                    <div class="deposit-form-group" v-if="depositCoin">
+                        <label>Estimated Credit Balance (USD)</label>
+                        <input type="text" :value="depositUsdPreview" readonly style="color:var(--green); font-family:'Space Mono',monospace;">
+                    </div>
+
+                    <button class="btn-primary" @click="generateDepositOrder"
+                        :disabled="creatingOrder || !depositCoin || !depositNetwork || !depositUsdtAmt"
+                        style="margin-top:4px;">
+                        {{ creatingOrder ? 'Creating...' : 'Generate Payment Order' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Payment -->
+            <div v-show="depositStep === 2">
+                <div class="deposit-steps">
+                    <div class="d-step">
+                        <div class="d-step-num">1</div>
+                        <div>Create Order</div>
+                    </div>
+                    <div class="d-step-line done"></div>
+                    <div class="d-step active">
+                        <div class="d-step-num">2</div>
+                        <div>Payment Confirmation</div>
+                    </div>
+                </div>
+                <div class="deposit-grid">
+                    <!-- Left: payment info -->
+                    <div class="deposit-card">
+                        <div class="deposit-card-title">Payment Info</div>
+
+                        <!-- Waiting for address assignment -->
+                        <div v-if="!depositWalletAddr" class="deposit-addr-pending">
+                            <div class="deposit-spinner"></div>
+                            <div>Please wait...</div>
+                            <div style="font-size:0.78em; color:var(--text-dim); margin-top:6px;">Usually completes within a few minutes</div>
+                        </div>
+
+                        <!-- Address assigned -->
+                        <template v-else>
+                            <div class="deposit-coin-badge">
+                                <span>{{ depositCoinSymbol }}</span>
+                                <span class="deposit-net-badge">{{ depositNetworkLabel }}</span>
+                            </div>
+                            <div class="deposit-qr-box">
+                                <img :src="depositQrUrl" alt="QR Code">
+                            </div>
+                            <div class="deposit-addr-box">
+                                <span class="deposit-addr-text">{{ depositWalletAddr }}</span>
+                                <span class="deposit-copy-btn" @click="copyDepositAddr">Copy</span>
+                            </div>
+                        </template>
+
+                        <div class="deposit-amount-highlight">
+                            Transfer Amount: {{ depositUniqueAmount }} {{ depositCoinSymbol }}
+                        </div>
+                    </div>
+                    <!-- Right: order info -->
+                    <div class="deposit-card">
+                        <div class="deposit-card-title">Order Info</div>
+                        <div class="deposit-info-row">
+                            <span class="deposit-info-label">Order No.</span>
+                            <span class="deposit-info-value" style="font-size:0.78em;">{{ depositOrderIdShort }}</span>
+                        </div>
+                        <div class="deposit-info-row">
+                            <span class="deposit-info-label">Coin / Network</span>
+                            <span class="deposit-info-value">{{ depositCoinSymbol }} · {{ depositNetworkLabel }}</span>
+                        </div>
+                        <div class="deposit-info-row">
+                            <span class="deposit-info-label">Transfer Amount</span>
+                            <span class="deposit-info-value red">{{ depositUniqueAmount }} {{ depositCoinSymbol }}</span>
+                        </div>
+                        <div class="deposit-info-row">
+                            <span class="deposit-info-label">Credit Balance</span>
+                            <span class="deposit-info-value" style="color:var(--green)">${{ depositUsdAmt }}</span>
+                        </div>
+                        <div class="deposit-info-row">
+                            <span class="deposit-info-label">Address Status</span>
+                            <span v-if="!depositWalletAddr" style="color:var(--gold); font-size:0.82em;">⏳ Pending</span>
+                            <span v-else style="color:var(--green); font-size:0.82em;">✓ Assigned</span>
+                        </div>
+                        <div class="deposit-info-row">
+                            <span class="deposit-info-label">Payment Status</span>
+                            <span :class="depositPaid ? 'deposit-badge-paid' : 'deposit-badge-pending'">
+                                {{ depositPaid ? 'Paid' : 'Pending' }}
+                            </span>
+                        </div>
+                        <div class="deposit-countdown-box">
+                            <div class="deposit-countdown-label">Time Remaining</div>
+                            <div class="deposit-countdown-time" :style="depositPaid ? 'color:var(--green)' : ''">
+                                {{ depositPaid ? 'Payment Successful' : depositCountdown }}
+                            </div>
+                        </div>
+                        <button class="btn-cancel-deposit" @click="promptCancelDeposit" v-if="!depositPaid">Cancel Order</button>
+                    </div>
+                </div>
+                <!-- Payment Instructions -->
+                <div class="deposit-instructions">
+                    <div class="deposit-card-title">Payment Instructions</div>
+                    <div class="deposit-inst-list">
+                        <div>1. Use the <strong>{{ depositCoinSymbol }} ({{ depositNetworkLabel }})</strong> network for transfer. Funds sent on the wrong network will be lost.</div>
+                        <div>2. The transfer amount must exactly match the order: <strong style="color:var(--red)">{{ depositUniqueAmount }} {{ depositCoinSymbol }}</strong></div>
+                        <div>3. The system auto-confirms after payment, usually within 3-30 minutes</div>
+                        <div>4. Please complete within 60 minutes, otherwise the order will be auto-cancelled</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Detail Page (overlay over trade page) -->
+        <div v-show="showWalletPage && !showDepositPage" class="wallet-page">
+            <button class="btn-back" @click="closeModal">← Back to Trade</button>
+            <div class="wallet-header-card">
+                <div class="lbl">Total Asset Value (USD)</div>
+                <div class="bal">${{ portfolio.usdBalance.toFixed(2) }}</div>
+                <div class="wallet-actions">
+                    <button class="btn-action btn-deposit" @click="openDepositPage">Deposit</button>
+                    <button class="btn-action btn-withdraw" @click="openModal('modal-withdraw')">Withdraw</button>
+                </div>
+            </div>
+            <div class="tx-list">
+                <div class="tx-list-header">Transaction History</div>
+                <div v-if="transactionHistory.length === 0" class="empty-msg" style="text-align:center;">No transactions yet</div>
+                <div class="tx-item clickable-row" v-for="tx in displayedHistory" :key="tx.id" @click="showTxDetails(tx)">
+                    <div class="tx-info">
+                        <span class="tx-title">{{ tx.title }}</span>
+                        <span class="tx-time">{{ formatDate(tx.time) }}</span>
+                        <span class="tx-status" :class="'status-' + tx.statusClass" v-if="tx.statusLabel">
+                            {{ tx.statusLabel }}
+                        </span>
+                    </div>
+                    <div class="tx-amount" :class="tx.amountChange >= 0 ? 'green' : 'red'">
+                        {{ tx.amountChange >= 0 ? '+' : '' }}${{ Math.abs(tx.amountChange).toFixed(2) }}
+                    </div>
+                </div>
+                <div v-if="!showAllHistory && transactionHistory.length > 5" class="load-more-btn" @click="showAllHistory = true">
+                    Show More ↓
+                </div>
+                <div v-if="showAllHistory && transactionHistory.length > 5" class="load-more-btn" @click="showAllHistory = false">
+                    Collapse ↑
+                </div>
+            </div>
+        </div>
+
+        <!-- Left (default trade view) -->
+        <div class="left-panel" v-show="!showWalletPage">
+            <div class="panel clickable-panel" @click="openModal('wallet-page')">
+                <h2 style="display:flex; justify-content:space-between;">My Assets <span style="color:var(--accent); font-size:0.9em; text-transform:none;">View Wallet ➔</span></h2>
+                <div class="balance-row">
+                    <span>Cash Balance</span>
+                    <strong>${{ portfolio.usdBalance.toFixed(2) }}</strong>
+                </div>
+            </div>
+            <div class="panel">
+                <h2>Execute Trade · <span style="color:var(--accent)">{{ tradeDuration }}s</span> Settlement</h2>
+                <div v-if="!currentUser" class="login-prompt">
+                    <div>Please connect your wallet to start trading</div>
+                    <button @click="openModal('modal-wallet')">Connect Wallet</button>
+                </div>
+                <div class="trade-form" v-else>
+                    <label>Search Coin</label>
+                    <input v-model="searchQuery" placeholder="Search...">
+                    <label>Select Coin</label>
+                    <div class="coin-picker-trigger" @click="showCoinPicker = true">
+                        <template v-if="selectedCoinData">
+                            <img :src="selectedCoinData.image" class="cp-trigger-icon" alt="">
+                            <div class="cp-trigger-info">
+                                <span class="cp-trigger-name">{{ selectedCoinData.name }}</span>
+                                <span class="cp-trigger-symbol">{{ selectedCoinData.symbol?.toUpperCase() }}</span>
+                            </div>
+                            <div class="cp-trigger-price">
+                                <span :class="selectedCoinData.change24h >= 0 ? 'cp-green' : 'cp-red'">
+                                    {{ selectedCoinData.change24h >= 0 ? '+' : '' }}{{ selectedCoinData.change24h?.toFixed(2) }}%
+                                </span>
+                            </div>
+                        </template>
+                        <template v-else><span style="color:var(--text-dim)">Select a trading coin...</span></template>
+                        <svg class="cp-trigger-chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                    </div>
+
+                    <!-- Settlement Duration Selector -->
+                    <label style="margin-top:4px;">Settlement Duration</label>
+                    <div class="duration-grid">
+                        <div
+                            v-for="tier in TRADE_TIERS"
+                            :key="tier.seconds"
+                            class="duration-cell"
+                            :class="{
+                                'dur-active': tradeDuration === tier.seconds,
+                                'dur-locked': !tierUnlocked(tier)
+                            }"
+                            @click="selectDuration(tier)">
+                            <div class="dur-label">{{ tier.label }}</div>
+                            <div class="dur-payout">+{{ Math.round((tier.payout - 1) * 100) }}%</div>
+                            <div class="dur-lock" v-if="!tierUnlocked(tier)">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1C8.676 1 6 3.676 6 7v1H4a1 1 0 00-1 1v13a1 1 0 001 1h16a1 1 0 001-1V9a1 1 0 00-1-1h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 10a2 2 0 110 4 2 2 0 010-4z"/></svg>
+                                <span>≥ ${{ (tier.minBalance >= 1000000 ? (tier.minBalance/1000000)+'M' : tier.minBalance >= 1000 ? (tier.minBalance/1000)+'K' : tier.minBalance) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Tier Info -->
+                    <div class="tier-info-bar">
+                        <div class="tier-info-item">
+                            <span class="tib-label">Settlement Cycle</span>
+                            <span class="tib-val">{{ currentTier.seconds }}s</span>
+                        </div>
+                        <div class="tier-info-divider"></div>
+                        <div class="tier-info-item">
+                            <span class="tib-label">Payout Rate</span>
+                            <span class="tib-val tib-green">+{{ Math.round((currentTier.payout - 1) * 100) }}%</span>
+                        </div>
+                        <div class="tier-info-divider"></div>
+                        <div class="tier-info-item">
+                            <span class="tib-label">Est. Profit</span>
+                            <span class="tib-val tib-gold">${{ tradeAmount > 0 ? (tradeAmount * (currentTier.payout - 1)).toFixed(2) : '0.00' }}</span>
+                        </div>
+                    </div>
+                    <!-- Locked Tier Hint -->
+                    <div class="tier-lock-hint" v-if="!tierUnlocked(currentTier)">
+                        🔒 Unlock requires balance of
+                        <strong>${{ currentTier.minBalance >= 1000000 ? (currentTier.minBalance/1000000)+'M' : (currentTier.minBalance/1000)+'K' }}</strong>
+                        · Current balance <strong>${{ portfolio.usdBalance.toLocaleString('en-US', {maximumFractionDigits:2}) }}</strong>
+                    </div>
+
+                    <label>Stake Amount (USD)</label>
+                    <input type="number" v-model="tradeAmount" placeholder="Enter amount">
+                    <div class="fee-info" v-if="tradeAmount > 0">
+                        <span>Fee: <strong>${{ estimatedFee.toFixed(2) }}</strong></span>
+                        <span>Total: <strong>${{ totalCost.toFixed(2) }}</strong></span>
+                    </div>
+                    <div class="trade-buttons">
+                        <button @click="openPosition('up')" class="trade-btn btn-up" :disabled="trading">
+                            {{ trading ? '...' : 'Buy Up ▲' }}
+                        </button>
+                        <button @click="openPosition('down')" class="trade-btn btn-down" :disabled="trading">
+                            {{ trading ? '...' : 'Buy Down ▼' }}
+                        </button>
+                    </div>
+                    <div class="trade-status" v-if="tradeStatus">{{ tradeStatus }}</div>
+                </div>
+            </div>
+
+            <!-- Coin Picker Modal -->
+            <div class="coin-picker-overlay" v-if="showCoinPicker" @click.self="showCoinPicker = false">
+                <div class="coin-picker-sheet">
+                    <div class="coin-picker-header">
+                        <button class="cp-back-btn" @click="showCoinPicker = false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                        </button>
+                        <span class="cp-title">Select Trading Coin</span>
+                        <span style="width:36px;"></span>
+                    </div>
+                    <div class="cp-search-wrap">
+                        <svg class="cp-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input class="cp-search-input" v-model="searchQuery" placeholder="Search coin name..." autofocus>
+                        <button v-if="searchQuery" class="cp-search-clear" @click="searchQuery = ''">✕</button>
+                    </div>
+                    <div class="cp-list">
+                        <div v-if="filteredCoins.length === 0" class="cp-empty">No matching coins found</div>
+                        <div
+                            class="cp-item"
+                            :class="{ 'cp-item-active': coin.id === selectedCoin }"
+                            v-for="coin in filteredCoins"
+                            :key="coin.id"
+                            @click="selectedCoin = coin.id; showCoinPicker = false; searchQuery = ''; loadTradeChart()">
+                            <img :src="coin.image" class="cp-item-icon" alt="" @error="$event.target.style.display='none'">
+                            <div class="cp-item-info">
+                                <span class="cp-item-name">{{ coin.name }}</span>
+                                <span class="cp-item-symbol">{{ coin.symbol?.toUpperCase() }}</span>
+                            </div>
+                            <div class="cp-item-right">
+                                <span class="cp-item-price">${{ coin.price >= 1 ? coin.price.toLocaleString('en-US',{maximumFractionDigits:2}) : coin.price?.toFixed(6) }}</span>
+                                <span class="cp-item-change" :class="coin.change24h >= 0 ? 'cp-green' : 'cp-red'">
+                                    {{ coin.change24h >= 0 ? '+' : '' }}{{ coin.change24h?.toFixed(2) }}%
+                                </span>
+                            </div>
+                            <svg v-if="coin.id === selectedCoin" class="cp-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Right side -->
+        <div class="right-panel" v-show="!showWalletPage">
+            <div class="chart-panel" v-if="selectedCoin">
+                <h2>{{ selectedCoin }} / USD — Price Chart</h2>
+                <div class="chart-area" ref="tradeChartContainer"></div>
+            </div>
+            <div class="panel">
+                <h2>Active Positions</h2>
+                <div v-if="!currentUser" class="empty-msg">Please log in to view positions</div>
+                <div class="table-wrap" v-else-if="portfolio.activePositions.length > 0">
+                    <table>
+                        <thead><tr><th>Coin</th><th>Direction</th><th>Amount</th><th>Entry Price</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr v-for="pos in portfolio.activePositions" :key="pos.id">
+                                <td>{{ pos.coinId }}</td>
+                                <td><span class="tag" :class="pos.type==='up' ? 'tag-up' : 'tag-down'">{{ pos.type==='up' ? 'Up ▲' : 'Down ▼' }}</span></td>
+                                <td>${{ pos.amount.toFixed(2) }}</td>
+                                <td>${{ pos.entryPrice.toFixed(4) }}</td>
+                                <td><span class="tag tag-active">Settling</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-msg" v-else>No active positions</div>
+            </div>
+            <div class="panel">
+                <h2>Position History</h2>
+                <div v-if="!currentUser" class="empty-msg">Please log in to view history</div>
+                <div class="table-wrap" v-else-if="portfolio.positionHistory.length > 0">
+                    <table>
+                        <thead><tr><th>Coin</th><th>Direction</th><th>Amount</th><th>Entry</th><th>Close</th><th>Result</th><th>P&L</th></tr></thead>
+                        <tbody>
+                            <tr v-for="pos in portfolio.positionHistory" :key="pos.id" class="clickable-row" @click="showTradeDetails(pos)">
+                                <td>{{ pos.coinId }}</td>
+                                <td><span class="tag" :class="pos.type==='up' ? 'tag-up' : 'tag-down'">{{ pos.type==='up' ? 'Up' : 'Down' }}</span></td>
+                                <td>${{ pos.amount.toFixed(2) }}</td>
+                                <td>${{ pos.entryPrice.toFixed(4) }}</td>
+                                <td>${{ pos.settlementPrice?.toFixed(4) ?? '-' }}</td>
+                                <td><span class="tag" :class="pos.status==='Won' ? 'tag-won' : 'tag-lost'">{{ pos.status==='Won' ? 'Won' : 'Lost' }}</span></td>
+                                <td>
+                                    <span :style="{ color: pos.status==='Won' ? 'var(--green)' : 'var(--red)' }">
+                                        {{ pos.status==='Won' ? '+' : '-' }}${{ pos.status==='Won' ? (pos.payout - pos.amount).toFixed(2) : pos.amount.toFixed(2) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-msg" v-else>No history records</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Page -->
+    <div v-show="activeTab === 'market'" class="market-page">
+
+        <!-- List View -->
+        <div v-show="!showMarketDetail" class="market-list">
+            <div class="market-search-bar">
+                <input type="text" v-model="marketSearchQuery" placeholder="Search coin name or symbol...">
+            </div>
+            <div v-if="marketCoins.length === 0" class="loading-coins">Loading market data...</div>
+            <div v-else-if="filteredMarketCoins.length === 0" class="empty-msg" style="text-align:center; padding: 20px 0;">No matching coins found</div>
+            <div class="coin-card" v-for="coin in filteredMarketCoins" :key="coin.id">
+                <div class="coin-card-header">
+                    <img :src="coin.image" class="coin-icon" alt="icon">
+                    <div class="coin-info">
+                        <h3>{{ coin.name }} <span class="coin-symbol">{{ coin.symbol }}</span></h3>
+                    </div>
+                </div>
+                <div class="coin-stats">
+                    <div class="coin-stat-item">
+                        <span class="coin-stat-label">Current Price</span>
+                        <span class="val font-mono">${{ formatMarketPrice(coin.price) }}</span>
+                    </div>
+                    <div class="coin-stat-item" style="text-align: right;">
+                        <span class="coin-stat-label">24h Change</span>
+                        <span class="val font-mono" :class="coin.change24h >= 0 ? 'green' : 'red'">
+                            {{ coin.change24h >= 0 ? '+' : '' }}{{ coin.change24h?.toFixed(2) }}%
+                        </span>
+                    </div>
+                </div>
+                <div class="coin-card-actions">
+                    <button class="btn-outline" @click="openCoinDetail(coin)">View Details</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail View -->
+        <div v-show="showMarketDetail" class="market-detail">
+            <button class="btn-back" @click="closeModal">← Back to List</button>
+
+            <div class="market-detail-header" v-if="marketSelectedCoin">
+                <img :src="marketSelectedCoin.image" class="coin-icon" style="width: 40px; height: 40px;" alt="icon">
+                <div>
+                    <h2 style="font-size: 1.4em; margin-bottom: 4px;">{{ marketSelectedCoin.name }}</h2>
+                    <span class="coin-symbol">{{ marketSelectedCoin.symbol }}</span>
+                </div>
+            </div>
+
+            <div class="detail-stats-grid" v-if="marketSelectedCoin">
+                <div class="detail-stat-box">
+                    <div class="lbl">Current Price</div>
+                    <div class="val font-mono">${{ formatMarketPrice(marketSelectedCoin.price) }}</div>
+                </div>
+                <div class="detail-stat-box">
+                    <div class="lbl">24h Change</div>
+                    <div class="val font-mono" :class="marketSelectedCoin.change24h >= 0 ? 'green' : 'red'">
+                        {{ marketSelectedCoin.change24h >= 0 ? '+' : '' }}{{ marketSelectedCoin.change24h?.toFixed(2) }}%
+                    </div>
+                </div>
+                <div class="detail-stat-box">
+                    <div class="lbl">Market Cap</div>
+                    <div class="val font-mono">${{ formatLargeNumber(marketSelectedCoin.marketCap) }}</div>
+                </div>
+                <div class="detail-stat-box">
+                    <div class="lbl">24h Volume</div>
+                    <div class="val font-mono">${{ formatLargeNumber(marketSelectedCoin.totalVolume) }}</div>
+                </div>
+            </div>
+
+            <div class="m-chart-container">
+                <div class="time-bar">
+                    <div class="time-group">
+                        <button v-for="p in marketPeriods" :key="p.value"
+                            class="time-btn" :class="{ active: marketPeriod === p.value }"
+                            @click="changeMarketPeriod(p.value)">{{ p.label }}</button>
+                    </div>
+                    <div class="type-group">
+                        <button class="type-btn" :class="{ active: chartType === 'line' }" @click="chartType = 'line'">Line</button>
+                        <button class="type-btn" :class="{ active: chartType === 'candle' }" @click="chartType = 'candle'">Candle</button>
+                    </div>
+                </div>
+                <div class="chart-view">
+                    <div class="chart-wrapper" :class="{ active: chartType === 'line' }" ref="marketAreaContainer">
+                        <div class="chart-header">{{ marketSelectedCoin ? marketSelectedCoin.name : '' }} / USD</div>
+                        <div class="chart-tooltip" ref="marketTooltip"></div>
+                    </div>
+                    <div class="chart-wrapper" :class="{ active: chartType === 'candle' }" ref="marketCandleContainer">
+                        <div class="chart-header">{{ marketSelectedCoin ? marketSelectedCoin.name : '' }} / USD</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+        <a :class="{ active: activeTab === 'market' }" href="#market">Market</a>
+        <a :class="{ active: activeTab === 'trade' }" href="#trade">Trade</a>
+        <a :class="{ active: activeTab === 'news' }" href="#news">News</a>
+    </div>
+
+    <!-- News Page -->
+    <div v-show="activeTab === 'news'" class="news-page">
+        <div class="news-header">
+            <div class="news-search-row">
+                <div class="news-search-wrap">
+                    <input v-model="newsQuery" @keyup.enter="fetchNews" placeholder="Search topics, e.g. BTC, ETH, DeFi..." class="news-search-input">
+                    <button @click="fetchNews" class="news-search-btn" :disabled="newsLoading">
+                        <span v-if="newsLoading" class="spinner"></span>
+                        <span v-else>Search</span>
+                    </button>
+                </div>
+            </div>
+            <div class="news-hot-tags">
+                <span class="news-tag-label">Trending:</span>
+                <button v-for="tag in newsTags" :key="tag" class="news-hot-tag" @click="quickSearch(tag)">{{ tag }}</button>
+            </div>
+        </div>
+
+        <div v-if="newsLoading" class="news-loading">
+            <div class="news-loading-inner">
+                <div class="news-spinner"></div>
+                <div class="news-loading-text">Loading news...</div>
+                <div class="news-loading-sub">{{ newsLoadingTip }}</div>
+            </div>
+        </div>
+
+        <div v-else-if="newsList.length > 0" class="news-list">
+            <div class="news-sentiment-bar" v-if="newsSentiment">
+                <div class="sentiment-label">Market Sentiment</div>
+                <div class="sentiment-meter">
+                    <div class="sentiment-fill" :style="{ width: newsSentiment.score + '%', background: newsSentiment.color }"></div>
+                </div>
+                <div class="sentiment-text" :style="{ color: newsSentiment.color }">{{ newsSentiment.label }}</div>
+                <div class="sentiment-summary">{{ newsSentiment.summary }}</div>
+            </div>
+
+            <div class="news-card" v-for="(item, idx) in pagedNewsList" :key="idx" @click="handleNewsClick(item)">
+                <div class="news-card-top">
+                    <div class="news-card-meta">
+                        <span class="news-source">{{ item.source }}</span>
+                        <span class="news-dot">·</span>
+                        <span class="news-time">{{ item.time }}</span>
+                        <span class="news-impact-badge" :class="'impact-' + item.impact" v-if="item.impact">{{ item.impactLabel }}</span>
+                    </div>
+                    <div class="news-card-tags">
+                        <span class="news-coin-tag" v-for="coin in item.coins" :key="coin">{{ coin }}</span>
+                    </div>
+                </div>
+                <div class="news-card-title">{{ item.title }}</div>
+                <div class="news-card-summary">{{ item.summary }}</div>
+                <div class="news-card-footer">
+                    <div class="news-sentiment-chip" :class="'chip-' + item.sentiment">{{ item.sentimentLabel }}</div>
+                    <div class="news-read-more">View Details</div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="news-pagination">
+                <button class="page-btn" @click="goNewsPage(newsCurrentPage - 1)" :disabled="newsCurrentPage === 1 || newsLoading">‹</button>
+                <button
+                    v-for="p in newsPageButtons" :key="p"
+                    class="page-btn" :class="{ active: p === newsCurrentPage }"
+                    @click="goNewsPage(p)" :disabled="newsLoading || p === '…'">
+                    {{ p }}
+                </button>
+                <button class="page-btn" @click="goNewsPage(newsCurrentPage + 1)" :disabled="newsCurrentPage === newsTotalPages || newsLoading">›</button>
+            </div>
+            <div class="page-info">Page {{ newsCurrentPage }} / {{ newsTotalPages }} · {{ newsList.length }} items total</div>
+
+            <div class="news-refresh-row">
+                <button class="news-refresh-btn" @click="refreshNews" :disabled="newsLoading">🔄 Refresh News</button>
+                <span class="news-update-time" v-if="newsUpdateTime">Updated at {{ newsUpdateTime }}</span>
+            </div>
+        </div>
+
+        <div v-else class="news-empty">
+            <div class="news-empty-icon">📰</div>
+            <div class="news-empty-title">Click search to get crypto news</div>
+            <div class="news-empty-sub">Real-time aggregation of the latest cryptocurrency news</div>
+            <button class="news-start-btn" @click="fetchNews">Get Latest News</button>
+        </div>
+
+        <div class="modal-overlay" v-if="showNewsDetail" @click.self="showNewsDetail = false">
+            <div class="modal news-detail-modal" v-if="selectedNews">
+                <div class="news-detail-header">
+                    <div class="news-detail-meta">
+                        <span class="news-source">{{ selectedNews.source }}</span>
+                        <span class="news-dot">·</span>
+                        <span class="news-time">{{ selectedNews.time }}</span>
+                    </div>
+                    <button class="modal-close" style="width:auto; margin:0; padding: 4px 12px;" @click="showNewsDetail = false">✕</button>
+                </div>
+                <h2 style="font-size:1.05em; margin-bottom:12px; line-height:1.5; font-family:'Inter'; font-weight:600;">{{ selectedNews.title }}</h2>
+                <div class="news-detail-tags">
+                    <span class="news-coin-tag" v-for="coin in selectedNews.coins" :key="coin">{{ coin }}</span>
+                    <span class="news-impact-badge" :class="'impact-' + selectedNews.impact">{{ selectedNews.impactLabel }}</span>
+                    <span class="news-sentiment-chip" :class="'chip-' + selectedNews.sentiment">{{ selectedNews.sentimentLabel }}</span>
+                </div>
+                <!-- Original content -->
+                <div class="news-detail-body">{{ selectedNews.detail || selectedNews.summary }}</div>
+
+                <a v-if="selectedNews.link" :href="selectedNews.link" target="_blank" rel="noopener noreferrer"
+                   style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px; padding:10px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--accent); font-size:0.85em; text-decoration:none; transition:all 0.2s;"
+                   onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    🔗 View Original
+                </a>
+                <button class="btn-primary" style="margin-top:10px;" @click="showNewsDetail = false">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global Config
+const SUPABASE_URL   = 'https://wovplubneljhoaliqkmk.supabase.co';
+const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvdnBsdWJuZWxqaG9hbGlxa21rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2OTI3OTksImV4cCI6MjA5MTI2ODc5OX0.aNdQ8xnAfzQqQ0hFgQfwvT5ywyN03mtdXoRPngdnuso';
+const EDGE_BASE      = `${SUPABASE_URL}/functions/v1`;
+const CG_KEY         = 'CG-rqTDnjCErgK6hEq9x6s8RKzD';
+const STORAGE_KEY    = 'tw_user_session';
+
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+
+createApp({
+    setup() {
+        // Tab
+        const activeTab = ref('trade');
+
+        // Toast
+        const toast = ref({ visible: false, msg: '', type: '' });
+        let toastTimer = null;
+        const showToast = (msg, type = 'success') => {
+            toast.value = { visible: true, msg, type };
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.value.visible = false; }, 3000);
+        };
+
+        // Theme (light by default; persisted in localStorage)
+        const THEME_KEY = 'theme';
+        const theme = ref(localStorage.getItem(THEME_KEY) || 'light');
+        const applyTheme = (t) => {
+            document.documentElement.setAttribute('data-theme', t);
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', t === 'dark' ? '#0D1016' : '#f5f7fa');
+        };
+        applyTheme(theme.value);
+        const toggleTheme = () => {
+            theme.value = theme.value === 'dark' ? 'light' : 'dark';
+            applyTheme(theme.value);
+            try { localStorage.setItem(THEME_KEY, theme.value); } catch (e) {}
+        };
+
+        // Trade page state
+        const currentUser    = ref(null);
+        const portfolio      = ref({ usdBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] });
+        const supportedCoins = ref([]);
+        const selectedCoin   = ref('');
+        const tradeAmount    = ref(null);
+        const tradeStatus    = ref('');
+        const trading        = ref(false);
+        const searchQuery    = ref('');
+        const showCoinPicker = ref(false);
+        const tradeDuration  = ref(30); // seconds
+
+        // Trade tier config
+        const TRADE_TIERS = [
+            { seconds: 30,  label: '30s',  minBalance: 0,      payout: 0.85, lockLabel: null },
+            { seconds: 60,  label: '60s',  minBalance: 10000,  payout: 0.92, lockLabel: '$10,000' },
+            { seconds: 120, label: '120s', minBalance: 50000,  payout: 1.05, lockLabel: '$50,000' },
+            { seconds: 240, label: '240s', minBalance: 100000, payout: 1.20, lockLabel: '$100,000' },
+            { seconds: 480, label: '480s', minBalance: 500000, payout: 1.50, lockLabel: '$500,000' },
+        ];
+        const showWalletModal   = ref(false);
+        const showProfileModal  = ref(false);
+        const isConnecting      = ref(false);
+        const editDisplayName   = ref('');
+        const editUsername      = ref('');
+        const savingProfile     = ref(false);
+        const tradeChartContainer = ref(null);
+        const showTradeModal    = ref(false);
+        const selectedTrade     = ref(null);
+        let tradeChartInst = null, tradeLineSeries = null;
+
+        const showMarketDetail = ref(false);
+
+        // Wallet & withdrawal state
+        const showWalletPage     = ref(false);
+        const showWithdrawModal  = ref(false);
+        const showWithdrawDetailModal = ref(false);
+        const selectedWithdraw   = ref(null);
+        const withdrawAddress    = ref('');
+        const withdrawAmount     = ref(null);
+        const withdrawing        = ref(false);
+        const transactionHistory = ref([]);
+        const showAllHistory     = ref(false);
+
+        // Deposit state
+        const showDepositPage    = ref(false);
+        const depositStep        = ref(1);
+        const depositUsdtAmt     = ref(null);
+        const depositRate        = ref('');
+        const depositWalletAddr  = ref('');
+        const depositQrUrl       = ref('');
+        const depositUniqueAmount = ref('');
+        const depositUsdAmt      = ref('');
+        const depositOrderId     = ref(null);
+        const depositOrderIdShort = ref('');
+        const depositPaid        = ref(false);
+        const depositCountdown   = ref('60:00');
+        const depositExpireTime  = ref(null);
+        const depositCoin        = ref('usdt');
+        const depositCoinSymbol  = ref('USDT');
+        const depositNetwork     = ref('trc20');
+        const depositNetworkLabel = ref('TRC20 (Tron)');
+        let depositCountdownTimer = null;
+        let depositDetectTimer   = null;
+        let depositAddrPollTimer = null;
+        const creatingOrder      = ref(false);
+
+        // Supported deposit coins
+        const DEPOSIT_COINS = [
+            {
+                id: 'usdt', name: 'Tether', symbol: 'USDT',
+                icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdt.svg',
+                rate: '1.00', minAmt: 10,
+                networks: [
+                    { id: 'trc20',  label: 'TRC20 (Tron)',     desc: 'Low fees, fast' },
+                    { id: 'erc20',  label: 'ERC20 (Ethereum)', desc: 'Secure & stable' },
+                    { id: 'bep20',  label: 'BEP20 (BSC)',      desc: 'Very low fees' },
+                ]
+            },
+            {
+                id: 'usdc', name: 'USD Coin', symbol: 'USDC',
+                icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdc.svg',
+                rate: '1.00', minAmt: 10,
+                networks: [
+                    { id: 'erc20',  label: 'ERC20 (Ethereum)', desc: 'Mainstream network' },
+                    { id: 'sol',    label: 'Solana',            desc: 'Very fast' },
+                    { id: 'bep20',  label: 'BEP20 (BSC)',      desc: 'Low fees' },
+                ]
+            },
+            {
+                id: 'btc', name: 'Bitcoin', symbol: 'BTC',
+                icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/btc.svg',
+                rate: '103000', minAmt: 0.0001,
+                networks: [
+                    { id: 'btc',    label: 'Bitcoin Mainnet',   desc: 'Native network' },
+                    { id: 'lbtc',   label: 'Lightning',         desc: 'Instant credit' },
+                ]
+            },
+            {
+                id: 'eth', name: 'Ethereum', symbol: 'ETH',
+                icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/eth.svg',
+                rate: '2500', minAmt: 0.005,
+                networks: [
+                    { id: 'erc20',  label: 'ERC20 (Ethereum)', desc: 'Native network' },
+                    { id: 'arb',    label: 'Arbitrum',          desc: 'Layer2, low fees' },
+                    { id: 'op',     label: 'Optimism',          desc: 'Layer2' },
+                ]
+            },
+            {
+                id: 'bnb', name: 'BNB', symbol: 'BNB',
+                icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/bnb.svg',
+                rate: '600', minAmt: 0.01,
+                networks: [
+                    { id: 'bep20',  label: 'BEP20 (BSC)',      desc: 'Native network' },
+                ]
+            },
+            {
+                id: 'trx', name: 'TRON', symbol: 'TRX',
+                icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/trx.svg',
+                rate: '0.25', minAmt: 100,
+                networks: [
+                    { id: 'trc20',  label: 'TRC20 (Tron)',     desc: 'Native network' },
+                ]
+            },
+        ];
+
+        const displayedHistory = computed(() => {
+            if (!showAllHistory.value) {
+                return transactionHistory.value.slice(0, 5);
+            } else {
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                return transactionHistory.value.filter((tx, index) => {
+                    return index < 5 || new Date(tx.time) >= threeDaysAgo;
+                });
+            }
+        });
+
+        const withdrawFee = computed(() => {
+            const amt = parseFloat(withdrawAmount.value);
+            return (amt && amt > 0) ? (amt * 0.01 + 2) : 0;
+        });
+        const withdrawTotal = computed(() => {
+            const amt = parseFloat(withdrawAmount.value);
+            return (amt && amt > 0) ? (amt + withdrawFee.value) : 0;
+        });
+
+        // Deposit computed
+        const depositUsdPreview = computed(() => {
+            const v = parseFloat(depositUsdtAmt.value);
+            if (!v || v <= 0) return '$0.00';
+            const coin = DEPOSIT_COINS.find(c => c.id === depositCoin.value);
+            const rate = parseFloat(coin?.rate || '1');
+            return '$' + (v * rate).toFixed(2);
+        });
+
+        // Deposit methods
+        const openDepositPage = async () => {
+            depositStep.value = 1;
+            depositUsdtAmt.value = null;
+            depositPaid.value = false;
+            depositOrderId.value = null;
+            depositWalletAddr.value = '';
+            depositQrUrl.value = '';
+            depositCoin.value = 'usdt';
+            depositCoinSymbol.value = 'USDT';
+            depositNetwork.value = 'trc20';
+            depositNetworkLabel.value = 'TRC20 (Tron)';
+            showDepositPage.value = true;
+            showWalletPage.value = true;
+        };
+
+        const closeDepositPage = () => {
+            clearDepositTimers();
+            showDepositPage.value = false;
+            depositStep.value = 1;
+        };
+
+        const clearDepositTimers = () => {
+            if (depositCountdownTimer) { clearInterval(depositCountdownTimer); depositCountdownTimer = null; }
+            if (depositDetectTimer)   { clearInterval(depositDetectTimer);   depositDetectTimer = null;   }
+            if (depositAddrPollTimer) { clearInterval(depositAddrPollTimer); depositAddrPollTimer = null; }
+        };
+
+        const generateDepositOrder = async () => {
+            const coin = DEPOSIT_COINS.find(c => c.id === depositCoin.value);
+            const baseAmt = parseFloat(depositUsdtAmt.value);
+            if (!baseAmt || baseAmt < (coin?.minAmt || 10)) {
+                showToast(`Minimum deposit amount is ${coin?.minAmt} ${coin?.symbol}`, 'error'); return;
+            }
+            if (!depositNetwork.value) { showToast('Please select a deposit network', 'error'); return; }
+
+            creatingOrder.value = true;
+            try {
+                // Auto-fetch pre-configured receiving address for this coin + network
+                let presetAddress = null;
+                try {
+                    const { data: addrs } = await sbClient
+                        .from('payment_addresses')
+                        .select('address')
+                        .eq('coin_id', depositCoin.value)
+                        .eq('network', depositNetwork.value)
+                        .limit(1);
+                    if (addrs && addrs.length && addrs[0].address) {
+                        presetAddress = addrs[0].address;
+                    }
+                } catch (e) {
+                    console.warn('payment_addresses lookup failed:', e);
+                }
+
+                if (!presetAddress) {
+                    showToast(`No receiving address configured for ${coin.symbol} on ${depositNetworkLabel.value}. Please contact admin.`, 'error');
+                    return;
+                }
+
+                // Generate unique fractional suffix to avoid amount collisions
+                const fraction = (Math.floor(Math.random() * 998) + 1) / 1000;
+                const uniqueAmt = parseFloat((baseAmt + fraction * (coin.minAmt < 1 ? coin.minAmt * 0.1 : 1)).toFixed(6));
+                const rate = parseFloat(coin.rate || '1');
+                const usdAmt = uniqueAmt * rate;
+
+                const { data: order, error } = await sbClient.from('recharge_orders').insert({
+                    user_id: currentUser.value.id,
+                    usdt_amount: uniqueAmt,
+                    usd_amount: usdAmt,
+                    points_amount: usdAmt,
+                    status: 'pending',
+                    coin_id: depositCoin.value,
+                    coin_symbol: coin.symbol,
+                    network: depositNetwork.value,
+                    network_label: depositNetworkLabel.value,
+                    wallet_address: presetAddress,
+                }).select().single();
+                if (error) throw error;
+
+                depositUniqueAmount.value = uniqueAmt.toFixed(coin.minAmt < 0.01 ? 6 : coin.minAmt < 1 ? 4 : 3);
+                depositUsdAmt.value = usdAmt.toFixed(2);
+                depositOrderId.value = order.id;
+                depositOrderIdShort.value = order.id.replace(/-/g, '').toUpperCase().slice(0, 16);
+                depositExpireTime.value = Date.now() + 60 * 60 * 1000;
+                depositPaid.value = false;
+                depositWalletAddr.value = presetAddress;
+                depositQrUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(presetAddress)}`;
+
+                depositStep.value = 2;
+                startDepositCountdown();
+                startDepositDetection();
+                // Address is already assigned; poll only as a safety net for admin overrides
+                startDepositAddrPoll();
+            } catch (e) {
+                showToast(e.message || 'Failed to create order', 'error');
+            } finally {
+                creatingOrder.value = false;
+            }
+        };
+
+        const startDepositAddrPoll = () => {
+            if (depositAddrPollTimer) clearInterval(depositAddrPollTimer);
+            const poll = async () => {
+                if (!depositOrderId.value) return;
+                try {
+                    const { data } = await sbClient
+                        .from('recharge_orders')
+                        .select('wallet_address')
+                        .eq('id', depositOrderId.value)
+                        .single();
+                    if (data?.wallet_address && data.wallet_address !== depositWalletAddr.value) {
+                        const wasEmpty = !depositWalletAddr.value;
+                        depositWalletAddr.value = data.wallet_address;
+                        depositQrUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.wallet_address)}`;
+                        showToast(wasEmpty ? '✓ Receiving address assigned, please scan to transfer' : '✓ Receiving address updated', 'success');
+                    }
+                } catch {}
+            };
+            poll();
+            depositAddrPollTimer = setInterval(poll, 8000);
+        };
+
+        const startDepositCountdown = () => {
+            clearInterval(depositCountdownTimer);
+            const tick = () => {
+                const diff = depositExpireTime.value - Date.now();
+                if (diff <= 0) {
+                    clearInterval(depositCountdownTimer);
+                    depositCountdown.value = '00:00';
+                    cancelDepositOrder(true);
+                    return;
+                }
+                const m = Math.floor(diff / 60000).toString().padStart(2, '0');
+                const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                depositCountdown.value = `${m}:${s}`;
+            };
+            tick();
+            depositCountdownTimer = setInterval(tick, 1000);
+        };
+
+        const startDepositDetection = () => {
+            clearInterval(depositDetectTimer);
+            checkDepositPayment();
+            depositDetectTimer = setInterval(checkDepositPayment, 15000);
+        };
+
+        const checkDepositPayment = async () => {
+            if (!depositOrderId.value) return;
+            try {
+                const { data: order } = await sbClient
+                    .from('recharge_orders')
+                    .select('status, usd_amount')
+                    .eq('id', depositOrderId.value)
+                    .single();
+
+                if (order && order.status === 'paid') {
+                    clearDepositTimers();
+                    depositPaid.value = true;
+                    showToast('✓ Deposit successful! Balance credited', 'success');
+                    setTimeout(() => { fetchPortfolio(); }, 800);
+                    setTimeout(() => { closeDepositPage(); }, 3500);
+                }
+            } catch (e) { /* silent */ }
+        };
+
+        const copyDepositAddr = () => {
+            navigator.clipboard.writeText(depositWalletAddr.value)
+                .then(() => showToast('Address copied', 'success'))
+                .catch(() => showToast('Copy failed, please copy manually', 'error'));
+        };
+
+        const promptCancelDeposit = () => {
+            if (confirm('Cancel this order? You will need to create a new one.')) {
+                cancelDepositOrder(false);
+            }
+        };
+
+        const cancelDepositOrder = async (isTimeout = false) => {
+            clearDepositTimers();
+            if (depositOrderId.value) {
+                await sbClient.from('recharge_orders').update({ status: 'cancelled' }).eq('id', depositOrderId.value);
+            }
+            showToast(isTimeout ? 'Order expired and cancelled' : 'Order cancelled', 'error');
+            depositStep.value = 1;
+            depositOrderId.value = null;
+        };
+
+        // Routing & history management (hash mode)
+        const openModal = (modalName) => { window.location.hash = modalName; };
+        const closeModal = () => {
+            if (window.location.hash.startsWith('#modal-') || window.location.hash === '#market-detail' || window.location.hash === '#wallet-page') {
+                window.history.back();
+            } else {
+                showWalletModal.value = false; showProfileModal.value = false; showTradeModal.value = false; showMarketDetail.value = false; showWalletPage.value = false; showWithdrawModal.value = false; showWithdrawDetailModal.value = false;
+            }
+        };
+
+        const handleHashChange = async () => {
+            const hash = window.location.hash.replace('#', '') || 'trade';
+
+            showWalletModal.value = hash === 'modal-wallet';
+            showProfileModal.value = hash === 'modal-profile';
+            showTradeModal.value = hash === 'modal-trade';
+            showWithdrawModal.value = hash === 'modal-withdraw';
+            showWithdrawDetailModal.value = hash === 'modal-withdraw-detail';
+
+            if (hash === 'trade') {
+                activeTab.value = 'trade';
+                showMarketDetail.value = false;
+                showWalletPage.value = false;
+            } else if (hash === 'wallet-page') {
+                activeTab.value = 'trade';
+                showWalletPage.value = true;
+                if (currentUser.value) loadTransactionHistory();
+            } else if (hash === 'market') {
+                activeTab.value = 'market';
+                showMarketDetail.value = false;
+                if (marketCoins.value.length === 0) loadMarketCoins();
+            } else if (hash === 'market-detail') {
+                activeTab.value = 'market';
+                showMarketDetail.value = true;
+                await nextTick();
+                await initMarketCharts();
+                if (marketSelectedCoin.value) {
+                    await fetchMarketChartData(marketSelectedCoin.value.id, marketPeriod.value);
+                } else {
+                    window.history.replaceState(null, null, '#market');
+                    handleHashChange();
+                }
+            } else if (hash === 'news') {
+                activeTab.value = 'news';
+                if (newsList.value.length === 0 && !newsLoading.value) {
+                    fetchNews();
+                }
+            }
+        };
+
+        const showTradeDetails = (pos) => {
+            selectedTrade.value = pos;
+            openModal('modal-trade');
+        };
+
+        const formatDate = (isoString) => {
+            if (!isoString) return '-';
+            const d = new Date(isoString);
+            return d.toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        };
+
+        const shortAddress = computed(() => {
+            const a = currentUser.value?.walletAddress;
+            return a ? a.slice(0,6) + '...' + a.slice(-4) : '';
+        });
+        const userInitial = computed(() => (currentUser.value?.displayName || currentUser.value?.username || '?').slice(0,1).toUpperCase());
+        const winRate = computed(() => {
+            if (!portfolio.value.totalTrades) return 0;
+            return ((portfolio.value.totalWon / portfolio.value.totalTrades) * 100).toFixed(1);
+        });
+        const filteredCoins = computed(() => {
+            if (!searchQuery.value) return supportedCoins.value;
+            const q = searchQuery.value.toLowerCase();
+            return supportedCoins.value.filter(c => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
+        });
+        const selectedCoinData = computed(() => supportedCoins.value.find(c => c.id === selectedCoin.value) || null);
+
+        const currentTier = computed(() => TRADE_TIERS.find(t => t.seconds === tradeDuration.value) || TRADE_TIERS[0]);
+
+        const payoutRate = computed(() => currentTier.value.payout);
+
+        const estimatedPayout = computed(() => {
+            const amt = parseFloat(tradeAmount.value);
+            return (amt && amt > 0) ? (amt * payoutRate.value).toFixed(2) : '0.00';
+        });
+
+        const tierUnlocked = (tier) => portfolio.value.usdBalance >= tier.minBalance;
+
+        const selectDuration = (tier) => {
+            tradeDuration.value = tier.seconds;
+        };
+
+        // Fee calculation (0.2% trading fee + $0.5 platform network fee)
+        const estimatedFee = computed(() => {
+            const amt = parseFloat(tradeAmount.value);
+            return (amt && amt > 0) ? (amt * 0.002 + 0.5) : 0;
+        });
+        const totalCost = computed(() => {
+            const amt = parseFloat(tradeAmount.value);
+            return (amt && amt > 0) ? (amt + estimatedFee.value) : 0;
+        });
+
+        // Supabase helpers
+        const getUserPortfolio = async (userId) => {
+            const { data: pd }      = await sbClient.from('portfolios').select('*').eq('user_id', userId).single();
+            const { data: active }  = await sbClient.from('positions').select('*').eq('user_id', userId).eq('status', 'Active').order('created_at', { ascending: false });
+            const { data: history } = await sbClient.from('positions').select('*').eq('user_id', userId).in('status', ['Won', 'Lost']).order('settled_at', { ascending: false }).limit(50);
+            const mapPos = p => ({
+                id: p.id, coinId: p.coin_id, type: p.type,
+                amount: parseFloat(p.amount), entryPrice: parseFloat(p.entry_price),
+                settlementPrice: p.settlement_price ? parseFloat(p.settlement_price) : null,
+                status: p.status, payout: p.payout ? parseFloat(p.payout) : null,
+                createdAt: p.created_at, settledAt: p.settled_at,
+            });
+            return {
+                usdBalance: parseFloat(pd?.usd_balance || 0),
+                totalTrades: pd?.total_trades || 0, totalWon: pd?.total_won || 0,
+                totalLost: pd?.total_lost || 0, totalPnl: parseFloat(pd?.total_pnl || 0),
+                activePositions: (active || []).map(mapPos),
+                positionHistory: (history || []).map(mapPos),
+            };
+        };
+
+        const loginWithWallet = async (address) => {
+            const normalized = address.toLowerCase();
+            let { data: user, error } = await sbClient.from('users').select('*').eq('wallet_address', normalized).single();
+            let isNewUser = false;
+            if (error && error.code === 'PGRST116') {
+                isNewUser = true;
+                const shortAddr = normalized.slice(0,6) + '...' + normalized.slice(-4);
+                const { data: newUser, error: ce } = await sbClient.from('users').insert({
+                    wallet_address: normalized,
+                    display_name: `User ${shortAddr}`,
+                    username: `wallet_${normalized.slice(2,10)}`,
+                }).select().single();
+                if (ce) throw ce;
+                user = newUser;
+                await sbClient.from('portfolios').insert({ user_id: user.id, usd_balance: 0 });
+            } else if (error) throw error;
+            else {
+                await sbClient.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
+            }
+            currentUser.value = { id: user.id, walletAddress: user.wallet_address, username: user.username, displayName: user.display_name };
+            portfolio.value = await getUserPortfolio(user.id);
+            await loadTransactionHistory();
+            editDisplayName.value = user.display_name || '';
+            editUsername.value = user.username || '';
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId: user.id, walletAddress: address }));
+            showToast(isNewUser ? '🎉 Welcome! Account created.' : '✓ Login successful');
+        };
+
+        const connectWallet = async () => {
+            isConnecting.value = true;
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    if (accounts?.[0]) { await loginWithWallet(accounts[0]); closeModal(); return; }
+                }
+                await new Promise(r => setTimeout(r, 1200));
+                const demo = '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join('');
+                await loginWithWallet(demo);
+                closeModal();
+            } catch (err) { console.error(err); showToast('Connection failed, please try again', 'error'); }
+            finally { isConnecting.value = false; }
+        };
+
+        const handleAccountClick = () => { openModal(currentUser.value ? 'modal-profile' : 'modal-wallet'); };
+        const disconnect = () => {
+            currentUser.value = null;
+            portfolio.value = { usdBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
+            localStorage.removeItem(STORAGE_KEY);
+            closeModal();
+            showToast('Disconnected');
+        };
+        const saveProfile = async () => {
+            if (!currentUser.value) return;
+            savingProfile.value = true;
+            try {
+                if (editUsername.value) {
+                    const { data: existing } = await sbClient.from('users').select('id').eq('username', editUsername.value).neq('id', currentUser.value.id).single();
+                    if (existing) { showToast('Username already taken', 'error'); return; }
+                }
+                await sbClient.from('users').update({ username: editUsername.value, display_name: editDisplayName.value }).eq('id', currentUser.value.id);
+                currentUser.value.displayName = editDisplayName.value;
+                currentUser.value.username = editUsername.value;
+                showToast('✓ Profile saved');
+            } catch { showToast('Save failed', 'error'); }
+            finally { savingProfile.value = false; }
+        };
+        const fetchPortfolio = async () => {
+            if (currentUser.value) {
+                portfolio.value = await getUserPortfolio(currentUser.value.id);
+                await loadTransactionHistory();
+            }
+        };
+
+        // Transaction history logic
+        const loadTransactionHistory = async () => {
+            if (!currentUser.value) return;
+
+            let withdraws = [];
+            try {
+                const { data } = await sbClient.from('withdrawals').select('*').eq('user_id', currentUser.value.id);
+                withdraws = data || [];
+            } catch (e) { console.error('Failed to load withdrawals', e); }
+
+            const history = [];
+
+            // 1. Trade records
+            portfolio.value.positionHistory.forEach(pos => {
+                const fee = pos.amount * 0.002 + 0.5;
+                const totalCost = pos.amount + fee;
+                const netChange = pos.status === 'Won' ? (pos.payout - totalCost) : -totalCost;
+
+                history.push({
+                    id: 'trade-' + pos.id,
+                    type: 'trade',
+                    title: `Trade Settled - ${pos.coinId.toUpperCase()}`,
+                    time: pos.settledAt,
+                    amountChange: netChange,
+                    statusClass: pos.status === 'Won' ? 'completed' : 'rejected',
+                    statusLabel: pos.status === 'Won' ? 'Won' : 'Lost',
+                    rawData: pos
+                });
+            });
+
+            // 2. Withdrawal records
+            withdraws.forEach(w => {
+                const totalDeduct = w.amount + w.fee;
+                let amtChange = -totalDeduct;
+                if (w.status === 'rejected') amtChange = 0;
+
+                history.push({
+                    id: 'withdraw-' + w.id,
+                    type: 'withdraw',
+                    title: `Withdraw to ${w.wallet_address.slice(0,6)}...${w.wallet_address.slice(-4)}`,
+                    time: w.created_at,
+                    amountChange: amtChange,
+                    statusClass: w.status,
+                    statusLabel: w.status === 'pending' ? 'Under Review' : (w.status === 'completed' ? 'Completed' : 'Rejected'),
+                    rawData: w
+                });
+            });
+
+            // Sort by time descending
+            history.sort((a, b) => new Date(b.time) - new Date(a.time));
+            transactionHistory.value = history;
+        };
+
+        const showTxDetails = (tx) => {
+            if (tx.type === 'trade') {
+                selectedTrade.value = tx.rawData;
+                openModal('modal-trade');
+            } else if (tx.type === 'withdraw') {
+                selectedWithdraw.value = tx.rawData;
+                openModal('modal-withdraw-detail');
+            }
+        };
+
+        const submitWithdraw = async () => {
+            if (!withdrawAddress.value) return showToast('Please enter wallet address', 'error');
+            const amt = parseFloat(withdrawAmount.value);
+            if (!amt || amt < 10) return showToast('Minimum withdrawal is $10', 'error');
+
+            const totalDeduct = withdrawTotal.value;
+            if (portfolio.value.usdBalance < totalDeduct) return showToast('Insufficient balance (incl. fees)', 'error');
+
+            withdrawing.value = true;
+            try {
+                // 1. Deduct balance
+                const newBalance = portfolio.value.usdBalance - totalDeduct;
+                const { error: updateErr } = await sbClient.from('portfolios').update({ usd_balance: newBalance }).eq('user_id', currentUser.value.id);
+                if (updateErr) throw updateErr;
+
+                // 2. Insert withdrawal record
+                const { error: insertErr } = await sbClient.from('withdrawals').insert({
+                    user_id: currentUser.value.id,
+                    amount: amt,
+                    fee: withdrawFee.value,
+                    wallet_address: withdrawAddress.value,
+                    status: 'pending'
+                });
+                if (insertErr) {
+                    // Roll back balance on failure (basic)
+                    await sbClient.from('portfolios').update({ usd_balance: portfolio.value.usdBalance }).eq('user_id', currentUser.value.id);
+                    console.error('Withdrawal insert failed:', insertErr);
+                    throw new Error(`Withdrawal failed: ${insertErr.message || 'Database permission issue (RLS)'}`);
+                }
+
+                showToast('✓ Withdrawal request submitted, awaiting review');
+                withdrawAmount.value = null;
+                withdrawAddress.value = '';
+                closeModal();
+                await fetchPortfolio();
+            } catch (err) {
+                showToast(err.message || 'Submit failed', 'error');
+            } finally {
+                withdrawing.value = false;
+            }
+        };
+
+        // Open position (deduct balance → write position → settle)
+        const openPosition = async (type) => {
+            if (!currentUser.value) { openModal('modal-wallet'); return; }
+            if (!tradeAmount.value || tradeAmount.value <= 0) { tradeStatus.value = 'Please enter a valid amount'; return; }
+            if (!selectedCoin.value) { tradeStatus.value = 'Please select a coin'; return; }
+
+            // Check tier balance threshold
+            const tier = currentTier.value;
+            if (portfolio.value.usdBalance < tier.minBalance) {
+                const need = tier.minBalance >= 1000000
+                    ? '$' + (tier.minBalance / 1000000) + 'M'
+                    : '$' + (tier.minBalance / 1000) + 'K';
+                showToast(`🔒 ${tier.label} tier requires balance ≥ ${need}, please deposit first`, 'error');
+                tradeStatus.value = `${tier.label} tier threshold: balance must reach ${need}`;
+                return;
+            }
+
+            trading.value = true;
+            tradeStatus.value = 'Fetching price...';
+            try {
+                const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${selectedCoin.value}&vs_currencies=usd&x_cg_demo_api_key=${CG_KEY}`);
+                const priceData = await priceRes.json();
+                const currentPrice = priceData[selectedCoin.value]?.usd;
+                if (!currentPrice) throw new Error('Unable to fetch price');
+
+                const amount = parseFloat(tradeAmount.value);
+                const totalDeduct = totalCost.value; // principal + fees
+
+                const { data: pd } = await sbClient.from('portfolios').select('usd_balance').eq('user_id', currentUser.value.id).single();
+                if (!pd || parseFloat(pd.usd_balance) < totalDeduct) {
+                    tradeStatus.value = 'Insufficient balance (incl. fees)'; showToast('Insufficient balance (incl. fees)', 'error'); return;
+                }
+                // Deduct total (principal + fees)
+                await sbClient.from('portfolios').update({ usd_balance: parseFloat(pd.usd_balance) - totalDeduct }).eq('user_id', currentUser.value.id);
+
+                // Database `amount` still records principal only, for payout calculation
+                const { data: newPos, error } = await sbClient.from('positions').insert({
+                    user_id: currentUser.value.id, coin_id: selectedCoin.value,
+                    type, amount, entry_price: currentPrice, status: 'Active',
+                }).select().single();
+                if (error) throw error;
+
+                const settleSecs = tier.seconds;
+                tradeStatus.value = `Position opened, settling in ${settleSecs}s...`;
+                tradeAmount.value = null;
+                showToast(`✓ Position opened, settling in ${settleSecs}s`);
+                await fetchPortfolio();
+
+                // Settle after tier seconds
+                setTimeout(async () => {
+                    try {
+                        await fetch(`${EDGE_BASE}/trade-settle`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+                            body: JSON.stringify({ positionId: newPos.id, userId: currentUser.value.id })
+                        });
+                        await fetchPortfolio();
+                        tradeStatus.value = '';
+                    } catch (e) { console.error('Settlement failed:', e); }
+                }, settleSecs * 1000);
+            } catch (err) {
+                tradeStatus.value = err.message || 'Request failed';
+                showToast(err.message || 'Open position failed', 'error');
+            } finally { trading.value = false; }
+        };
+
+        // Trade page chart
+        const loadTradeChart = async () => {
+            if (!selectedCoin.value || !tradeChartContainer.value) return;
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoin.value}/market_chart?vs_currency=usd&days=7&x_cg_demo_api_key=${CG_KEY}`);
+                const data = await res.json();
+                const lineData = (data.prices || []).map(d => ({ time: Math.floor(d[0]/1000), value: d[1] }));
+                if (!tradeChartInst) {
+                    tradeChartInst = LightweightCharts.createChart(tradeChartContainer.value, {
+                        width: tradeChartContainer.value.clientWidth, height: 220,
+                        layout: { background: { color: 'transparent' }, textColor: '#64748b' },
+                        grid: { vertLines: { color: '#2a3247' }, horzLines: { color: '#2a3247' } },
+                        timeScale: { timeVisible: true, secondsVisible: false },
+                        rightPriceScale: { borderColor: '#2a3247' },
+                    });
+                    tradeLineSeries = tradeChartInst.addAreaSeries({ lineColor: '#3b82f6', topColor: 'rgba(59,130,246,0.3)', bottomColor: 'rgba(59,130,246,0)', lineWidth: 2 });
+                }
+                if (lineData.length) { tradeLineSeries.setData(lineData); tradeChartInst.timeScale().fitContent(); }
+            } catch (e) { console.error('Chart load failed:', e); }
+        };
+
+        // Load coins (for trade page)
+        const loadCoins = async () => {
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&x_cg_demo_api_key=${CG_KEY}`);
+                const data = await res.json();
+                supportedCoins.value = data.map(c => ({ id: c.id, name: c.name, symbol: c.symbol, image: c.image, price: c.current_price, change24h: c.price_change_percentage_24h }));
+                if (supportedCoins.value.length) selectedCoin.value = supportedCoins.value[0].id;
+            } catch (e) { console.error('Load coins failed:', e); }
+        };
+
+        // Market page state
+        const marketCoins          = ref([]);
+        const marketSearchQuery    = ref('');
+        const filteredMarketCoins  = computed(() => {
+            if (!marketSearchQuery.value) return marketCoins.value;
+            const q = marketSearchQuery.value.toLowerCase();
+            return marketCoins.value.filter(c => c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
+        });
+        const marketSelectedCoin   = ref(null);
+        const marketAreaContainer  = ref(null);
+        const marketCandleContainer = ref(null);
+        const marketTooltip        = ref(null);
+        const marketPeriod         = ref(90);
+        const chartType            = ref('line');
+        const marketPeriods = [
+            { label: '1W', value: 7 }, { label: '1M', value: 30 },
+            { label: '3M', value: 90 }, { label: '1Y', value: 365 },
+        ];
+        let mAreaChart = null, mAreaSeries = null, mCandleChart = null, mCandleSeries = null, mAvgPriceLine = null;
+        let marketChartsInited = false;
+
+        // Watch chart type switch to ensure proper sizing
+        watch(chartType, () => {
+            nextTick(() => {
+                if (mAreaChart && marketAreaContainer.value) mAreaChart.resize(marketAreaContainer.value.clientWidth, marketAreaContainer.value.clientHeight);
+                if (mCandleChart && marketCandleContainer.value) mCandleChart.resize(marketCandleContainer.value.clientWidth, marketCandleContainer.value.clientHeight);
+            });
+        });
+
+        const formatMarketPrice = (p) => {
+            if (!p) return '0.00';
+            if (p >= 1000) return p.toLocaleString('en-US', { maximumFractionDigits: 2 });
+            if (p >= 1) return p.toFixed(2);
+            return p.toFixed(6);
+        };
+
+        const cgFetch = async (path) => {
+            const sep = path.includes('?') ? '&' : '?';
+            const res = await fetch(`https://api.coingecko.com/api/v3${path}${sep}x_cg_demo_api_key=${CG_KEY}`);
+            return res.json();
+        };
+
+        const fetchMarketChartData = async (coinId, days) => {
+            try {
+                const [ohlcData, lineData] = await Promise.all([
+                    cgFetch(`/coins/${coinId}/ohlc?vs_currency=usd&days=${days}`),
+                    cgFetch(`/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`)
+                ]);
+                if (mCandleSeries) {
+                    const mapped = ohlcData.map(d => ({ time: Math.floor(d[0]/1000), open: d[1], high: d[2], low: d[3], close: d[4] }));
+                    mCandleSeries.setData(mapped);
+                    if (mapped.length) mCandleChart.timeScale().fitContent();
+                }
+                if (mAreaSeries) {
+                    const mapped = (lineData.prices || []).map(d => ({ time: Math.floor(d[0]/1000), value: d[1] }));
+                    mAreaSeries.setData(mapped);
+                    if (mapped.length) {
+                        mAreaChart.timeScale().fitContent();
+                        // Calculate average and add dashed line
+                        const sum = mapped.reduce((acc, curr) => acc + curr.value, 0);
+                        const avg = sum / mapped.length;
+                        if (mAvgPriceLine) mAreaSeries.removePriceLine(mAvgPriceLine);
+                        mAvgPriceLine = mAreaSeries.createPriceLine({
+                            price: avg,
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            lineWidth: 1,
+                            lineStyle: LightweightCharts.LineStyle.Dashed,
+                            axisLabelVisible: true,
+                            title: 'Avg',
+                        });
+                    }
+                }
+            } catch (e) { console.error('Market chart data failed:', e); }
+        };
+
+        // Lazy init market charts (after DOM renders)
+        const initMarketCharts = async () => {
+            if (marketChartsInited) return;
+            await nextTick();
+            if (!marketAreaContainer.value || !marketCandleContainer.value) return;
+            const commonOpts = {
+                layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b949e' },
+                grid: { vertLines: { color: 'rgba(42, 50, 71, 0.5)' }, horzLines: { color: 'rgba(42, 50, 71, 0.5)' } },
+                timeScale: { timeVisible: true, secondsVisible: false, borderColor: 'rgba(42, 50, 71, 0.5)' },
+                rightPriceScale: { borderColor: 'rgba(42, 50, 71, 0.5)' },
+                handleScroll: true, handleScale: true,
+            };
+            try {
+                mAreaChart = LightweightCharts.createChart(marketAreaContainer.value, {
+                    ...commonOpts,
+                    width: marketAreaContainer.value.clientWidth,
+                    height: marketAreaContainer.value.clientHeight,
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Magnet,
+                        vertLine: { width: 1, color: 'rgba(255, 255, 255, 0.2)', style: LightweightCharts.LineStyle.Dashed },
+                        horzLine: { visible: false, labelVisible: false },
+                    }
+                });
+                mAreaSeries = mAreaChart.addLineSeries({
+                    color: '#3b82f6',
+                    lineWidth: 2,
+                    crosshairMarkerVisible: true,
+                    crosshairMarkerRadius: 5,
+                    crosshairMarkerBorderColor: '#fff',
+                    crosshairMarkerBackgroundColor: '#3b82f6',
+                });
+
+                // Subscribe to crosshair move to update tooltip
+                mAreaChart.subscribeCrosshairMove((param) => {
+                    if (!marketTooltip.value) return;
+                    if (!param.time || param.point.x < 0 || param.point.x > marketAreaContainer.value.clientWidth || param.point.y < 0 || param.point.y > marketAreaContainer.value.clientHeight) {
+                        marketTooltip.value.style.display = 'none';
+                        return;
+                    }
+                    const dateStr = new Date(param.time * 1000).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                    const price = param.seriesData.get(mAreaSeries)?.value;
+                    if (price !== undefined) {
+                        marketTooltip.value.style.display = 'block';
+                        marketTooltip.value.innerHTML = `<div class="tt-date">${dateStr}</div><div class="tt-price">Price: $${formatMarketPrice(price)}</div>`;
+                        let x = param.point.x + 15;
+                        if (x + 150 > marketAreaContainer.value.clientWidth) x = param.point.x - 165;
+                        marketTooltip.value.style.left = x + 'px';
+                        marketTooltip.value.style.top = param.point.y + 15 + 'px';
+                    } else {
+                        marketTooltip.value.style.display = 'none';
+                    }
+                });
+
+                mCandleChart = LightweightCharts.createChart(marketCandleContainer.value, { ...commonOpts, width: marketCandleContainer.value.clientWidth, height: marketCandleContainer.value.clientHeight });
+                mCandleSeries = mCandleChart.addCandlestickSeries({ upColor: '#26a69a', downColor: '#ef5350', borderDownColor: '#ef5350', borderUpColor: '#26a69a', wickDownColor: '#ef5350', wickUpColor: '#26a69a' });
+                marketChartsInited = true;
+            } catch (e) { console.error('Market chart init failed:', e); }
+        };
+
+        const openCoinDetail = (coin) => {
+            marketSelectedCoin.value = coin;
+            window.location.hash = 'market-detail';
+        };
+
+        const changeMarketPeriod = (days) => {
+            marketPeriod.value = days;
+            if (marketSelectedCoin.value) fetchMarketChartData(marketSelectedCoin.value.id, days);
+        };
+
+        const formatLargeNumber = (num) => {
+            if (!num) return '0';
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+            return num.toString();
+        };
+
+        const loadMarketCoins = async () => {
+            try {
+                const data = await cgFetch('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1');
+                marketCoins.value = data.map(c => ({
+                    id: c.id, name: c.name, symbol: c.symbol, image: c.image,
+                    price: c.current_price, change24h: c.price_change_percentage_24h,
+                    marketCap: c.market_cap, totalVolume: c.total_volume
+                }));
+            } catch (e) { console.error('Market coins load failed:', e); }
+        };
+
+        // News page state
+        const newsList        = ref([]);
+        const newsQuery       = ref('');
+        const newsLoading     = ref(false);
+        const newsUpdateTime  = ref('');
+        const newsSentiment   = ref(null);
+        const showNewsDetail  = ref(false);
+        const showInBrowser   = ref(false);
+        const inBrowserUrl    = ref('');
+        const inBrowserTitle  = ref('');
+        const selectedNews    = ref(null);
+        const newsLoadingTip  = ref('');
+        const newsTags = ['Bitcoin', 'Ethereum', 'DeFi', 'NFT', 'Regulation', 'Layer2', 'Solana', 'Altcoin'];
+
+        // Pagination state
+        const NEWS_PER_PAGE   = 10;
+        const NEWS_MAX_PAGES  = 10;
+        const newsCurrentPage = ref(1);
+        const newsTotalPages  = computed(() => Math.min(Math.ceil(newsList.value.length / NEWS_PER_PAGE), NEWS_MAX_PAGES));
+        const pagedNewsList   = computed(() => {
+            const start = (newsCurrentPage.value - 1) * NEWS_PER_PAGE;
+            return newsList.value.slice(start, start + NEWS_PER_PAGE);
+        });
+        const newsPageButtons = computed(() => {
+            const total = newsTotalPages.value;
+            const cur   = newsCurrentPage.value;
+            if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+            const pages = [];
+            if (cur > 3) { pages.push(1, '…'); }
+            for (let p = Math.max(1, cur - 2); p <= Math.min(total, cur + 2); p++) pages.push(p);
+            if (cur < total - 2) { pages.push('…', total); }
+            return pages;
+        });
+        const goNewsPage = (p) => {
+            if (typeof p !== 'number' || p < 1 || p > newsTotalPages.value || p === newsCurrentPage.value) return;
+            newsCurrentPage.value = p;
+            document.querySelector('.news-page')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        const loadingTips = [
+            'Searching the latest news...',
+            'Analyzing market sentiment...',
+            'Extracting key price signals...',
+            'Generating impact scores...'
+        ];
+
+        const translating     = ref(false);
+        const currentTranslation = ref('');
+
+        const openNewsDetail = (item) => {
+            selectedNews.value = item;
+            showNewsDetail.value = true;
+            currentTranslation.value = '';
+        };
+
+        const translateNews = async (item) => {
+            if (translating.value) return;
+            translating.value = true;
+            const text = item.title + '. ' + (item.detail || item.summary || '');
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=en|zh`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data.responseStatus === 200 && data.responseData?.translatedText) {
+                    currentTranslation.value = data.responseData.translatedText;
+                } else {
+                    showToast('Translation failed, please try again', 'error');
+                }
+            } catch (e) {
+                showToast('Translation service temporarily unavailable', 'error');
+            } finally {
+                translating.value = false;
+            }
+        };
+        const handleNewsClick = (item) => {
+            openNewsDetail(item);
+        };
+        const quickSearch = (tag) => { newsQuery.value = tag; fetchNews(); };
+
+        // Coin keyword mapping
+        const COIN_KEYWORDS = {
+            'BTC': ['bitcoin','btc'], 'ETH': ['ethereum','eth'], 'BNB': ['bnb','binance'],
+            'SOL': ['solana','sol'], 'XRP': ['xrp','ripple'], 'ADA': ['cardano','ada'],
+            'DOGE': ['dogecoin','doge'], 'AVAX': ['avalanche','avax'], 'DOT': ['polkadot','dot'],
+            'MATIC': ['polygon','matic'], 'LINK': ['chainlink','link'], 'UNI': ['uniswap','uni'],
+            'ATOM': ['cosmos','atom'], 'LTC': ['litecoin','ltc'], 'ARB': ['arbitrum','arb'],
+            'OP': ['optimism'], 'SUI': ['sui'], 'APT': ['aptos'], 'INJ': ['injective'],
+        };
+
+        const detectCoins = (text) => {
+            const low = text.toLowerCase();
+            return Object.entries(COIN_KEYWORDS)
+                .filter(([, kws]) => kws.some(kw => low.includes(kw)))
+                .map(([sym]) => sym).slice(0, 4);
+        };
+
+        const relativeTime = (dateStr) => {
+            if (!dateStr) return 'Latest';
+            const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+            return `${Math.floor(diff/86400)}d ago`;
+        };
+
+        const guessSentiment = (text) => {
+            const low = text.toLowerCase();
+            const bull = ['surge','rally','gain','rise','high','bull','pump','adoption','approve','ath','record','growth','positive','launch','partnership','up','soar','boost'];
+            const bear = ['crash','drop','fall','dump','hack','ban','fear','loss','bear','sec','lawsuit','warning','risk','decline','negative','fraud','down','sink','slump'];
+            const bs = bull.filter(w => low.includes(w)).length;
+            const be = bear.filter(w => low.includes(w)).length;
+            if (bs > be) return { s: 'bullish', l: 'Bullish' };
+            if (be > bs) return { s: 'bearish', l: 'Bearish' };
+            return { s: 'neutral', l: 'Neutral' };
+        };
+
+        const guessImpact = (text) => {
+            const low = text.toLowerCase();
+            const high = ['billion','million','etf','sec','fed','regulation','ban','hack','ath','record','federal','reserve','government'];
+            const med = ['launch','partnership','upgrade','update','listing','protocol','network'];
+            if (high.some(w => low.includes(w))) return { i: 'high', l: 'High Impact' };
+            if (med.some(w => low.includes(w))) return { i: 'medium', l: 'Medium Impact' };
+            return { i: 'low', l: 'Low Impact' };
+        };
+
+        // Map raw API item to news object
+        const mapNewsItem = (it) => {
+            const fullText = it.title + ' ' + (it.desc || '');
+            const coins = detectCoins(fullText);
+            const { s, l } = guessSentiment(fullText);
+            const { i, l: il } = guessImpact(fullText);
+            return {
+                title: it.title || '(No title)',
+                summary: it.desc || it.title,
+                detail: it.desc || it.title,
+                source: it.source || 'Crypto News',
+                time: relativeTime(it.pubDate),
+                pubDate: it.pubDate,
+                link: it.link,
+                coins: coins.length ? coins : ['CRYPTO'],
+                sentiment: s,
+                sentimentLabel: l,
+                impact: i,
+                impactLabel: il,
+                analysis: '',
+            };
+        };
+
+        const fetchNews = async () => {
+            if (newsLoading.value) return;
+            newsLoading.value = true;
+            newsSentiment.value = null;
+            newsCurrentPage.value = 1;
+
+            const topic = newsQuery.value.trim();
+
+            // No query: parallel fetch multiple trending topics for 100 items
+            // With query: single topic (20 items)
+            const topics = topic
+                ? [topic]
+                : ['bitcoin', 'ethereum', 'defi', 'crypto market', 'altcoin', 'regulation'];
+
+            const tips = ['Searching the latest news...','Aggregating topic data...','Analyzing market sentiment...','Generating impact scores...'];
+            let tipIdx = 0;
+            newsLoadingTip.value = tips[0];
+            const tipTimer = setInterval(() => { newsLoadingTip.value = tips[Math.min(++tipIdx, tips.length - 1)]; }, 1200);
+
+            try {
+                // Parallel fetch all topics
+                const results = await Promise.allSettled(
+                    topics.map(t => fetch(`${EDGE_BASE}/crypto-news?q=${encodeURIComponent(t)}`).then(r => r.ok ? r.json() : null))
+                );
+
+                // Merge items, dedupe by link, sort by time
+                const seen = new Set();
+                const allItems = [];
+                for (const res of results) {
+                    if (res.status === 'fulfilled' && res.value?.items) {
+                        for (const it of res.value.items) {
+                            const key = it.link || it.title;
+                            if (!seen.has(key)) { seen.add(key); allItems.push(it); }
+                        }
+                    }
+                }
+
+                if (allItems.length === 0) throw new Error('no items');
+
+                // Sort by pubDate descending
+                allItems.sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0));
+
+                newsList.value = allItems.map(mapNewsItem);
+
+                // Compute overall sentiment
+                const total = newsList.value.length;
+                const bullCount = newsList.value.filter(n => n.sentiment === 'bullish').length;
+                const score = Math.round((bullCount / total) * 100);
+                const color = score >= 60 ? '#22c55e' : score <= 40 ? '#ef4444' : '#f59e0b';
+                const label = score >= 70 ? 'Strongly Bullish' : score >= 55 ? 'Mildly Bullish' : score <= 30 ? 'Strongly Bearish' : score <= 45 ? 'Mildly Bearish' : 'Neutral';
+                newsSentiment.value = {
+                    score, label, color,
+                    summary: `From ${[...new Set(allItems.map(i=>i.source))].slice(0,4).join(' / ')} and more`
+                };
+                newsUpdateTime.value = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            } catch (e) {
+                console.error('News load failed:', e);
+                showToast('News load failed, please try again', 'error');
+            } finally {
+                clearInterval(tipTimer);
+                newsLoading.value = false;
+            }
+        };
+        const refreshNews = () => { newsCurrentPage.value = 1; fetchNews(); };
+
+        // Lifecycle
+        onMounted(async () => {
+            // Initialize router
+            window.addEventListener('hashchange', handleHashChange);
+            if (!window.location.hash) {
+                window.history.replaceState(null, null, '#trade');
+            }
+            handleHashChange();
+
+            // Restore session
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try { const { walletAddress } = JSON.parse(saved); await loginWithWallet(walletAddress); }
+                catch { localStorage.removeItem(STORAGE_KEY); }
+            }
+
+            await loadCoins();
+            await nextTick();
+            await loadTradeChart();
+
+            // Periodic refresh
+            setInterval(fetchPortfolio, 8000);
+            setInterval(async () => {
+                try {
+                    const data = await cgFetch('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1');
+                    marketCoins.value = data.map(c => ({
+                        id: c.id, name: c.name, symbol: c.symbol, image: c.image,
+                        price: c.current_price, change24h: c.price_change_percentage_24h,
+                        marketCap: c.market_cap, totalVolume: c.total_volume
+                    }));
+                } catch {}
+            }, 60000);
+
+            window.addEventListener('resize', () => {
+                if (tradeChartInst && tradeChartContainer.value) tradeChartInst.resize(tradeChartContainer.value.clientWidth, 220);
+                if (mAreaChart && marketAreaContainer.value) mAreaChart.resize(marketAreaContainer.value.clientWidth, marketAreaContainer.value.clientHeight);
+                if (mCandleChart && marketCandleContainer.value) mCandleChart.resize(marketCandleContainer.value.clientWidth, marketCandleContainer.value.clientHeight);
+            });
+        });
+
+        return {
+            // Tab
+            activeTab,
+            // Theme
+            theme, toggleTheme,
+            // Toast
+            toast,
+            // Trade
+            currentUser, portfolio, supportedCoins, selectedCoin, tradeAmount, tradeStatus,
+            trading, searchQuery, filteredCoins, showWalletModal, showProfileModal, isConnecting,
+            showCoinPicker, selectedCoinData,
+            tradeDuration, TRADE_TIERS, currentTier, payoutRate, estimatedPayout, tierUnlocked, selectDuration,
+            editDisplayName, editUsername, savingProfile, shortAddress, userInitial, winRate,
+            tradeChartContainer, connectWallet, handleAccountClick, disconnect, saveProfile,
+            openPosition, loadTradeChart, showTradeModal, selectedTrade, showTradeDetails, formatDate,
+            estimatedFee, totalCost, openModal, closeModal,
+            showWalletPage, showWithdrawModal, showWithdrawDetailModal, selectedWithdraw, withdrawAddress, withdrawAmount, withdrawing, transactionHistory, showAllHistory, displayedHistory, withdrawFee, withdrawTotal, submitWithdraw, showTxDetails,
+            // Deposit
+            showDepositPage, depositStep, depositUsdtAmt, depositUsdPreview,
+            depositWalletAddr, depositQrUrl, depositUniqueAmount, depositUsdAmt,
+            depositOrderIdShort, depositPaid, depositCountdown, creatingOrder,
+            openDepositPage, closeDepositPage, generateDepositOrder, copyDepositAddr, promptCancelDeposit,
+            depositCoin, depositCoinSymbol, depositNetwork, depositNetworkLabel, DEPOSIT_COINS,
+            // Market
+            marketCoins, marketSearchQuery, filteredMarketCoins, marketSelectedCoin, marketAreaContainer, marketCandleContainer, marketTooltip,
+            marketPeriod, marketPeriods, chartType, openCoinDetail, changeMarketPeriod, formatMarketPrice,
+            showMarketDetail, formatLargeNumber,
+            // News
+            newsList, newsQuery, newsLoading, newsUpdateTime, newsSentiment, showNewsDetail, selectedNews,
+            newsLoadingTip, newsTags, fetchNews, refreshNews, quickSearch, openNewsDetail, handleNewsClick,
+            translateNews, translating, currentTranslation,
+            showInBrowser, inBrowserUrl, inBrowserTitle,
+            // News Pagination
+            newsCurrentPage, newsTotalPages, pagedNewsList, newsPageButtons, goNewsPage,
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

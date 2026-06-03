@@ -1,0 +1,21 @@
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local backup files
+*.bak
+*.tmp
+*.orig
+
+# Logs
+*.log
+
+# Backend admin panel — kept local, not deployed
+admin_v2.html

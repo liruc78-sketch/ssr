@@ -1,0 +1,26 @@
+<svg width="680" height="440" viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Crypto.ssr logo</title>
+<defs>
+<linearGradient id="bG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A8AF0"/><stop offset="1" stop-color="#1450A8"/></linearGradient>
+<linearGradient id="sG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2F4F7"/><stop offset="0.5" stop-color="#C3C9D2"/><stop offset="1" stop-color="#969DA8"/></linearGradient>
+<radialGradient id="gG" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#E0A21E" stop-opacity="0.45"/><stop offset="1" stop-color="#E0A21E" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="40" y="30" width="600" height="380" rx="18" fill="#0D1016"/>
+<g stroke="#222C3A" stroke-width="1" fill="none">
+<path d="M40 110 H95 L110 95 H150"/><circle cx="150" cy="95" r="2.5" fill="#2A3849" stroke="none"/>
+<path d="M40 360 H100 L120 340"/><circle cx="120" cy="340" r="2.5" fill="#2A3849" stroke="none"/>
+<path d="M640 130 H585 L568 113 H530"/><circle cx="530" cy="113" r="2.5" fill="#2A3849" stroke="none"/>
+<path d="M640 330 H580 L560 350 H520"/><circle cx="520" cy="350" r="2.5" fill="#2A3849" stroke="none"/>
+</g>
+<ellipse cx="300" cy="252" rx="150" ry="14" fill="url(#gG)"/>
+<path d="M340.15 117.66 A70 70 0 1 0 340.15 232.34" fill="none" stroke="url(#bG)" stroke-width="22" stroke-linecap="round"/>
+<g transform="translate(300,176) scale(1.05)">
+<path d="M13 -16 C11 -23 4 -26 -2 -25 C-11 -24 -15 -18 -14 -11 C-13 -1 13 -3 14 8 C15 19 7 26 -2 26 C-10 26 -15 21 -15 14" fill="none" stroke="url(#sG)" stroke-width="8" stroke-linecap="round"/>
+<circle cx="13" cy="-16" r="3" fill="#EDEFF2"/><circle cx="-15" cy="14" r="3" fill="#EDEFF2"/>
+<polygon points="0,-9 9,-4.5 0,0 -9,-4.5" fill="#FFD24A"/>
+<polygon points="-9,-4.5 0,0 0,11 -9,6.5" fill="#C8860E"/>
+<polygon points="9,-4.5 0,0 0,11 9,6.5" fill="#E5A81C"/>
+</g>
+<text x="238" y="330" style="font-family:Arial,Helvetica,sans-serif;font-size:40px;font-weight:600"><tspan fill="#3A8AF0">Crypto</tspan><tspan fill="#C7CDD6">.ssr</tspan></text>
+<line x1="240" y1="345" x2="378" y2="345" stroke="#E0A21E" stroke-width="3" stroke-linecap="round"/>
+</svg>
