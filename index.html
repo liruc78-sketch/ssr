@@ -919,28 +919,39 @@
                         </div>
                     </div>
 
-                    <!-- Exchange rate reference -->
+                    <!-- Live exchange rate reference -->
                     <div class="deposit-form-group" v-if="depositCoin">
                         <label>Exchange Rate</label>
                         <div class="deposit-rate-box">
-                            1 {{ depositCoinSymbol }} ≈ ${{ DEPOSIT_COINS.find(c=>c.id===depositCoin)?.rate }} USD (real-time credit)
+                            <span v-if="depositLiveRate">1 {{ depositCoinSymbol }} ≈ ${{ formatDepositRate(depositLiveRate) }} USD</span>
+                            <span v-else>Fetching live price…</span>
+                            <span style="font-size:0.82em; color:var(--text-dim); margin-left:6px;">
+                                <span v-if="depositRateLoading">· updating…</span>
+                                <span v-else-if="depositRateUpdated">· live @ {{ depositRateUpdated }}</span>
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Amount input -->
+                    <!-- Amount input (crypto quantity) -->
                     <div class="deposit-form-group" v-if="depositCoin && depositNetwork">
                         <label>Deposit Amount (min {{ DEPOSIT_COINS.find(c=>c.id===depositCoin)?.minAmt }} {{ depositCoinSymbol }})</label>
-                        <input type="number" v-model="depositUsdtAmt"
+                        <input type="number" :value="depositUsdtAmt" @input="onCryptoInput($event.target.value)"
                             :placeholder="'e.g. ' + DEPOSIT_COINS.find(c=>c.id===depositCoin)?.minAmt"
                             :min="DEPOSIT_COINS.find(c=>c.id===depositCoin)?.minAmt" step="any">
                     </div>
+                    <!-- Fiat value (editable — converts back to crypto at the live rate) -->
                     <div class="deposit-form-group" v-if="depositCoin">
-                        <label>Estimated Credit Balance (USD)</label>
-                        <input type="text" :value="depositUsdPreview" readonly style="color:var(--green); font-family:'Space Mono',monospace;">
+                        <label>Credit Value (USD)</label>
+                        <input type="number" :value="depositFiatAmt" @input="onFiatInput($event.target.value)"
+                            placeholder="e.g. 100" step="any"
+                            style="color:var(--green); font-family:'Space Mono',monospace;">
+                        <div style="font-size:0.74em; color:var(--text-dim); margin-top:4px;">
+                            ⇅ Edit either field — amounts convert at the live {{ depositCoinSymbol }} price.
+                        </div>
                     </div>
 
                     <button class="btn-primary" @click="generateDepositOrder"
-                        :disabled="creatingOrder || !depositCoin || !depositNetwork || !depositUsdtAmt"
+                        :disabled="creatingOrder || !depositCoin || !depositNetwork || !(parseFloat(depositUsdtAmt) > 0)"
                         style="margin-top:4px;">
                         {{ creatingOrder ? 'Creating...' : 'Generate Payment Order' }}
                     </button>
@@ -1563,8 +1574,12 @@ createApp({
         // Deposit state
         const showDepositPage    = ref(false);
         const depositStep        = ref(1);
-        const depositUsdtAmt     = ref(null);
-        const depositRate        = ref('');
+        const depositUsdtAmt     = ref(null);   // crypto quantity
+        const depositFiatAmt     = ref('');     // USD value (editable, two-way linked to the quantity)
+        const depositLiveRate    = ref(null);   // live USD price of 1 unit of the selected coin
+        const depositRateLoading = ref(false);
+        const depositRateUpdated = ref('');     // local time of the last successful price refresh
+        const depositLastEdited  = ref('crypto');
         const depositWalletAddr  = ref('');
         const depositQrUrl       = ref('');
         const depositUniqueAmount = ref('');
@@ -1581,6 +1596,7 @@ createApp({
         let depositCountdownTimer = null;
         let depositDetectTimer   = null;
         let depositAddrPollTimer = null;
+        let depositRateTimer     = null;
         const creatingOrder      = ref(false);
 
         // Supported deposit coins
@@ -1588,7 +1604,7 @@ createApp({
             {
                 id: 'usdt', name: 'Tether', symbol: 'USDT',
                 icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdt.svg',
-                rate: '1.00', minAmt: 10,
+                cgId: 'tether', rate: '1.00', minAmt: 10,
                 networks: [
                     { id: 'trc20',  label: 'TRC20 (Tron)',     desc: 'Low fees, fast' },
                     { id: 'erc20',  label: 'ERC20 (Ethereum)', desc: 'Secure & stable' },
@@ -1598,7 +1614,7 @@ createApp({
             {
                 id: 'usdc', name: 'USD Coin', symbol: 'USDC',
                 icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdc.svg',
-                rate: '1.00', minAmt: 10,
+                cgId: 'usd-coin', rate: '1.00', minAmt: 10,
                 networks: [
                     { id: 'erc20',  label: 'ERC20 (Ethereum)', desc: 'Mainstream network' },
                     { id: 'sol',    label: 'Solana',            desc: 'Very fast' },
@@ -1608,7 +1624,7 @@ createApp({
             {
                 id: 'btc', name: 'Bitcoin', symbol: 'BTC',
                 icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/btc.svg',
-                rate: '103000', minAmt: 0.0001,
+                cgId: 'bitcoin', rate: '103000', minAmt: 0.0001,
                 networks: [
                     { id: 'btc',    label: 'Bitcoin Mainnet',   desc: 'Native network' },
                     { id: 'lbtc',   label: 'Lightning',         desc: 'Instant credit' },
@@ -1617,7 +1633,7 @@ createApp({
             {
                 id: 'eth', name: 'Ethereum', symbol: 'ETH',
                 icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/eth.svg',
-                rate: '2500', minAmt: 0.005,
+                cgId: 'ethereum', rate: '2500', minAmt: 0.005,
                 networks: [
                     { id: 'erc20',  label: 'ERC20 (Ethereum)', desc: 'Native network' },
                     { id: 'arb',    label: 'Arbitrum',          desc: 'Layer2, low fees' },
@@ -1627,7 +1643,7 @@ createApp({
             {
                 id: 'bnb', name: 'BNB', symbol: 'BNB',
                 icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/bnb.svg',
-                rate: '600', minAmt: 0.01,
+                cgId: 'binancecoin', rate: '600', minAmt: 0.01,
                 networks: [
                     { id: 'bep20',  label: 'BEP20 (BSC)',      desc: 'Native network' },
                 ]
@@ -1635,7 +1651,7 @@ createApp({
             {
                 id: 'trx', name: 'TRON', symbol: 'TRX',
                 icon: 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/trx.svg',
-                rate: '0.25', minAmt: 100,
+                cgId: 'tron', rate: '0.25', minAmt: 100,
                 networks: [
                     { id: 'trc20',  label: 'TRC20 (Tron)',     desc: 'Native network' },
                 ]
@@ -1663,14 +1679,99 @@ createApp({
             return (amt && amt > 0) ? (amt + withdrawFee.value) : 0;
         });
 
-        // Deposit computed
-        const depositUsdPreview = computed(() => {
-            const v = parseFloat(depositUsdtAmt.value);
-            if (!v || v <= 0) return '$0.00';
-            const coin = DEPOSIT_COINS.find(c => c.id === depositCoin.value);
-            const rate = parseFloat(coin?.rate || '1');
-            return '$' + (v * rate).toFixed(2);
+        // ---- Deposit: real-time price conversion ----
+        const currentDepositCoin = () => DEPOSIT_COINS.find(c => c.id === depositCoin.value);
+
+        // Decimal places for the crypto quantity, scaled to the coin's USD price
+        const cryptoDecimals = () => {
+            const r = depositLiveRate.value || parseFloat(currentDepositCoin()?.rate || '1');
+            if (r >= 10000) return 6;
+            if (r >= 100)   return 5;
+            if (r >= 1)     return 4;
+            return 2;
+        };
+
+        const formatDepositRate = (p) => {
+            if (!p) return '0.00';
+            if (p >= 1000) return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (p >= 1)    return p.toFixed(2);
+            return p.toFixed(6);
+        };
+
+        // Re-derive the field the user did NOT just edit, using the freshest rate
+        const recomputeFromRate = () => {
+            const rate = depositLiveRate.value;
+            if (!rate || rate <= 0) return;
+            if (depositLastEdited.value === 'fiat') {
+                const v = parseFloat(depositFiatAmt.value);
+                if (v > 0) depositUsdtAmt.value = (v / rate).toFixed(cryptoDecimals());
+            } else {
+                const v = parseFloat(depositUsdtAmt.value);
+                if (v > 0) depositFiatAmt.value = (v * rate).toFixed(2);
+            }
+        };
+
+        // User typed a crypto quantity → derive the USD value
+        const onCryptoInput = (val) => {
+            depositLastEdited.value = 'crypto';
+            depositUsdtAmt.value = val;
+            const v = parseFloat(val);
+            const rate = depositLiveRate.value;
+            if (!val || isNaN(v) || !rate || rate <= 0) { depositFiatAmt.value = ''; return; }
+            depositFiatAmt.value = (v * rate).toFixed(2);
+        };
+
+        // User typed a USD value → derive the crypto quantity
+        const onFiatInput = (val) => {
+            depositLastEdited.value = 'fiat';
+            depositFiatAmt.value = val;
+            const v = parseFloat(val);
+            const rate = depositLiveRate.value;
+            if (!val || isNaN(v) || !rate || rate <= 0) { depositUsdtAmt.value = ''; return; }
+            depositUsdtAmt.value = (v / rate).toFixed(cryptoDecimals());
+        };
+
+        // Pull the latest USD price for the selected coin from CoinGecko
+        const fetchDepositRate = async () => {
+            const coin = currentDepositCoin();
+            if (!coin) return;
+            const reqCoinId = coin.id; // guards against out-of-order responses after a coin switch
+            depositRateLoading.value = true;
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coin.cgId}&vs_currencies=usd&x_cg_demo_api_key=${CG_KEY}`);
+                const data = await res.json();
+                if (reqCoinId !== depositCoin.value) return; // user switched coins mid-flight — drop stale result
+                const price = data?.[coin.cgId]?.usd;
+                if (price && price > 0) {
+                    depositLiveRate.value = price;
+                    depositRateUpdated.value = new Date().toLocaleTimeString();
+                    recomputeFromRate();
+                } else if (!depositLiveRate.value) {
+                    depositLiveRate.value = parseFloat(coin.rate || '1'); // fallback to static rate
+                    recomputeFromRate();
+                }
+            } catch (e) {
+                console.warn('deposit rate fetch failed:', e);
+                if (reqCoinId === depositCoin.value && !depositLiveRate.value) {
+                    depositLiveRate.value = parseFloat(coin.rate || '1');
+                    recomputeFromRate();
+                }
+            } finally {
+                if (reqCoinId === depositCoin.value) depositRateLoading.value = false;
+            }
+        };
+
+        // Re-price whenever the user switches the deposit coin
+        watch(depositCoin, () => {
+            depositLiveRate.value = null;
+            depositRateUpdated.value = '';
+            fetchDepositRate();
         });
+
+        const startDepositRateTimer = () => {
+            if (depositRateTimer) clearInterval(depositRateTimer);
+            depositRateTimer = setInterval(fetchDepositRate, 20000);
+        };
 
         // Deposit methods
         const openDepositPage = async () => {
@@ -1681,16 +1782,25 @@ createApp({
             }
             depositStep.value = 1;
             depositUsdtAmt.value = null;
+            depositFiatAmt.value = '';
+            depositLastEdited.value = 'crypto';
+            depositLiveRate.value = null;
+            depositRateUpdated.value = '';
             depositPaid.value = false;
             depositOrderId.value = null;
             depositWalletAddr.value = '';
             depositQrUrl.value = '';
-            depositCoin.value = 'usdt';
+            const wasUsdt = depositCoin.value === 'usdt';
+            depositCoin.value = 'usdt';   // if this is a real change, watch(depositCoin) fetches the rate
             depositCoinSymbol.value = 'USDT';
             depositNetwork.value = 'trc20';
             depositNetworkLabel.value = 'TRC20 (Tron)';
             showDepositPage.value = true;
             showWalletPage.value = true;
+            // Fetch the live price now (only if the watcher won't, to avoid a duplicate request),
+            // and keep it fresh while the order form is open
+            if (wasUsdt) fetchDepositRate();
+            startDepositRateTimer();
         };
 
         const closeDepositPage = () => {
@@ -1703,6 +1813,7 @@ createApp({
             if (depositCountdownTimer) { clearInterval(depositCountdownTimer); depositCountdownTimer = null; }
             if (depositDetectTimer)   { clearInterval(depositDetectTimer);   depositDetectTimer = null;   }
             if (depositAddrPollTimer) { clearInterval(depositAddrPollTimer); depositAddrPollTimer = null; }
+            if (depositRateTimer)     { clearInterval(depositRateTimer);     depositRateTimer = null;     }
         };
 
         const generateDepositOrder = async () => {
@@ -1713,6 +1824,8 @@ createApp({
                 return;
             }
             const coin = DEPOSIT_COINS.find(c => c.id === depositCoin.value);
+            // Lock in the freshest price so the credited USD matches the live rate
+            await fetchDepositRate();
             const baseAmt = parseFloat(depositUsdtAmt.value);
             if (!baseAmt || baseAmt < (coin?.minAmt || 10)) {
                 showToast(`Minimum deposit amount is ${coin?.minAmt} ${coin?.symbol}`, 'error'); return;
@@ -1745,8 +1858,10 @@ createApp({
                 // Generate unique fractional suffix to avoid amount collisions
                 const fraction = (Math.floor(Math.random() * 998) + 1) / 1000;
                 const uniqueAmt = parseFloat((baseAmt + fraction * (coin.minAmt < 1 ? coin.minAmt * 0.1 : 1)).toFixed(6));
-                const rate = parseFloat(coin.rate || '1');
-                const usdAmt = uniqueAmt * rate;
+                const rate = depositLiveRate.value || parseFloat(coin.rate || '1');
+                // Credit the value the user actually entered/saw, priced at the live rate.
+                // The collision suffix only affects the transfer amount (uniqueAmt), not the credit.
+                const usdAmt = baseAmt * rate;
 
                 const { data: order, error } = await sbClient.from('recharge_orders').insert({
                     user_id: currentUser.value.id,
@@ -1772,6 +1887,7 @@ createApp({
                 depositQrUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(presetAddress)}`;
 
                 depositStep.value = 2;
+                if (depositRateTimer) { clearInterval(depositRateTimer); depositRateTimer = null; }
                 startDepositCountdown();
                 startDepositDetection();
                 // Address is already assigned; poll only as a safety net for admin overrides
@@ -1868,6 +1984,9 @@ createApp({
             showToast(isTimeout ? 'Order expired and cancelled' : 'Order cancelled', 'error');
             depositStep.value = 1;
             depositOrderId.value = null;
+            // Returning to the order form — resume live price refreshing
+            fetchDepositRate();
+            startDepositRateTimer();
         };
 
         // Routing & history management (hash mode)
@@ -2710,7 +2829,9 @@ createApp({
             estimatedFee, totalCost, openModal, closeModal,
             showWalletPage, showWithdrawModal, showWithdrawDetailModal, selectedWithdraw, withdrawAddress, withdrawAmount, withdrawing, transactionHistory, showAllHistory, displayedHistory, withdrawFee, withdrawTotal, submitWithdraw, showTxDetails,
             // Deposit
-            showDepositPage, depositStep, depositUsdtAmt, depositUsdPreview,
+            showDepositPage, depositStep, depositUsdtAmt, depositFiatAmt,
+            depositLiveRate, depositRateLoading, depositRateUpdated,
+            formatDepositRate, onCryptoInput, onFiatInput,
             depositWalletAddr, depositQrUrl, depositUniqueAmount, depositUsdAmt,
             depositOrderIdShort, depositPaid, depositCountdown, creatingOrder,
             openDepositPage, closeDepositPage, generateDepositOrder, copyDepositAddr, promptCancelDeposit,
