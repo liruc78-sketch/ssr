@@ -1964,10 +1964,34 @@ createApp({
             } catch (e) { /* silent */ }
         };
 
-        const copyDepositAddr = () => {
-            navigator.clipboard.writeText(depositWalletAddr.value)
-                .then(() => showToast('Address copied', 'success'))
-                .catch(() => showToast('Copy failed, please copy manually', 'error'));
+        const copyDepositAddr = async () => {
+            const text = depositWalletAddr.value;
+            if (!text) return;
+            // 1) Prefer the modern API (secure context + permission granted only)
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    showToast('Address copied', 'success');
+                    return;
+                }
+            } catch (e) { /* fall through to legacy fallback */ }
+
+            // 2) Fallback: temporary textarea + execCommand('copy') — works in most WebViews
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                ta.setSelectionRange(0, text.length); // iOS needs an explicit range
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast(ok ? 'Address copied' : 'Copy failed, please copy manually', ok ? 'success' : 'error');
+            } catch (e) {
+                showToast('Copy failed, please copy manually', 'error');
+            }
         };
 
         const promptCancelDeposit = () => {
