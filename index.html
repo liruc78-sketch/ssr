@@ -745,7 +745,7 @@
                 </div>
                 <div class="detail-row"><span>Net P&L (incl. fees)</span>
                     <span :class="selectedTrade.status==='Won' ? 'green' : 'red'">
-                        {{ selectedTrade.status==='Won' ? '+' : '-' }}${{ selectedTrade.status==='Won' ? (selectedTrade.payout - selectedTrade.amount - (selectedTrade.amount * 0.002 + 0.5)).toFixed(2) : (selectedTrade.amount + (selectedTrade.amount * 0.002 + 0.5)).toFixed(2) }}
+                        {{ selectedTrade.status==='Won' ? '+' : '-' }}${{ selectedTrade.status==='Won' ? (selectedTrade.payout - selectedTrade.amount - (selectedTrade.amount * 0.002 + 0.5)).toFixed(2) : (selectedTrade.amount + (selectedTrade.amount * 0.002 + 0.5) - (selectedTrade.payout != null ? selectedTrade.payout : 0)).toFixed(2) }}
                     </span>
                 </div>
             </div>
@@ -1265,7 +1265,7 @@
                                 <td><span class="tag" :class="pos.status==='Won' ? 'tag-won' : 'tag-lost'">{{ pos.status==='Won' ? 'Won' : 'Lost' }}</span></td>
                                 <td>
                                     <span :style="{ color: pos.status==='Won' ? 'var(--green)' : 'var(--red)' }">
-                                        {{ pos.status==='Won' ? '+' : '-' }}${{ pos.status==='Won' ? (pos.payout - pos.amount).toFixed(2) : pos.amount.toFixed(2) }}
+                                        {{ pos.status==='Won' ? '+' : '-' }}${{ pos.status==='Won' ? (pos.payout - pos.amount).toFixed(2) : (pos.amount - (pos.payout != null ? pos.payout : 0)).toFixed(2) }}
                                     </span>
                                 </td>
                             </tr>
@@ -1544,10 +1544,10 @@ createApp({
         // Trade tier config
         const TRADE_TIERS = [
             { seconds: 30,  label: '30s',  minBalance: 0,      payout: 1.15, lockLabel: null },
-            { seconds: 60,  label: '60s',  minBalance: 10000,  payout: 1.08, lockLabel: '$10,000' },
-            { seconds: 120, label: '120s', minBalance: 50000,  payout: 1.05, lockLabel: '$50,000' },
-            { seconds: 240, label: '240s', minBalance: 100000, payout: 1.20, lockLabel: '$100,000' },
-            { seconds: 480, label: '480s', minBalance: 500000, payout: 1.50, lockLabel: '$500,000' },
+            { seconds: 60,  label: '60s',  minBalance: 10000,  payout: 1.25, lockLabel: '$10,000' },
+            { seconds: 120, label: '120s', minBalance: 50000,  payout: 1.35, lockLabel: '$50,000' },
+            { seconds: 240, label: '240s', minBalance: 100000, payout: 1.45, lockLabel: '$100,000' },
+            { seconds: 480, label: '480s', minBalance: 500000, payout: 1.55, lockLabel: '$500,000' },
         ];
         const showWalletModal   = ref(false);
         const showProfileModal  = ref(false);
@@ -2124,7 +2124,7 @@ createApp({
                 id: p.id, coinId: p.coin_id, type: p.type,
                 amount: parseFloat(p.amount), entryPrice: parseFloat(p.entry_price),
                 settlementPrice: p.settlement_price ? parseFloat(p.settlement_price) : null,
-                status: p.status, payout: p.payout ? parseFloat(p.payout) : null,
+                status: p.status, payout: p.payout != null ? parseFloat(p.payout) : null,
                 createdAt: p.created_at, settledAt: p.settled_at,
             });
             return {
@@ -2246,7 +2246,9 @@ createApp({
             portfolio.value.positionHistory.forEach(pos => {
                 const fee = pos.amount * 0.002 + 0.5;
                 const totalCost = pos.amount + fee;
-                const netChange = pos.status === 'Won' ? (pos.payout - totalCost) : -totalCost;
+                // payout = amount returned at settlement (win or loss). Legacy 100%-loss rows stored 0.
+                const returned = pos.payout != null ? pos.payout : 0;
+                const netChange = returned - totalCost;
 
                 history.push({
                     id: 'trade-' + pos.id,
