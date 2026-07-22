@@ -1254,17 +1254,17 @@
                 <div v-if="!currentUser" class="empty-msg">Please log in to view history</div>
                 <div class="table-wrap" v-else-if="portfolio.positionHistory.length > 0">
                     <table>
-                        <thead><tr><th>Coin</th><th>Direction</th><th>Amount</th><th>Entry</th><th>Close</th><th>Result</th><th>P&L</th></tr></thead>
+                        <thead><tr><th>Coin</th><th>Amount</th><th>Result</th><th>P&L</th></tr></thead>
                         <tbody>
                             <tr v-for="pos in portfolio.positionHistory" :key="pos.id" class="clickable-row" @click="showTradeDetails(pos)">
-                                <td>{{ pos.coinId }}</td>
-                                <td><span class="tag" :class="pos.type==='up' ? 'tag-up' : 'tag-down'">{{ pos.type==='up' ? 'Up' : 'Down' }}</span></td>
+                                <td style="text-transform: capitalize;">
+                                    {{ pos.coinId }}
+                                    <span :style="{ color: pos.type==='up' ? 'var(--green)' : 'var(--red)' }">{{ pos.type==='up' ? '▲' : '▼' }}</span>
+                                </td>
                                 <td>${{ pos.amount.toFixed(2) }}</td>
-                                <td>${{ pos.entryPrice.toFixed(4) }}</td>
-                                <td>${{ pos.settlementPrice?.toFixed(4) ?? '-' }}</td>
                                 <td><span class="tag" :class="pos.status==='Won' ? 'tag-won' : 'tag-lost'">{{ pos.status==='Won' ? 'Won' : 'Lost' }}</span></td>
                                 <td>
-                                    <span :style="{ color: pos.status==='Won' ? 'var(--green)' : 'var(--red)' }">
+                                    <span :style="{ color: pos.status==='Won' ? 'var(--green)' : 'var(--red)', fontWeight: 600 }">
                                         {{ pos.status==='Won' ? '+' : '-' }}${{ pos.status==='Won' ? (pos.payout - pos.amount).toFixed(2) : (pos.amount - (pos.payout != null ? pos.payout : 0)).toFixed(2) }}
                                     </span>
                                 </td>
