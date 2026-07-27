@@ -1571,9 +1571,9 @@ createApp({
         const TRADE_TIERS = [
             { seconds: 30,  label: '30s',  minBalance: 0,      payout: 1.15, lockLabel: null },
             { seconds: 60,  label: '60s',  minBalance: 10000,  payout: 1.25, lockLabel: '$10,000' },
-            { seconds: 120, label: '120s', minBalance: 50000,  payout: 1.35, lockLabel: '$50,000' },
-            { seconds: 240, label: '240s', minBalance: 100000, payout: 1.45, lockLabel: '$100,000' },
-            { seconds: 480, label: '480s', minBalance: 500000, payout: 1.55, lockLabel: '$500,000' },
+            { seconds: 120, label: '120s', minBalance: 200000,  payout: 1.35, lockLabel: '$200,000' },
+            { seconds: 240, label: '240s', minBalance: 500000, payout: 1.45, lockLabel: '$500,000' },
+            { seconds: 480, label: '480s', minBalance: 1000000, payout: 1.55, lockLabel: '$1,000,000' },
         ];
         const showWalletModal   = ref(false);
         const showProfileModal  = ref(false);
