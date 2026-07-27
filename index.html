@@ -535,6 +535,11 @@
         .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .page-info { font-size: 0.78em; color: var(--text-dim); text-align: center; padding-bottom: 4px; }
+        .page-jump { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px 0 8px; font-size: 0.8em; color: var(--text-dim); flex-wrap: wrap; }
+        .page-jump input { width: 60px; height: 34px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.85em; -moz-appearance: textfield; }
+        .page-jump input::-webkit-outer-spin-button, .page-jump input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .page-jump input:focus { outline: none; border-color: var(--accent); }
+        .page-jump .page-btn { height: 34px; }
 
         .news-empty { display: flex; flex-direction: column; align-items: center; padding: 80px 20px; gap: 12px; text-align: center; }
         .news-empty-icon { font-size: 3em; }
@@ -1252,26 +1257,47 @@
             <div class="panel">
                 <h2>Position History</h2>
                 <div v-if="!currentUser" class="empty-msg">Please log in to view history</div>
-                <div class="table-wrap" v-else-if="portfolio.positionHistory.length > 0">
-                    <table>
-                        <thead><tr><th>Coin</th><th>Amount</th><th>Result</th><th>P&L</th></tr></thead>
-                        <tbody>
-                            <tr v-for="pos in portfolio.positionHistory" :key="pos.id" class="clickable-row" @click="showTradeDetails(pos)">
-                                <td style="text-transform: capitalize;">
-                                    {{ pos.coinId }}
-                                    <span :style="{ color: pos.type==='up' ? 'var(--green)' : 'var(--red)' }">{{ pos.type==='up' ? '▲' : '▼' }}</span>
-                                </td>
-                                <td>${{ pos.amount.toFixed(2) }}</td>
-                                <td><span class="tag" :class="pos.status==='Won' ? 'tag-won' : 'tag-lost'">{{ pos.status==='Won' ? 'Won' : 'Lost' }}</span></td>
-                                <td>
-                                    <span :style="{ color: pos.status==='Won' ? 'var(--green)' : 'var(--red)', fontWeight: 600 }">
-                                        {{ pos.status==='Won' ? '+' : '-' }}${{ pos.status==='Won' ? (pos.payout - pos.amount).toFixed(2) : (pos.amount - (pos.payout != null ? pos.payout : 0)).toFixed(2) }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <template v-else-if="portfolio.positionHistory.length > 0">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Coin</th><th>Amount</th><th>Result</th><th>P&L</th></tr></thead>
+                            <tbody>
+                                <tr v-for="pos in pagedPositionHistory" :key="pos.id" class="clickable-row" @click="showTradeDetails(pos)">
+                                    <td style="text-transform: capitalize;">
+                                        {{ pos.coinId }}
+                                        <span :style="{ color: pos.type==='up' ? 'var(--green)' : 'var(--red)' }">{{ pos.type==='up' ? '▲' : '▼' }}</span>
+                                    </td>
+                                    <td>${{ pos.amount.toFixed(2) }}</td>
+                                    <td><span class="tag" :class="pos.status==='Won' ? 'tag-won' : 'tag-lost'">{{ pos.status==='Won' ? 'Won' : 'Lost' }}</span></td>
+                                    <td>
+                                        <span :style="{ color: pos.status==='Won' ? 'var(--green)' : 'var(--red)', fontWeight: 600 }">
+                                            {{ pos.status==='Won' ? '+' : '-' }}${{ pos.status==='Won' ? (pos.payout - pos.amount).toFixed(2) : (pos.amount - (pos.payout != null ? pos.payout : 0)).toFixed(2) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="news-pagination" v-if="posHistoryTotalPages > 1">
+                        <button class="page-btn" @click="goPosHistoryPage(posHistoryPage - 1)" :disabled="posHistoryPage === 1">‹</button>
+                        <button
+                            v-for="p in posHistoryPageButtons" :key="p"
+                            class="page-btn" :class="{ active: p === posHistoryPage }"
+                            @click="goPosHistoryPage(p)" :disabled="p === '…'">
+                            {{ p }}
+                        </button>
+                        <button class="page-btn" @click="goPosHistoryPage(posHistoryPage + 1)" :disabled="posHistoryPage === posHistoryTotalPages">›</button>
+                    </div>
+                    <!-- Jump to page -->
+                    <div class="page-jump" v-if="posHistoryTotalPages > 1">
+                        <span>Go to page</span>
+                        <input type="number" min="1" :max="posHistoryTotalPages" v-model="posHistoryPageInput"
+                               @keyup.enter="jumpPosHistoryPage" placeholder="#" aria-label="Jump to page number">
+                        <button class="page-btn" @click="jumpPosHistoryPage" aria-label="Go to page">Go</button>
+                    </div>
+                    <div class="page-info">Page {{ posHistoryPage }} / {{ posHistoryTotalPages }} · {{ portfolio.positionHistory.length }} records total</div>
+                </template>
                 <div class="empty-msg" v-else>No history records</div>
             </div>
         </div>
@@ -1668,6 +1694,41 @@ createApp({
                     return index < 5 || new Date(tx.time) >= threeDaysAgo;
                 });
             }
+        });
+
+        // Position History pagination
+        const POS_HISTORY_PER_PAGE = 10;
+        const posHistoryPage      = ref(1);
+        const posHistoryPageInput = ref('');
+        const posHistoryTotalPages = computed(() =>
+            Math.max(1, Math.ceil(portfolio.value.positionHistory.length / POS_HISTORY_PER_PAGE)));
+        const pagedPositionHistory = computed(() => {
+            const start = (posHistoryPage.value - 1) * POS_HISTORY_PER_PAGE;
+            return portfolio.value.positionHistory.slice(start, start + POS_HISTORY_PER_PAGE);
+        });
+        const posHistoryPageButtons = computed(() => {
+            const total = posHistoryTotalPages.value;
+            const cur   = posHistoryPage.value;
+            if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+            const pages = [];
+            if (cur > 3) { pages.push(1, '…'); }
+            for (let p = Math.max(1, cur - 2); p <= Math.min(total, cur + 2); p++) pages.push(p);
+            if (cur < total - 2) { pages.push('…', total); }
+            return pages;
+        });
+        const goPosHistoryPage = (p) => {
+            if (typeof p !== 'number' || p < 1 || p > posHistoryTotalPages.value || p === posHistoryPage.value) return;
+            posHistoryPage.value = p;
+        };
+        const jumpPosHistoryPage = () => {
+            const p = parseInt(posHistoryPageInput.value, 10);
+            posHistoryPageInput.value = '';
+            if (isNaN(p)) return;
+            goPosHistoryPage(Math.min(Math.max(p, 1), posHistoryTotalPages.value));
+        };
+        // Keep the current page valid when the history reloads or shrinks
+        watch(posHistoryTotalPages, (total) => {
+            if (posHistoryPage.value > total) posHistoryPage.value = total;
         });
 
         const withdrawFee = computed(() => {
@@ -2852,6 +2913,9 @@ createApp({
             editDisplayName, editUsername, savingProfile, shortAddress, userInitial, winRate,
             connectWallet, handleAccountClick, disconnect, saveProfile,
             openPosition, showTradeModal, selectedTrade, showTradeDetails, formatDate,
+            // Position History Pagination
+            pagedPositionHistory, posHistoryPage, posHistoryTotalPages, posHistoryPageButtons,
+            posHistoryPageInput, goPosHistoryPage, jumpPosHistoryPage,
             estimatedFee, totalCost, openModal, closeModal,
             showWalletPage, showWithdrawModal, showWithdrawDetailModal, selectedWithdraw, withdrawAddress, withdrawAmount, withdrawing, transactionHistory, showAllHistory, displayedHistory, withdrawFee, withdrawTotal, submitWithdraw, showTxDetails,
             // Deposit
