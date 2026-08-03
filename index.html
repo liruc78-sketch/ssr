@@ -616,6 +616,44 @@
             #ssr-intro .scap, #ssr-intro .word, #ssr-intro .glow { opacity: 1; animation: none; }
             #ssr-intro .cube { opacity: 1; transform: scale(1); animation: none; }
         }
+
+        /* ── Customer support chat ── */
+        .support-entry { display: flex; align-items: center; gap: 12px; width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; color: var(--text); font-family: 'Inter', sans-serif; text-align: left; }
+        .support-entry:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .support-entry .se-icon { width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 1.15em; }
+        .support-entry .se-text { flex: 1; min-width: 0; }
+        .support-entry .se-title { font-size: 0.92em; font-weight: 600; }
+        .support-entry .se-sub { font-size: 0.75em; color: var(--text-dim); margin-top: 2px; }
+        .support-entry .se-arrow { color: var(--text-dim); font-size: 1.1em; flex-shrink: 0; }
+        .support-unread-dot { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font-size: 0.72em; font-weight: 700; font-family: 'Space Mono', monospace; flex-shrink: 0; }
+        .account-btn .support-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+        .support-modal { display: flex; flex-direction: column; padding: 0; max-width: 440px; height: 82vh; max-height: 640px; overflow: hidden; }
+        .support-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .support-head .sh-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 1.15em; flex-shrink: 0; }
+        .support-head .sh-info { flex: 1; min-width: 0; }
+        .support-head .sh-title { font-size: 0.98em; font-weight: 600; }
+        .support-head .sh-status { font-size: 0.74em; color: var(--green); display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+        .support-head .sh-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+        .support-head .sh-close { background: none; border: none; color: var(--text-dim); font-size: 1.5em; cursor: pointer; line-height: 1; padding: 0 4px; }
+        .support-head .sh-close:hover { color: var(--text); }
+        .support-body { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); }
+        .support-empty { margin: auto; text-align: center; color: var(--text-dim); font-size: 0.85em; padding: 20px; }
+        .support-empty .se-emoji { font-size: 2.2em; margin-bottom: 10px; }
+        .chat-day { text-align: center; font-size: 0.7em; color: var(--text-dim); margin: 6px 0; }
+        .chat-msg { display: flex; flex-direction: column; max-width: 78%; }
+        .chat-msg .bubble { padding: 9px 13px; border-radius: 14px; font-size: 0.9em; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
+        .chat-msg .meta { font-size: 0.66em; color: var(--text-dim); margin-top: 3px; }
+        .chat-msg.from-user { align-self: flex-end; align-items: flex-end; }
+        .chat-msg.from-user .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+        .chat-msg.from-admin { align-self: flex-start; align-items: flex-start; }
+        .chat-msg.from-admin .bubble { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .support-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+        .support-input-row textarea { flex: 1; resize: none; max-height: 100px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9em; line-height: 1.4; }
+        .support-input-row textarea:focus { outline: none; border-color: var(--accent); }
+        .support-input-row .send-btn { flex-shrink: 0; width: 44px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 1.1em; cursor: pointer; transition: background 0.2s; }
+        .support-input-row .send-btn:hover { background: #2563eb; }
+        .support-input-row .send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -724,7 +762,51 @@
             <button class="btn-primary" @click="saveProfile" :disabled="savingProfile">
                 {{ savingProfile ? 'Saving...' : 'Save Changes' }}
             </button>
+            <button class="support-entry" style="margin-top:12px;" @click="openSupport">
+                <span class="se-icon">🎧</span>
+                <span class="se-text">
+                    <span class="se-title">Contact Support</span>
+                    <span class="se-sub">Chat live with our team, 24/7</span>
+                </span>
+                <span v-if="supportUnread > 0" class="support-unread-dot">{{ supportUnread > 99 ? '99+' : supportUnread }}</span>
+                <span v-else class="se-arrow">›</span>
+            </button>
             <button class="btn-danger" @click="disconnect">Disconnect</button>
+        </div>
+    </div>
+
+    <!-- Support Chat Modal -->
+    <div class="modal-overlay" v-if="showSupportModal" @click.self="closeModal">
+        <div class="modal support-modal">
+            <div class="support-head">
+                <div class="sh-avatar">🎧</div>
+                <div class="sh-info">
+                    <div class="sh-title">Customer Support</div>
+                    <div class="sh-status"><span class="dot"></span> Online — typically replies in minutes</div>
+                </div>
+                <button class="sh-close" @click="closeModal">&times;</button>
+            </div>
+            <div class="support-body" ref="supportBody">
+                <div v-if="supportLoading" class="support-empty">Loading conversation…</div>
+                <div v-else-if="supportMessages.length === 0" class="support-empty">
+                    <div class="se-emoji">💬</div>
+                    <div>No messages yet.<br>Send us a message and we'll reply right here.</div>
+                </div>
+                <template v-else>
+                    <template v-for="(m, i) in supportMessages" :key="m.id">
+                        <div v-if="showSupportDay(i)" class="chat-day">{{ formatSupportDay(m.created_at) }}</div>
+                        <div class="chat-msg" :class="m.sender === 'user' ? 'from-user' : 'from-admin'">
+                            <div class="bubble">{{ m.content }}</div>
+                            <div class="meta">{{ m.sender === 'user' ? 'You' : 'Support' }} · {{ formatSupportTime(m.created_at) }}</div>
+                        </div>
+                    </template>
+                </template>
+            </div>
+            <div class="support-input-row">
+                <textarea v-model="supportInput" rows="1" maxlength="2000" placeholder="Type your message…"
+                          @keydown.enter.exact.prevent="sendSupportMessage"></textarea>
+                <button class="send-btn" @click="sendSupportMessage" :disabled="supportSending || !supportInput.trim()">➤</button>
+            </div>
         </div>
     </div>
 
@@ -859,6 +941,7 @@
             </button>
             <button class="account-btn" @click="handleAccountClick">
                 <span class="dot" :class="{ offline: !currentUser }"></span>
+                <span v-if="currentUser && supportUnread > 0" class="support-dot" title="New support reply"></span>
                 <template v-if="currentUser">
                     <span>{{ currentUser.displayName || currentUser.username }}</span>
                     <span class="wallet-addr">{{ shortAddress }}</span>
@@ -1584,6 +1667,16 @@ createApp({
         const showTradeModal    = ref(false);
         const selectedTrade     = ref(null);
 
+        // Customer support chat state
+        const showSupportModal  = ref(false);
+        const supportMessages   = ref([]);
+        const supportInput      = ref('');
+        const supportSending    = ref(false);
+        const supportLoading    = ref(false);
+        const supportUnread     = ref(0);
+        const supportBody       = ref(null);
+        let   supportChannel    = null;
+
         const showMarketDetail = ref(false);
 
         // Wallet & withdrawal state
@@ -2080,7 +2173,7 @@ createApp({
             if (window.location.hash.startsWith('#modal-') || window.location.hash === '#market-detail' || window.location.hash === '#wallet-page') {
                 window.history.back();
             } else {
-                showWalletModal.value = false; showProfileModal.value = false; showTradeModal.value = false; showMarketDetail.value = false; showWalletPage.value = false; showWithdrawModal.value = false; showWithdrawDetailModal.value = false;
+                showWalletModal.value = false; showProfileModal.value = false; showTradeModal.value = false; showMarketDetail.value = false; showWalletPage.value = false; showWithdrawModal.value = false; showWithdrawDetailModal.value = false; showSupportModal.value = false;
             }
         };
 
@@ -2092,6 +2185,8 @@ createApp({
             showTradeModal.value = hash === 'modal-trade';
             showWithdrawModal.value = hash === 'modal-withdraw';
             showWithdrawDetailModal.value = hash === 'modal-withdraw-detail';
+            showSupportModal.value = hash === 'modal-support';
+            if (hash === 'modal-support') loadSupportMessages();
 
             if (hash === 'trade') {
                 activeTab.value = 'trade';
@@ -2222,6 +2317,7 @@ createApp({
             editDisplayName.value = user.display_name || '';
             editUsername.value = user.username || '';
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId: user.id, walletAddress: address }));
+            initSupportForUser();
             showToast(isNewUser ? '🎉 Welcome! Account created.' : '✓ Login successful');
         };
 
@@ -2242,6 +2338,7 @@ createApp({
 
         const handleAccountClick = () => { openModal(currentUser.value ? 'modal-profile' : 'modal-wallet'); };
         const disconnect = () => {
+            teardownSupport();
             currentUser.value = null;
             portfolio.value = { usdBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
             localStorage.removeItem(STORAGE_KEY);
@@ -2263,6 +2360,139 @@ createApp({
             } catch { showToast('Save failed', 'error'); }
             finally { savingProfile.value = false; }
         };
+
+        // ── Customer support chat ──
+        // Union two message arrays by id, sorted by created_at (avoids a fetch clobbering
+        // realtime rows that arrived while the SELECT was in flight).
+        const mergeMessages = (existing, incoming) => {
+            const byId = new Map();
+            for (const m of incoming) byId.set(m.id, m);
+            for (const m of existing) if (!byId.has(m.id)) byId.set(m.id, m);
+            return Array.from(byId.values()).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        };
+        const scrollSupportToBottom = () => {
+            nextTick(() => { const el = supportBody.value; if (el) el.scrollTop = el.scrollHeight; });
+        };
+        const formatSupportTime = (iso) => {
+            if (!iso) return '';
+            return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        };
+        const formatSupportDay = (iso) => {
+            if (!iso) return '';
+            const d = new Date(iso), now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            if (sameDay) return 'Today';
+            return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+        };
+        const showSupportDay = (i) => {
+            if (i === 0) return true;
+            const prev = supportMessages.value[i - 1], cur = supportMessages.value[i];
+            if (!prev || !cur) return false;
+            return new Date(prev.created_at).toDateString() !== new Date(cur.created_at).toDateString();
+        };
+        const resetSupportUnread = async () => {
+            supportUnread.value = 0;
+            if (!currentUser.value) return;
+            try { await sbClient.from('support_conversations').update({ unread_user: 0 }).eq('user_id', currentUser.value.id); }
+            catch (e) { /* conversation may not exist yet */ }
+        };
+        const loadSupportMessages = async () => {
+            if (!currentUser.value) return;
+            supportLoading.value = true;
+            try {
+                const { data, error } = await sbClient
+                    .from('support_messages')
+                    .select('*')
+                    .eq('user_id', currentUser.value.id)
+                    .order('created_at', { ascending: true })
+                    .limit(200);
+                if (error) throw error;
+                // Merge (not replace): keep any realtime rows appended while the SELECT was in flight.
+                supportMessages.value = mergeMessages(supportMessages.value, data || []);
+                await resetSupportUnread();
+                scrollSupportToBottom();
+            } catch (e) {
+                console.error('loadSupportMessages', e);
+                showToast('Could not load messages', 'error');
+            } finally {
+                supportLoading.value = false;
+            }
+        };
+        const openSupport = () => {
+            if (!currentUser.value) { openModal('modal-wallet'); return; }
+            openModal('modal-support');
+        };
+        const sendSupportMessage = async () => {
+            const text = supportInput.value.trim();
+            if (!text || supportSending.value || !currentUser.value) return;
+            supportSending.value = true;
+            try {
+                const { data, error } = await sbClient
+                    .from('support_messages')
+                    .insert({ user_id: currentUser.value.id, sender: 'user', content: text })
+                    .select()
+                    .single();
+                if (error) throw error;
+                supportInput.value = '';
+                if (data && !supportMessages.value.some(m => m.id === data.id)) {
+                    supportMessages.value.push(data);
+                }
+                scrollSupportToBottom();
+            } catch (e) {
+                console.error('sendSupportMessage', e);
+                showToast('Message failed to send', 'error');
+            } finally {
+                supportSending.value = false;
+            }
+        };
+        const subscribeSupport = () => {
+            if (!currentUser.value || supportChannel) return;
+            const uid = currentUser.value.id;
+            supportChannel = sbClient
+                .channel('support:' + uid)
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'support_messages', filter: 'user_id=eq.' + uid },
+                    (payload) => {
+                        const msg = payload.new;
+                        if (!msg || supportMessages.value.some(m => m.id === msg.id)) return;
+                        supportMessages.value.push(msg);
+                        if (showSupportModal.value) {
+                            if (msg.sender === 'admin') resetSupportUnread();
+                            scrollSupportToBottom();
+                        }
+                        // When the modal is closed, the support_conversations UPDATE handler below
+                        // owns the unread badge (DB is the single source of truth — avoids double counting).
+                    })
+                .on('postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'support_conversations', filter: 'user_id=eq.' + uid },
+                    (payload) => {
+                        // Reconcile unread from DB (covers admin replies + resets on other devices/tabs).
+                        if (!showSupportModal.value && payload.new) supportUnread.value = payload.new.unread_user || 0;
+                    })
+                .subscribe();
+        };
+        const teardownSupport = () => {
+            if (supportChannel) { try { sbClient.removeChannel(supportChannel); } catch (e) {} supportChannel = null; }
+            supportMessages.value = [];
+            supportInput.value = '';
+            supportUnread.value = 0;
+        };
+        const initSupportForUser = async () => {
+            if (!currentUser.value) return;
+            subscribeSupport();
+            // If the modal is already open (e.g. page reloaded on #modal-support, which routes
+            // before session restore), load history + reset unread now that we have a user.
+            if (showSupportModal.value) { await loadSupportMessages(); return; }
+            try {
+                const { data } = await sbClient
+                    .from('support_conversations')
+                    .select('unread_user')
+                    .eq('user_id', currentUser.value.id)
+                    .single();
+                supportUnread.value = data?.unread_user || 0;
+            } catch (e) { supportUnread.value = 0; }
+        };
+
         const fetchPortfolio = async () => {
             if (currentUser.value) {
                 portfolio.value = await getUserPortfolio(currentUser.value.id);
@@ -2912,6 +3142,9 @@ createApp({
             tradeDuration, TRADE_TIERS, currentTier, payoutRate, estimatedPayout, tierUnlocked, selectDuration,
             editDisplayName, editUsername, savingProfile, shortAddress, userInitial, winRate,
             connectWallet, handleAccountClick, disconnect, saveProfile,
+            // Customer support
+            showSupportModal, supportMessages, supportInput, supportSending, supportLoading, supportUnread, supportBody,
+            openSupport, sendSupportMessage, showSupportDay, formatSupportDay, formatSupportTime,
             openPosition, showTradeModal, selectedTrade, showTradeDetails, formatDate,
             // Position History Pagination
             pagedPositionHistory, posHistoryPage, posHistoryTotalPages, posHistoryPageButtons,
