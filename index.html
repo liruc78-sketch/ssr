@@ -135,6 +135,8 @@
         .trade-page > div { min-width: 0; }
         .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; overflow: hidden; }
         .panel h2 { font-family: 'Space Mono', monospace; font-size: 0.95em; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; letter-spacing: 0.05em; text-transform: uppercase; }
+        .conn-warning { margin-top: 8px; font-size: 0.8em; font-weight: 600; color: #92600a; background: rgba(224,168,0,0.12); border: 1px solid rgba(224,168,0,0.40); border-radius: 8px; padding: 6px 10px; line-height: 1.4; }
+        [data-theme="dark"] .conn-warning { color: #f59e0b; }
         .balance-row { display: flex; justify-content: space-between; align-items: center; }
         .balance-row span { color: var(--text-dim); font-size: 0.9em; }
         .balance-row strong { font-family: 'Space Mono', monospace; font-size: 1.2em; color: var(--gold); }
@@ -732,7 +734,7 @@
                 <div class="profile-wallet">{{ currentUser?.walletAddress }}</div>
                 <div class="stats-grid">
                     <div class="stat-box">
-                        <div class="val gold">${{ portfolio.usdBalance.toFixed(2) }}</div>
+                        <div class="val gold">{{ balanceText }}</div>
                         <div class="lbl">Current Balance</div>
                     </div>
                     <div class="stat-box">
@@ -1147,7 +1149,8 @@
             <button class="btn-back" @click="closeModal">← Back to Trade</button>
             <div class="wallet-header-card">
                 <div class="lbl">Total Asset Value (USD)</div>
-                <div class="bal">${{ portfolio.usdBalance.toFixed(2) }}</div>
+                <div class="bal">{{ balanceText }}</div>
+                <div v-show="connectionLost" class="conn-warning">⚠ 连接中断,余额可能不是最新,正在自动重试…</div>
                 <div class="wallet-actions">
                     <button class="btn-action btn-deposit" @click="openDepositPage">Deposit</button>
                     <button class="btn-action btn-withdraw" @click="openModal('modal-withdraw')">Withdraw</button>
@@ -1183,7 +1186,7 @@
                 <h2 style="display:flex; justify-content:space-between;">My Assets <span style="color:var(--accent); font-size:0.9em; text-transform:none;">View Wallet ➔</span></h2>
                 <div class="balance-row">
                     <span>Cash Balance</span>
-                    <strong>${{ portfolio.usdBalance.toFixed(2) }}</strong>
+                    <strong>{{ balanceText }}</strong>
                 </div>
             </div>
             <div class="panel">
@@ -1255,7 +1258,7 @@
                     <div class="tier-lock-hint" v-if="!tierUnlocked(currentTier)">
                         🔒 Unlock requires balance of
                         <strong>${{ currentTier.minBalance >= 1000000 ? (currentTier.minBalance/1000000)+'M' : (currentTier.minBalance/1000)+'K' }}</strong>
-                        · Current balance <strong>${{ portfolio.usdBalance.toLocaleString('en-US', {maximumFractionDigits:2}) }}</strong>
+                        · Current balance <strong>{{ balanceLoaded ? '$' + portfolio.usdBalance.toLocaleString('en-US', {maximumFractionDigits:2}) : '—' }}</strong>
                     </div>
 
                     <label>Stake Amount (USD)</label>
@@ -1641,6 +1644,11 @@ createApp({
         // Trade page state
         const currentUser    = ref(null);
         const portfolio      = ref({ usdBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] });
+        // Distinguishes "we have really loaded a balance" from the zeroed default,
+        // and tracks whether the last portfolio fetch failed (API 503 / network).
+        // These stop a transient backend blip from flashing the user's balance to $0.
+        const balanceLoaded  = ref(false);
+        const connectionLost = ref(false);
         const supportedCoins = ref([]);
         const selectedCoin   = ref('');
         const tradeAmount    = ref(null);
@@ -2239,6 +2247,9 @@ createApp({
             if (!portfolio.value.totalTrades) return 0;
             return ((portfolio.value.totalWon / portfolio.value.totalTrades) * 100).toFixed(1);
         });
+        // Headline balance text: show a dash placeholder until a balance has genuinely
+        // loaded, so a backend outage never presents a confident "$0.00".
+        const balanceText = computed(() => balanceLoaded.value ? '$' + portfolio.value.usdBalance.toFixed(2) : '—');
         const filteredCoins = computed(() => {
             if (!searchQuery.value) return supportedCoins.value;
             const q = searchQuery.value.toLowerCase();
@@ -2273,7 +2284,12 @@ createApp({
 
         // Supabase helpers
         const getUserPortfolio = async (userId) => {
-            const { data: pd }      = await sbClient.from('portfolios').select('*').eq('user_id', userId).single();
+            const { data: pd, error: pErr } = await sbClient.from('portfolios').select('*').eq('user_id', userId).single();
+            // A transport/API failure (503, network drop) must NOT be silently read as
+            // "balance 0". PGRST116 = "no row" is the only legitimate empty case
+            // (brand-new user before their portfolio row is created). Anything else is a
+            // real failure — throw so callers keep the last-known-good balance on screen.
+            if (pErr && pErr.code !== 'PGRST116') throw pErr;
             const { data: active }  = await sbClient.from('positions').select('*').eq('user_id', userId).eq('status', 'Active').order('created_at', { ascending: false });
             const { data: history } = await sbClient.from('positions').select('*').eq('user_id', userId).in('status', ['Won', 'Lost']).order('settled_at', { ascending: false }).limit(50);
             const mapPos = p => ({
@@ -2312,8 +2328,18 @@ createApp({
                 await sbClient.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
             }
             currentUser.value = { id: user.id, walletAddress: user.wallet_address, username: user.username, displayName: user.display_name };
-            portfolio.value = await getUserPortfolio(user.id);
-            await loadTransactionHistory();
+            try {
+                portfolio.value = await getUserPortfolio(user.id);
+                balanceLoaded.value = true;
+                connectionLost.value = false;
+                await loadTransactionHistory();
+            } catch (e) {
+                // Don't let a backend blip during login seat a misleading $0 balance or
+                // block sign-in. balanceLoaded stays false so the UI shows "—" (loading),
+                // not "$0.00"; the 8s refresh loop will fill it in once the API recovers.
+                connectionLost.value = true;
+                console.warn('Initial portfolio load failed — will retry on next refresh:', e);
+            }
             editDisplayName.value = user.display_name || '';
             editUsername.value = user.username || '';
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId: user.id, walletAddress: address }));
@@ -2324,16 +2350,33 @@ createApp({
         const connectWallet = async () => {
             isConnecting.value = true;
             try {
-                if (typeof window.ethereum !== 'undefined') {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    if (accounts?.[0]) { await loginWithWallet(accounts[0]); closeModal(); return; }
+                let walletAddress = null;
+                // Best-effort wallet handshake. In some in-app wallet browsers (notably
+                // Trust Wallet) eth_requestAccounts can reject INSTANTLY without ever
+                // showing the approval prompt. That must NOT dead-end the user, so we
+                // isolate it in its own try/catch and fall back to guest login below —
+                // the same path a normal browser (no injected wallet) already uses.
+                if (window.ethereum && typeof window.ethereum.request === 'function') {
+                    try {
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        if (accounts && accounts[0]) walletAddress = accounts[0];
+                    } catch (walletErr) {
+                        console.warn('Wallet handshake failed, using guest login:', walletErr);
+                    }
                 }
-                await new Promise(r => setTimeout(r, 1200));
-                const demo = '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                await loginWithWallet(demo);
+                if (!walletAddress) {
+                    // Guest identity (persisted in localStorage for return visits).
+                    walletAddress = '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join('');
+                }
+                await loginWithWallet(walletAddress);
                 closeModal();
-            } catch (err) { console.error(err); showToast('Connection failed, please try again', 'error'); }
-            finally { isConnecting.value = false; }
+            } catch (err) {
+                console.error(err);
+                // Surface the actual reason (visible on mobile where the console isn't),
+                // so a genuine failure can be diagnosed instead of a generic message.
+                const reason = (err && (err.message || err.error_description || err.hint || err.code)) || String(err);
+                showToast('Connection failed: ' + reason, 'error');
+            } finally { isConnecting.value = false; }
         };
 
         const handleAccountClick = () => { openModal(currentUser.value ? 'modal-profile' : 'modal-wallet'); };
@@ -2341,6 +2384,8 @@ createApp({
             teardownSupport();
             currentUser.value = null;
             portfolio.value = { usdBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
+            balanceLoaded.value = false;
+            connectionLost.value = false;
             localStorage.removeItem(STORAGE_KEY);
             closeModal();
             showToast('Disconnected');
@@ -2494,9 +2539,18 @@ createApp({
         };
 
         const fetchPortfolio = async () => {
-            if (currentUser.value) {
+            if (!currentUser.value) return;
+            try {
                 portfolio.value = await getUserPortfolio(currentUser.value.id);
+                balanceLoaded.value = true;
+                connectionLost.value = false;
                 await loadTransactionHistory();
+            } catch (e) {
+                // Backend blip (e.g. PostgREST 503). Keep the last known-good balance and
+                // positions on screen rather than flashing $0, and flag the stale state so
+                // the UI can tell the user it's a connection issue, not a real zero balance.
+                connectionLost.value = true;
+                console.warn('Portfolio refresh failed — keeping last-known balance:', e);
             }
         };
 
@@ -2656,8 +2710,14 @@ createApp({
                 const amount = parseFloat(tradeAmount.value);
                 const totalDeduct = totalCost.value; // principal + fees
 
-                const { data: pd } = await sbClient.from('portfolios').select('usd_balance').eq('user_id', currentUser.value.id).single();
-                if (!pd || parseFloat(pd.usd_balance) < totalDeduct) {
+                const { data: pd, error: balErr } = await sbClient.from('portfolios').select('usd_balance').eq('user_id', currentUser.value.id).single();
+                if (balErr || !pd) {
+                    // Couldn't reach the backend to confirm balance — fail safe without
+                    // pretending the user is broke.
+                    connectionLost.value = true;
+                    tradeStatus.value = 'Connection error, please try again'; showToast('Connection error, please try again', 'error'); return;
+                }
+                if (parseFloat(pd.usd_balance) < totalDeduct) {
                     tradeStatus.value = 'Insufficient balance (incl. fees)'; showToast('Insufficient balance (incl. fees)', 'error'); return;
                 }
                 // Deduct total (principal + fees)
@@ -3136,7 +3196,7 @@ createApp({
             // Toast
             toast,
             // Trade
-            currentUser, portfolio, supportedCoins, selectedCoin, tradeAmount, tradeStatus,
+            currentUser, portfolio, balanceLoaded, connectionLost, balanceText, supportedCoins, selectedCoin, tradeAmount, tradeStatus,
             trading, searchQuery, filteredCoins, showWalletModal, showProfileModal, isConnecting,
             showCoinPicker, selectedCoinData,
             tradeDuration, TRADE_TIERS, currentTier, payoutRate, estimatedPayout, tierUnlocked, selectDuration,
