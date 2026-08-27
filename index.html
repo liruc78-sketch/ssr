@@ -2350,33 +2350,16 @@ createApp({
         const connectWallet = async () => {
             isConnecting.value = true;
             try {
-                let walletAddress = null;
-                // Best-effort wallet handshake. In some in-app wallet browsers (notably
-                // Trust Wallet) eth_requestAccounts can reject INSTANTLY without ever
-                // showing the approval prompt. That must NOT dead-end the user, so we
-                // isolate it in its own try/catch and fall back to guest login below —
-                // the same path a normal browser (no injected wallet) already uses.
-                if (window.ethereum && typeof window.ethereum.request === 'function') {
-                    try {
-                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                        if (accounts && accounts[0]) walletAddress = accounts[0];
-                    } catch (walletErr) {
-                        console.warn('Wallet handshake failed, using guest login:', walletErr);
-                    }
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    if (accounts?.[0]) { await loginWithWallet(accounts[0]); closeModal(); return; }
                 }
-                if (!walletAddress) {
-                    // Guest identity (persisted in localStorage for return visits).
-                    walletAddress = '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                }
-                await loginWithWallet(walletAddress);
+                await new Promise(r => setTimeout(r, 1200));
+                const demo = '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join('');
+                await loginWithWallet(demo);
                 closeModal();
-            } catch (err) {
-                console.error(err);
-                // Surface the actual reason (visible on mobile where the console isn't),
-                // so a genuine failure can be diagnosed instead of a generic message.
-                const reason = (err && (err.message || err.error_description || err.hint || err.code)) || String(err);
-                showToast('Connection failed: ' + reason, 'error');
-            } finally { isConnecting.value = false; }
+            } catch (err) { console.error(err); showToast('Connection failed, please try again', 'error'); }
+            finally { isConnecting.value = false; }
         };
 
         const handleAccountClick = () => { openModal(currentUser.value ? 'modal-profile' : 'modal-wallet'); };
