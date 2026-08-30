@@ -105,6 +105,9 @@
         .wallet-option-info span { font-size: 0.78em; color: var(--text-dim); }
         .modal-close { width: 100%; margin-top: 16px; background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; padding: 10px; cursor: pointer; font-size: 0.88em; transition: all 0.2s; font-family: 'Inter', sans-serif; }
         .modal-close:hover { border-color: var(--red); color: var(--red); }
+        .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .modal-x { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; margin: -8px -8px 0 8px; background: none; border: none; border-radius: 8px; color: var(--text-dim); font-size: 1.7em; line-height: 1; cursor: pointer; transition: all 0.2s; }
+        .modal-x:hover { color: var(--red); background: var(--surface2); }
         .profile-section { margin-bottom: 20px; }
         .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 1.6em; font-weight: bold; margin: 0 auto 14px; }
         .profile-wallet { text-align: center; font-family: 'Space Mono', monospace; font-size: 0.78em; color: var(--text-dim); margin-bottom: 20px; word-break: break-all; }
@@ -728,7 +731,10 @@
     <!-- Profile Modal -->
     <div class="modal-overlay" v-if="showProfileModal" @click.self="closeModal">
         <div class="modal">
-            <h2>Account Info</h2>
+            <div class="modal-head">
+                <h2>Account Info</h2>
+                <button class="modal-x" @click="closeModal" aria-label="Close" title="Close">&times;</button>
+            </div>
             <div class="profile-section">
                 <div class="profile-avatar">{{ userInitial }}</div>
                 <div class="profile-wallet">{{ currentUser?.walletAddress }}</div>
@@ -2370,7 +2376,13 @@ createApp({
             balanceLoaded.value = false;
             connectionLost.value = false;
             localStorage.removeItem(STORAGE_KEY);
-            closeModal();
+            // Close the profile modal deterministically. closeModal() relies on
+            // history.back(), which is a no-op in some in-app browsers and would
+            // leave this modal stuck open showing a logged-out ("?" / "—") state.
+            showProfileModal.value = false;
+            if (window.location.hash) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
             showToast('Disconnected');
         };
         const saveProfile = async () => {
