@@ -2183,12 +2183,31 @@ createApp({
 
         // Routing & history management (hash mode)
         const openModal = (modalName) => { window.location.hash = modalName; };
+        const forceCloseAll = () => {
+            showWalletModal.value = false; showProfileModal.value = false; showTradeModal.value = false; showMarketDetail.value = false; showWalletPage.value = false; showWithdrawModal.value = false; showWithdrawDetailModal.value = false; showSupportModal.value = false;
+        };
         const closeModal = () => {
-            if (window.location.hash.startsWith('#modal-') || window.location.hash === '#market-detail' || window.location.hash === '#wallet-page') {
-                window.history.back();
-            } else {
-                showWalletModal.value = false; showProfileModal.value = false; showTradeModal.value = false; showMarketDetail.value = false; showWalletPage.value = false; showWithdrawModal.value = false; showWithdrawDetailModal.value = false; showSupportModal.value = false;
-            }
+            const hash = window.location.hash;
+            const routed = hash.startsWith('#modal-') || hash === '#market-detail' || hash === '#wallet-page';
+            if (!routed) { forceCloseAll(); return; }
+            // Preferred path: pop the routed history entry so the underlying view
+            // is restored and the hardware/browser back button stays in sync.
+            // But history.back() is a no-op in some in-app / wallet browsers,
+            // which would leave the modal stuck open (the X button doing nothing).
+            // Detect that by watching for the hashchange back() should trigger;
+            // if it never comes, force the view closed and reset the URL.
+            let navigated = false;
+            const onChange = () => { navigated = true; window.removeEventListener('hashchange', onChange); };
+            window.addEventListener('hashchange', onChange);
+            window.history.back();
+            window.setTimeout(() => {
+                window.removeEventListener('hashchange', onChange);
+                if (navigated) return;
+                forceCloseAll();
+                if (window.location.hash) {
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+            }, 150);
         };
 
         const handleHashChange = async () => {
