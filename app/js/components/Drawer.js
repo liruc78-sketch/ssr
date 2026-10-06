@@ -1,7 +1,7 @@
 // Side drawer — full menu, account card, Live/Simulated toggle
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
-import { store, closeDrawer, setMode, toast, toggleTheme } from '../store.js';
+import { store, closeDrawer, setMode, toast, toggleTheme, logout } from '../store.js';
 
 export default {
     name: 'Drawer',
@@ -41,7 +41,8 @@ export default {
         const initials = () => (store.session?.displayName || store.session?.username || 'U').trim().charAt(0).toUpperCase();
         const handle = () => store.session?.phone || store.session?.email || store.session?.username || '';
         const maskHandle = () => { const h = handle(); return h.length > 6 ? h.slice(0, 3) + '****' + h.slice(-2) : h; };
-        return { store, nav, closeDrawer, groups, toggleMode, initials, maskHandle, toggleTheme };
+        const doLogout = () => { logout(); closeDrawer(); toast('Logged out', 'info'); go('/'); };
+        return { store, nav, closeDrawer, groups, toggleMode, initials, maskHandle, toggleTheme, doLogout };
     },
     template: /*html*/`
     <div class="drawer" role="dialog" aria-label="Menu">
@@ -102,7 +103,7 @@ export default {
 
         <div class="drawer__section" v-if="store.isAuthed">
             <button class="btn btn--ghost btn--block" style="justify-content:flex-start; gap:12px; color:var(--down)"
-                    @click="nav('/login')">
+                    @click="doLogout">
                 <Icon name="logout" /> Log out
             </button>
         </div>

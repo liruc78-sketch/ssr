@@ -49,6 +49,17 @@ export function setMode(mode) {
 export function openDrawer()  { store.drawerOpen = true;  document.body.style.overflow = 'hidden'; }
 export function closeDrawer() { store.drawerOpen = false; document.body.style.overflow = ''; }
 
+// Session (demo): persisted under STORAGE_KEY, shared with the legacy site's key.
+// Real auth wiring (Supabase / edge function) replaces login() per the backend phase.
+export function login(session) {
+    store.session = session;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); } catch {}
+}
+export function logout() {
+    store.session = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+}
+
 export function toast(msg, type = 'info', ms = 2600) {
     store.toast = { show: true, msg, type };
     clearTimeout(store._toastTimer);
