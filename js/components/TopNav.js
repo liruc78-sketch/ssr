@@ -26,7 +26,7 @@ export default {
     template: /*html*/`
     <header class="topnav">
         <a class="brand" href="#/" @click.prevent="go('/')">
-            <span class="brand__mark">C</span>
+            <img class="brand__logo" src="crypto-ssr-icon.svg" alt="" width="32" height="32" draggable="false" />
             <span class="brand__name">Crypto<b>.ssr</b></span>
         </a>
         <nav class="topnav__links" aria-label="Primary">

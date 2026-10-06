@@ -1,6 +1,7 @@
 // Finance / Earn — Current & AI-Quant products, My Holding, Subscribe sheet
 import { ref, computed, watch, onMounted } from 'vue';
 import { Icon } from '../icons.js';
+import { CoinIcon } from '../components/CoinIcon.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { FINANCE_PRODUCTS, genSpark, fmtAmt } from '../data.js';
@@ -8,7 +9,7 @@ import { subscribeFinance, loadHoldings, redeemSubscription, FINANCE_MIN_USD } f
 
 export default {
     name: 'Finance',
-    components: { Icon },
+    components: { Icon, CoinIcon },
     setup() {
         const tab = ref('current');        // current | quant | holding
         const products = computed(() => FINANCE_PRODUCTS.filter(p => p.cat === tab.value));
@@ -81,7 +82,7 @@ export default {
         <div v-if="tab !== 'holding'" class="fin__list">
             <div v-for="p in products" :key="p.id" class="card fin__card">
                 <div class="fin__card-top">
-                    <span class="fin__coin" :style="{ background: p.color }">{{ p.asset.slice(0,1) }}</span>
+                    <CoinIcon :sym="p.asset" :color="p.color" cls="fin__coin" />
                     <div class="fin__id">
                         <b>{{ p.asset }} · {{ p.name }}</b>
                         <div class="fin__badges">

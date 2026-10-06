@@ -1,9 +1,11 @@
 // Markets — category tabs, search, watchlist, live crypto prices
 import { ref, computed, onMounted } from 'vue';
 import { Icon } from '../icons.js';
+import { CoinIcon } from '../components/CoinIcon.js';
 import { go, router } from '../router.js';
 import { COINS, US_STOCKS, FX, CATEGORIES, fetchTickers, fmtPrice, fmtChg } from '../data.js';
 
+const CRYPTO_SYMS = new Set(COINS.map(c => c.sym));
 const WATCH_KEY = 'ssr_watch';
 function loadWatch() {
     try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) || 'null'); return new Set(v || COINS.map(c => c.sym)); }
@@ -12,7 +14,7 @@ function loadWatch() {
 
 export default {
     name: 'Market',
-    components: { Icon },
+    components: { Icon, CoinIcon },
     setup() {
         const cat = ref(['us', 'fx', 'crypto', 'watch'].includes(router.query.cat) ? router.query.cat : 'crypto');
         const query = ref('');
@@ -44,7 +46,7 @@ export default {
         };
         const open = (c) => go('/coin?sym=' + c.sym);
 
-        return { cat, query, CATEGORIES, list, isWatched, toggleWatch, open, go, fmtPrice, fmtChg };
+        return { cat, query, CATEGORIES, list, isWatched, toggleWatch, open, go, fmtPrice, fmtChg, CRYPTO_SYMS };
     },
     template: /*html*/`
     <section class="market">
@@ -68,7 +70,7 @@ export default {
             </div>
             <button v-for="c in list" :key="c.sym" class="market__row" @click="open(c)">
                 <span class="market__pair">
-                    <span class="market__ico" :style="{ background: c.color }">{{ c.sym.slice(0,1) }}</span>
+                    <CoinIcon :sym="c.sym" :color="c.color" :crypto="CRYPTO_SYMS.has(c.sym)" cls="market__ico" />
                     <span class="market__id"><b>{{ c.sym }}</b><span class="muted" style="font-size:var(--fs-caption)">{{ c.name }}</span></span>
                 </span>
                 <span class="market__px num">{{ fmtPrice(c.price) }}</span>

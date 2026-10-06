@@ -43,8 +43,90 @@
       }
     }
     </script>
+
+    <!-- Intro overlay animation (plays once per session, follows the theme set above) -->
+    <style>
+        #ssr-intro {
+            position: fixed; inset: 0; z-index: 99999;
+            background: #0b0e14;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 1; transition: opacity .7s ease;
+        }
+        :root[data-theme="light"] #ssr-intro { background: #f5f7fb; }
+        :root[data-theme="light"] #ssr-intro .spath { stroke: url(#introSGLight); }
+        :root[data-theme="light"] #ssr-intro .scap  { fill: #64748B; }
+        :root[data-theme="light"] #ssr-intro .t-dim { fill: #94A3B8; }
+        #ssr-intro.done { opacity: 0; pointer-events: none; }
+        #ssr-intro svg { width: min(420px, 78vw); height: auto; }
+        #ssr-intro .cring,
+        #ssr-intro .spath,
+        #ssr-intro .uline { stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; }
+        #ssr-intro .scap,
+        #ssr-intro .word,
+        #ssr-intro .glow  { opacity: 0; }
+        #ssr-intro .cube  { opacity: 0; transform: scale(0); transform-box: fill-box; transform-origin: center; }
+        #ssr-intro .word  { transform-box: fill-box; transform-origin: center; }
+        @keyframes ssr-draw { to { stroke-dashoffset: 0; } }
+        @keyframes ssr-fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes ssr-pop  { from { opacity: 0; transform: scale(0) } 60% { opacity: 1; transform: scale(1.15) } to { opacity: 1; transform: scale(1) } }
+        @keyframes ssr-rise { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+        #ssr-intro .cring { animation: ssr-fade .25s ease forwards,        ssr-draw 1s ease .1s forwards; }
+        #ssr-intro .spath { animation: ssr-fade .25s ease .6s forwards,    ssr-draw .8s ease .65s forwards; }
+        #ssr-intro .scap  { animation: ssr-fade .4s  ease 1.35s forwards; }
+        #ssr-intro .cube  { animation: ssr-pop  .55s cubic-bezier(.2,.8,.3,1.2) 1.25s forwards; }
+        #ssr-intro .glow  { animation: ssr-fade .6s  ease 1.4s forwards; }
+        #ssr-intro .word  { animation: ssr-rise .6s  ease 1.7s forwards; }
+        #ssr-intro .uline { animation: ssr-fade .2s  ease 1.95s forwards, ssr-draw .7s ease 2s forwards; }
+        @media (prefers-reduced-motion: reduce) {
+            #ssr-intro .cring, #ssr-intro .spath, #ssr-intro .uline { stroke-dashoffset: 0; opacity: 1; animation: none; }
+            #ssr-intro .scap, #ssr-intro .word, #ssr-intro .glow { opacity: 1; animation: none; }
+            #ssr-intro .cube { opacity: 1; transform: scale(1); animation: none; }
+        }
+    </style>
 </head>
 <body>
+    <!-- ===== Intro overlay animation (plays once per session) ===== -->
+    <div id="ssr-intro" aria-label="Crypto.ssr loading">
+        <svg viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg" role="img">
+            <title>Crypto.ssr</title>
+            <defs>
+                <linearGradient id="introBG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A8AF0"/><stop offset="1" stop-color="#1450A8"/></linearGradient>
+                <linearGradient id="introSG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2F4F7"/><stop offset="0.5" stop-color="#C3C9D2"/><stop offset="1" stop-color="#969DA8"/></linearGradient>
+                <linearGradient id="introSGLight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#94A3B8"/><stop offset="0.5" stop-color="#64748B"/><stop offset="1" stop-color="#475569"/></linearGradient>
+                <radialGradient id="introGG" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#E0A21E" stop-opacity="0.45"/><stop offset="1" stop-color="#E0A21E" stop-opacity="0"/></radialGradient>
+            </defs>
+            <ellipse class="glow" cx="300" cy="252" rx="150" ry="14" fill="url(#introGG)"/>
+            <path class="cring" pathLength="100" d="M340.15 117.66 A70 70 0 1 0 340.15 232.34" fill="none" stroke="url(#introBG)" stroke-width="22" stroke-linecap="round"/>
+            <g transform="translate(300,176) scale(1.05)">
+                <path class="spath" pathLength="100" d="M13 -16 C11 -23 4 -26 -2 -25 C-11 -24 -15 -18 -14 -11 C-13 -1 13 -3 14 8 C15 19 7 26 -2 26 C-10 26 -15 21 -15 14" fill="none" stroke="url(#introSG)" stroke-width="8" stroke-linecap="round"/>
+                <circle class="scap" cx="13" cy="-16" r="3" fill="#EDEFF2"/>
+                <circle class="scap" cx="-15" cy="14" r="3" fill="#EDEFF2"/>
+                <g class="cube">
+                    <polygon points="0,-9 9,-4.5 0,0 -9,-4.5" fill="#FFD24A"/>
+                    <polygon points="-9,-4.5 0,0 0,11 -9,6.5" fill="#C8860E"/>
+                    <polygon points="9,-4.5 0,0 0,11 9,6.5" fill="#E5A81C"/>
+                </g>
+            </g>
+            <text class="word" x="300" y="330" text-anchor="middle" style="font-size:40px;font-weight:600;font-family:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif"><tspan fill="#3A8AF0">Crypto</tspan><tspan class="t-dim" fill="#C7CDD6">.ssr</tspan></text>
+            <line class="uline" pathLength="100" x1="192" y1="345" x2="328" y2="345" stroke="#E0A21E" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+    </div>
+    <script>
+        (function () {
+            var intro = document.getElementById('ssr-intro');
+            if (!intro) return;
+            try {
+                if (sessionStorage.getItem('ssrIntroShown')) { intro.remove(); return; }
+                sessionStorage.setItem('ssrIntroShown', '1');
+            } catch (e) { /* sessionStorage unavailable: just play once */ }
+            var HOLD = 3000;
+            setTimeout(function () {
+                intro.classList.add('done');
+                intro.addEventListener('transitionend', function () { intro.remove(); }, { once: true });
+            }, HOLD);
+        })();
+    </script>
+
     <div id="app"></div>
     <script type="module" src="js/main.js"></script>
 </body>

@@ -1,12 +1,13 @@
 // Home — landing dashboard
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Icon } from '../icons.js';
+import { CoinIcon } from '../components/CoinIcon.js';
 import { go } from '../router.js';
 import { COINS, fmtPrice, fmtChg, genFeed, FAQ } from '../data.js';
 
 export default {
     name: 'Home',
-    components: { Icon },
+    components: { Icon, CoinIcon },
     setup() {
         const actions = [
             { icon: 'deposit',  label: 'Deposit',  path: '/deposit' },
@@ -70,7 +71,7 @@ export default {
         </div>
         <div class="quotes card">
             <button v-for="c in coins" :key="c.sym" class="quote" @click="go('/coin?sym=' + c.sym)">
-                <span class="quote__ico" :style="{ background: c.color }">{{ c.sym.slice(0,1) }}</span>
+                <CoinIcon :sym="c.sym" :color="c.color" cls="quote__ico" />
                 <span class="quote__id">
                     <b>{{ c.sym }}</b>
                     <span class="muted num" style="font-size:var(--fs-caption)">Vol {{ c.vol }}</span>
@@ -116,7 +117,7 @@ export default {
 
         <!-- Footer -->
         <footer class="home-footer">
-            <div class="brand"><span class="brand__mark">C</span><span class="brand__name">Crypto<b>.ssr</b></span></div>
+            <div class="brand"><img class="brand__logo" src="crypto-ssr-icon.svg" alt="" width="30" height="30" draggable="false" /><span class="brand__name">Crypto<b>.ssr</b></span></div>
             <p class="muted" style="font-size:var(--fs-small); margin-top:8px">Your next-generation trading platform.</p>
             <p class="faint" style="font-size:var(--fs-caption); margin-top:12px">© 2026 Crypto.ssr · Trade responsibly. Markets carry risk.</p>
         </footer>

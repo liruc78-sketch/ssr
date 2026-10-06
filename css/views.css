@@ -51,6 +51,9 @@
 .quote + .quote { border-top: 1px solid var(--border-2); }
 .quote:hover { background: var(--surface-2); }
 .quote__ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: var(--font-display); }
+/* CoinIcon: real artwork fills the size class; the colored-initial fallback keeps the old look. */
+img.coin-ic { object-fit: cover; }
+.coin-ic--fallback { font-size: 0.82em; letter-spacing: -0.01em; }
 .quote__id { display: flex; flex-direction: column; gap: 1px; }
 .quote__id b { font-size: var(--fs-body); }
 .quote__px { font-weight: 600; font-size: var(--fs-body); }
