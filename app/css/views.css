@@ -221,6 +221,31 @@
 
 .trade__ledger { margin-top: var(--sp-6); border-top: 1px solid var(--border); padding-top: var(--sp-3); }
 
+/* ============================ ASSETS / WALLET =========================== */
+.wallet { padding: var(--sp-5); }
+.wallet__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.wallet__total { font-size: var(--fs-h1); font-weight: 700; margin-top: 2px; }
+.donut { flex: none; }
+.wallet__legend { display: flex; gap: var(--sp-5); margin-top: var(--sp-4); flex-wrap: wrap; font-size: var(--fs-small); color: var(--text-2); }
+.wallet__legend div { display: flex; align-items: center; gap: 6px; }
+.wallet__legend b { color: var(--text); }
+.dotc { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.subacct { padding: var(--sp-5); border-bottom: 1px solid var(--border-2); }
+
+/* ============================ PAY FORMS (deposit/withdraw/transfer) ====== */
+.pay__card { padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-4); }
+.pay__qr { display: grid; place-items: center; padding: var(--sp-2); }
+.pay__qr img { border-radius: var(--r-sm); border: 1px solid var(--border); }
+.paystep { display: flex; flex-direction: column; gap: var(--sp-2); }
+select.field { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2398a2b3' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 18px; padding-right: 40px; }
+.addr { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3); background: var(--surface-2); border-radius: var(--r-sm); }
+.addr__val { flex: 1; min-width: 0; font-size: var(--fs-small); word-break: break-all; }
+.note { display: flex; gap: var(--sp-2); font-size: var(--fs-caption); color: var(--text-3); background: var(--gold-weak); padding: var(--sp-3); border-radius: var(--r-sm); line-height: 1.5; }
+.note svg { flex: none; color: var(--gold); margin-top: 1px; }
+.payline { display: flex; justify-content: space-between; font-size: var(--fs-small); }
+.xfer__swap { display: flex; justify-content: center; margin: calc(-1 * var(--sp-2)) 0; }
+.xfer__swap .iconbtn { background: var(--surface-2); transform: rotate(90deg); }
+
 /* ---- Desktop refinements ------------------------------------------------ */
 @media (min-width: 1024px) {
     .quickrow { max-width: 560px; }
