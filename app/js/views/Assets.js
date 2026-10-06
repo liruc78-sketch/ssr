@@ -16,15 +16,13 @@ export default {
             { k: 'trading', l: 'Trading Account' },
             { k: 'finance', l: 'Finance' },
         ];
-        // No backend balances yet -> zeroed sub-accounts (UI-first).
-        const accounts = computed(() => {
-            const b = store.isAuthed ? (store.session || {}) : {};
-            return {
-                spot: +(b.spotBalance || 0),
-                trading: +(b.tradingBalance || 0),
-                finance: +(b.financeBalance || 0),
-            };
-        });
+        // Backend tracks a single usd_balance -> shown as the Spot account.
+        // Trading/Finance sub-accounts aren't tracked server-side yet (show 0).
+        const accounts = computed(() => ({
+            spot: store.isAuthed ? store.portfolio.usdBalance : 0,
+            trading: 0,
+            finance: 0,
+        }));
         const total = computed(() => accounts.value.spot + accounts.value.trading + accounts.value.finance);
         const segs = computed(() => {
             const t = total.value || 1;

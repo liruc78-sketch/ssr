@@ -16,7 +16,7 @@ export default {
         const mode = ref(['spot', 'perp', 'options'].includes(router.query.mode) ? router.query.mode : 'spot');
 
         const price = ref(coin?.price || 0);
-        const balance = computed(() => store.isAuthed ? (store.session?.usdBalance || 0) : 0);
+        const balance = computed(() => store.isAuthed ? store.portfolio.usdBalance : 0);
 
         // shared order form
         const f = reactive({ side: 'buy', type: 'market', price: '', amount: '', lev: 10, tpsl: false, tp: '', sl: '' });

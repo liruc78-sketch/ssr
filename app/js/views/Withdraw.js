@@ -16,7 +16,8 @@ export default {
         const network = ref('TRC20');
         const amount = ref('');
         const address = ref('');
-        const balance = computed(() => store.isAuthed ? +(store.session?.spotBalance || 0) : 0);
+        // Backend tracks a single USD balance -> available for USDT withdrawals.
+        const balance = computed(() => (store.isAuthed && currency.value === 'USDT') ? store.portfolio.usdBalance : 0);
         const nets = computed(() => NETWORKS[currency.value] || ['ERC20']);
         const arrival = computed(() => { const a = parseFloat(amount.value) || 0; return Math.max(0, a - a * FEE); });
 

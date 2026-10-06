@@ -16,7 +16,7 @@ export default {
         const priceOf = (s) => s === 'USDT' ? 1 : (findSym(s)?.price || 0);
         const rate = computed(() => { const p = priceOf(to.value); return p ? priceOf(from.value) / p : 0; });
         const outAmount = computed(() => { const a = parseFloat(amount.value) || 0; return a * rate.value; });
-        const available = computed(() => store.isAuthed ? 0 : 0);
+        const available = computed(() => (store.isAuthed && from.value === 'USDT') ? store.portfolio.usdBalance : 0);
 
         const swap = () => { const t = from.value; from.value = to.value; to.value = t; };
         const exchange = () => {

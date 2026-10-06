@@ -1,8 +1,10 @@
-// Sign in / Register — email/phone + password, wallet login (demo session)
+// Sign in / Register — wallet connect (shared backend) + real email/password
+// (Supabase Auth). Phone sign-in needs an SMS provider, so it stays pending.
 import { ref } from 'vue';
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
-import { login, toast } from '../store.js';
+import { toast } from '../store.js';
+import { connectWallet, signInEmail, signUpEmail } from '../auth.js';
 
 export default {
     name: 'Login',
@@ -13,31 +15,48 @@ export default {
         const password = ref('');
         const showPw = ref(false);
         const register = ref(false);
+        const connecting = ref(false);
+        const busy = ref(false);
 
-        // Demo session. Real auth (Supabase / edge function) is wired in the backend phase.
-        const makeSession = (via) => ({
-            uid: String(700000 + Math.floor(Math.random() * 99999)),
-            handle: handle.value || (via === 'wallet' ? '0x' + Math.random().toString(16).slice(2, 10) : 'user'),
-            via,
-            creditScore: 100,
-            verified: false,
-            usdBalance: 0, spotBalance: 0, tradingBalance: 0, financeBalance: 0,
-        });
-        const submit = () => {
-            if (!handle.value) { toast('Enter your ' + (method.value === 'email' ? 'email' : 'phone'), 'error'); return; }
-            if (!register.value && !password.value) { toast('Enter your password', 'error'); return; }
-            login(makeSession(method.value));
-            toast(register.value ? 'Account created (demo)' : 'Signed in (demo)', 'success');
-            go('/');
+        const walletLogin = async () => {
+            connecting.value = true;
+            try { await connectWallet(); toast('Wallet connected', 'success'); go('/'); }
+            catch (e) { console.error(e); toast('Wallet connection failed, please try again', 'error'); }
+            finally { connecting.value = false; }
         };
-        const walletLogin = () => { login(makeSession('wallet')); toast('Wallet connected (demo)', 'success'); go('/'); };
-        const forgot = () => toast('Password reset — coming with backend auth', 'info');
 
-        return { method, handle, password, showPw, register, submit, walletLogin, forgot, go };
+        const submit = async () => {
+            if (method.value === 'phone') { toast('Phone sign-in is coming soon — use email or your wallet', 'info', 3400); return; }
+            if (!handle.value) { toast('Enter your email', 'error'); return; }
+            if (!password.value || password.value.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+            busy.value = true;
+            try {
+                await (register.value ? signUpEmail : signInEmail)(handle.value.trim(), password.value);
+                toast(register.value ? 'Account created' : 'Signed in', 'success');
+                go('/');
+            } catch (e) {
+                const raw = e?.message || '';
+                const msg = /disabled|not enabled|provider|signups/i.test(raw)
+                    ? 'Email sign-in isn’t enabled on the backend yet — connect your wallet, or enable the Email provider in Supabase.'
+                    : (raw || 'Sign-in failed');
+                toast(msg, 'error', 4200);
+            } finally { busy.value = false; }
+        };
+        const forgot = () => toast('Password reset link — coming soon', 'info');
+
+        return { method, handle, password, showPw, register, connecting, busy, walletLogin, submit, forgot, go };
     },
     template: /*html*/`
     <section class="auth">
         <h1 class="auth__title">{{ register ? 'Create account' : 'Sign in' }}</h1>
+
+        <button class="btn btn--brand btn--block btn--lg" :disabled="connecting" @click="walletLogin">
+            <span v-if="connecting" class="spinner" style="border-top-color:#fff"></span>
+            <template v-else><Icon name="assets" :size="20" /> Connect wallet</template>
+        </button>
+        <p class="muted" style="text-align:center; font-size:var(--fs-caption)">Works with MetaMask, Trust and other Web3 wallets</p>
+
+        <div class="auth__or"><span>or use email</span></div>
 
         <div class="auth__methods">
             <button class="auth__m" :class="{ 'is-on': method === 'email' }" @click="method = 'email'">Email</button>
@@ -48,27 +67,24 @@ export default {
             <span class="eyebrow">{{ method === 'email' ? 'Email' : 'Phone number' }}</span>
             <input class="field" v-model="handle" :type="method === 'email' ? 'email' : 'tel'" :placeholder="method === 'email' ? 'you@example.com' : '+1 555 0100'" autocomplete="username" />
         </label>
-
         <label class="paystep">
-            <span class="eyebrow">{{ register ? 'Set a password' : 'Login password' }}</span>
+            <span class="eyebrow">{{ register ? 'Set a password (min 6 chars)' : 'Login password' }}</span>
             <div class="field" style="display:flex; align-items:center; gap:8px">
-                <input :type="showPw ? 'text' : 'password'" v-model="password" placeholder="Enter your password" autocomplete="current-password" style="flex:1; background:none; border:none; outline:none; color:var(--text)" />
+                <input :type="showPw ? 'text' : 'password'" v-model="password" placeholder="Enter your password" :autocomplete="register ? 'new-password' : 'current-password'" style="flex:1; background:none; border:none; outline:none; color:var(--text)" @keyup.enter="submit" />
                 <button class="pw-eye" @click="showPw = !showPw" type="button" :aria-label="showPw ? 'Hide' : 'Show'"><Icon :name="showPw ? 'user' : 'search'" :size="18" /></button>
             </div>
         </label>
-
         <div v-if="!register" style="text-align:right"><a class="auth__link" @click="forgot">Forgot password?</a></div>
 
         <p class="auth__legal">By continuing you agree to our <a>Terms of Service</a>, <a>Privacy Policy</a> and <a>AML Agreement</a>.</p>
-
-        <button class="btn btn--dark btn--block btn--lg" @click="submit">{{ register ? 'Create account' : 'Login' }}</button>
+        <button class="btn btn--dark btn--block btn--lg" :disabled="busy" @click="submit">
+            <span v-if="busy" class="spinner" style="border-top-color:#fff"></span>
+            <template v-else>{{ register ? 'Create account' : 'Login' }}</template>
+        </button>
 
         <p class="auth__switch">
             {{ register ? 'Already have an account?' : 'No account?' }}
             <a class="auth__link" @click="register = !register">{{ register ? 'Sign in' : 'Register' }}</a>
         </p>
-
-        <div class="auth__or"><span>or</span></div>
-        <button class="btn btn--ghost btn--block btn--lg" style="border:1px solid var(--border)" @click="walletLogin"><Icon name="assets" :size="20" /> Wallet login</button>
     </section>`,
 };
