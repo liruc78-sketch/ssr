@@ -32,6 +32,10 @@ export default {
         const faq = FAQ;
         const openFaq = ref(0);
 
+        // Home search → hands the query to the Market view.
+        const q = ref('');
+        const search = () => go('/market' + (q.value.trim() ? '?q=' + encodeURIComponent(q.value.trim()) : ''));
+
         const trust = [
             {
                 title: 'Enhanced security via encryption',
@@ -50,10 +54,18 @@ export default {
             },
         ];
 
-        return { actions, slides, slide, goSlide, coins, feed, faq, openFaq, trust, wallets: WALLETS, go, fmtPrice, fmtChg };
+        return { actions, slides, slide, goSlide, coins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg };
     },
     template: /*html*/`
     <section class="home">
+        <!-- Market search -->
+        <div class="home-search" @click="$refs.sx.focus()">
+            <Icon name="search" :size="18" />
+            <input ref="sx" v-model="q" type="search" inputmode="search" placeholder="Search the market here"
+                   @keyup.enter="search" aria-label="Search the market" />
+            <button v-if="q" class="home-search__go btn btn--brand btn--sm btn--pill" @click.stop="search">Search</button>
+        </div>
+
         <!-- Quick actions -->
         <div class="quickrow">
             <button v-for="a in actions" :key="a.label" class="quickrow__item" @click="go(a.path)">

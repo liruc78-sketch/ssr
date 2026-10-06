@@ -115,10 +115,7 @@
         (function () {
             var intro = document.getElementById('ssr-intro');
             if (!intro) return;
-            try {
-                if (sessionStorage.getItem('ssrIntroShown')) { intro.remove(); return; }
-                sessionStorage.setItem('ssrIntroShown', '1');
-            } catch (e) { /* sessionStorage unavailable: just play once */ }
+            // Plays on every page load / refresh (no once-per-session gate).
             var HOLD = 3000;
             setTimeout(function () {
                 intro.classList.add('done');

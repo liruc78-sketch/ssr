@@ -17,7 +17,7 @@ export default {
     components: { Icon, CoinIcon },
     setup() {
         const cat = ref(['us', 'fx', 'crypto', 'watch'].includes(router.query.cat) ? router.query.cat : 'crypto');
-        const query = ref('');
+        const query = ref(router.query.q || '');
         const coins = ref(COINS.map(c => ({ ...c })));   // live-updatable
         const watch = ref(loadWatch());
 
