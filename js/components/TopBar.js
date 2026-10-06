@@ -10,7 +10,7 @@ export default {
     template: /*html*/`
     <header class="topbar">
         <a class="brand" href="#/" @click.prevent="go('/')">
-            <span class="brand__mark">C</span>
+            <img class="brand__logo" src="crypto-ssr-icon.svg" alt="" width="30" height="30" draggable="false" />
             <span class="brand__name">Crypto<b>.ssr</b></span>
         </a>
         <div class="topbar__actions">

@@ -22,6 +22,12 @@
 
 /* ---- Brand lockup -------------------------------------------------------- */
 .brand { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; }
+.brand__logo {
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    display: block; object-fit: contain;
+    box-shadow: 0 2px 10px -3px rgba(10, 26, 64, 0.55);
+}
+/* Legacy text-mark fallback (kept so any remaining lockup still renders). */
 .brand__mark {
     width: 30px; height: 30px; border-radius: 9px;
     display: grid; place-items: center;
