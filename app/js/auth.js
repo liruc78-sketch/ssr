@@ -90,7 +90,8 @@ async function linkedUser(authUser, { email } = {}) {
 export async function signUpEmail(email, password) {
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
-    if (!data.user) throw new Error('Check your email to confirm your account, then sign in.');
+    // Email-confirmation ON -> no session yet; don't log in, prompt to confirm.
+    if (!data.session) throw new Error('Account created — check your email to confirm, then sign in.');
     const user = await linkedUser(data.user, { email });
     setSessionMem(sessionFromUser(user));
     try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }

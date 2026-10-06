@@ -36,10 +36,10 @@ export default {
                 go('/');
             } catch (e) {
                 const raw = e?.message || '';
-                const msg = /disabled|not enabled|provider|signups/i.test(raw)
-                    ? 'Email sign-in isn’t enabled on the backend yet — connect your wallet, or enable the Email provider in Supabase.'
-                    : (raw || 'Sign-in failed');
-                toast(msg, 'error', 4200);
+                if (/confirm|check your email/i.test(raw)) { toast(raw, 'info', 4600); }
+                else if (/disabled|not enabled|provider|signups/i.test(raw)) {
+                    toast('Email sign-in isn’t enabled on the backend yet — connect your wallet, or enable the Email provider in Supabase.', 'error', 4600);
+                } else { toast(raw || 'Sign-in failed', 'error', 4200); }
             } finally { busy.value = false; }
         };
         const forgot = () => toast('Password reset link — coming soon', 'info');
