@@ -4,7 +4,8 @@ import { Icon } from '../icons.js';
 import { go, router } from '../router.js';
 import { store } from '../store.js';
 import { toast } from '../store.js';
-import { findSym, fetchTickers, OPTION_TIERS, LEVERAGES, fmtNum, fmtPrice } from '../data.js';
+import { findSym, fetchTickers, COINS, OPTION_TIERS, LEVERAGES, fmtNum, fmtPrice } from '../data.js';
+import { openOptionPosition } from '../trade.js';
 import OrderBook from '../components/OrderBook.js';
 
 export default {
@@ -42,10 +43,30 @@ export default {
         });
 
         const needAuth = computed(() => !store.isAuthed);
+        // Spot/Perp execution is wired in a later step — demo for now.
         const act = (label) => {
             if (needAuth.value) { go('/login'); return; }
             toast(`${label} order placed (demo)`, 'success');
         };
+
+        // Options (binary) — real execution against positions + trade-settle.
+        const placing = ref(false);
+        const placeOption = async (type) => {
+            if (needAuth.value) { go('/login'); return; }
+            placing.value = true;
+            try {
+                await openOptionPosition({ coin, type, amount: o.amount, tier: activeTier.value });
+                toast(`${type === 'up' ? 'Up' : 'Down'} · ${activeTier.value.label} opened — settling in ${activeTier.value.sec}s`, 'success', 3200);
+                o.amount = '';
+                ledgerTab.value = 'open';
+            } catch (e) {
+                toast(e?.message || 'Could not place trade', 'error', 3400);
+            } finally { placing.value = false; }
+        };
+
+        const symOf = (cgId) => COINS.find(c => c.cg === cgId)?.sym || (cgId || '').toUpperCase();
+        const positions = computed(() => mode.value !== 'options' ? []
+            : (ledgerTab.value === 'hist' ? store.portfolio.positionHistory : store.portfolio.activePositions));
 
         const ledgerTabs = computed(() => mode.value === 'spot'
             ? [{ k: 'open', l: 'Current Order' }, { k: 'hist', l: 'Trade History' }, { k: 'assets', l: 'Assets' }]
@@ -53,8 +74,8 @@ export default {
                 ? [{ k: 'open', l: 'My Holding' }, { k: 'pos', l: 'Current Position' }, { k: 'hist', l: 'Transaction Records' }]
                 : [{ k: 'open', l: 'Positions' }, { k: 'hist', l: 'History' }]);
 
-        return { coin, MODES, mode, price, balance, f, o, ledgerTab, ledgerTabs, OPTION_TIERS, LEVERAGES,
-                 setPct, pickPrice, activeTier, tierLocked, optProfit, needAuth, act, go, fmtNum, fmtPrice, store };
+        return { coin, MODES, mode, price, balance, f, o, ledgerTab, ledgerTabs, OPTION_TIERS, LEVERAGES, positions, symOf,
+                 setPct, pickPrice, activeTier, tierLocked, optProfit, needAuth, act, placing, placeOption, go, fmtNum, fmtPrice, store };
     },
     template: /*html*/`
     <section class="trade">
@@ -168,8 +189,14 @@ export default {
                 <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">Log in or Register</button>
             </template>
             <div v-else class="opt__cta">
-                <button class="btn btn--up btn--lg" @click="act('Up (Long)')"><Icon name="withdraw" :size="20" /> Up</button>
-                <button class="btn btn--down btn--lg" @click="act('Down (Short)')"><Icon name="deposit" :size="20" /> Down</button>
+                <button class="btn btn--up btn--lg" :disabled="placing" @click="placeOption('up')">
+                    <span v-if="placing" class="spinner" style="border-top-color:#fff"></span>
+                    <template v-else><Icon name="withdraw" :size="20" /> Up</template>
+                </button>
+                <button class="btn btn--down btn--lg" :disabled="placing" @click="placeOption('down')">
+                    <span v-if="placing" class="spinner" style="border-top-color:#fff"></span>
+                    <template v-else><Icon name="deposit" :size="20" /> Down</template>
+                </button>
             </div>
         </div>
 
@@ -178,7 +205,18 @@ export default {
             <div class="tabs">
                 <button v-for="t in ledgerTabs" :key="t.k" class="tab" :class="{ 'is-on': ledgerTab === t.k }" @click="ledgerTab = t.k">{{ t.l }}</button>
             </div>
-            <div class="placeholder" style="border:0; padding:var(--sp-8)">
+            <div v-if="mode === 'options' && !needAuth && positions.length" class="pos-list">
+                <div v-for="p in positions" :key="p.id" class="pos-row">
+                    <span class="chip" :class="p.type === 'up' ? 'chip--up' : 'chip--down'">{{ p.type === 'up' ? 'Up ▲' : 'Down ▼' }}</span>
+                    <span class="pos-sym num">{{ symOf(p.coinId) }}</span>
+                    <span class="num muted">{{ fmtNum(p.amount) }} @ {{ fmtNum(p.entryPrice) }}</span>
+                    <span class="pos-status num" :class="{ up: p.status === 'Won', down: p.status === 'Lost', muted: p.status === 'Active' }">
+                        {{ p.status === 'Active' ? 'Settling…' : p.status }}
+                        <template v-if="p.payout != null"> · {{ p.status === 'Won' ? '+' : '' }}{{ fmtNum(p.payout) }}</template>
+                    </span>
+                </div>
+            </div>
+            <div v-else class="placeholder" style="border:0; padding:var(--sp-8)">
                 <Icon name="doc" class="placeholder__icon" :size="40" />
                 <p class="muted">{{ needAuth ? 'Log in to view your orders.' : 'No records yet.' }}</p>
             </div>

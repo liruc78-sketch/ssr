@@ -5,6 +5,7 @@ import { createApp } from 'vue';
 import { router, startRouter } from './router.js';
 import { store, closeDrawer } from './store.js';
 import { restoreSession, refreshPortfolio } from './auth.js';
+import { sweepPositions } from './trade.js';
 
 import TopNav from './components/TopNav.js';
 import TopBar from './components/TopBar.js';
@@ -46,6 +47,11 @@ const App = {
 createApp(App).mount('#app');
 startRouter();
 
-// Restore a shared wallet session (if any) and keep balances fresh.
+// Restore a shared session (if any) and keep balances fresh.
 restoreSession();
 setInterval(refreshPortfolio, 8000);
+
+// Settle expired positions (missed timers): periodic + on load + on tab focus.
+setInterval(sweepPositions, 15000);
+sweepPositions();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) sweepPositions(); });

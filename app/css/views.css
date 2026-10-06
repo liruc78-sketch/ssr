@@ -220,6 +220,10 @@
 .opt__cta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 
 .trade__ledger { margin-top: var(--sp-6); border-top: 1px solid var(--border); padding-top: var(--sp-3); }
+.pos-list { display: grid; gap: 1px; background: var(--border-2); border-radius: var(--r-sm); overflow: hidden; margin-top: var(--sp-2); }
+.pos-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: var(--sp-2); padding: var(--sp-3); background: var(--surface); font-size: var(--fs-small); }
+.pos-sym { font-weight: 700; }
+.pos-status { justify-self: end; font-weight: 600; white-space: nowrap; }
 
 /* ============================ ASSETS / WALLET =========================== */
 .wallet { padding: var(--sp-5); }
