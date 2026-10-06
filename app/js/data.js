@@ -158,6 +158,25 @@ export const OPTION_TIERS = [
 ];
 export const LEVERAGES = [1, 25, 50, 75, 100];
 
+// Finance / Earn products (daily-return model). Flexible term = 0.
+export const FINANCE_PRODUCTS = [
+    // Current (flexible)
+    { id: 'usdt-flex', cat: 'current', asset: 'USDT', name: 'USDT Flexible', yield: 'Low Yield', dmin: 0.0685, dmax: 0.481, buyers: 55973, min: 100, max: 1000000, term: 0, color: '#26a17b' },
+    { id: 'btc-flex',  cat: 'current', asset: 'BTC',  name: 'BTC Flexible',  yield: 'Low Yield', dmin: 0.0210, dmax: 0.118, buyers: 12430, min: 0.001, max: 50, term: 0, color: '#f7931a' },
+    { id: 'eth-flex',  cat: 'current', asset: 'ETH',  name: 'ETH Flexible',  yield: 'Low Yield', dmin: 0.0320, dmax: 0.140, buyers: 9871,  min: 0.01, max: 500, term: 0, color: '#627eea' },
+    // AI Quant (fixed term)
+    { id: 'quant-7',   cat: 'quant', asset: 'USDT', name: 'Quant Alpha', yield: 'High Yield', dmin: 0.201, dmax: 0.482, buyers: 8221, min: 500,  max: 500000, term: 7,  color: '#5b73ff' },
+    { id: 'quant-15',  cat: 'quant', asset: 'USDT', name: 'Neural Grid', yield: 'High Yield', dmin: 0.284, dmax: 0.556, buyers: 5002, min: 1000, max: 800000, term: 15, color: '#e24fe2' },
+    { id: 'quant-30',  cat: 'quant', asset: 'USDT', name: 'Quant Pro',   yield: 'High Yield', dmin: 0.351, dmax: 0.628, buyers: 3140, min: 2000, max: 1000000, term: 30, color: '#f0a020' },
+];
+
+// Mini sparkline points (0..100 range) for finance cards.
+export function genSpark(n = 24, up = true) {
+    const pts = []; let v = 50;
+    for (let i = 0; i < n; i++) { v += (Math.random() - (up ? 0.42 : 0.58)) * 14; v = Math.max(8, Math.min(92, v)); pts.push(v); }
+    return pts;
+}
+
 // --- Activity feed & FAQ (unchanged shape) -------------------------------
 const PRODUCTS = ['Spot', 'Contract', 'Follow orders', 'AI Quant'];
 export function genFeed(n = 8) {

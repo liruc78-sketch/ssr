@@ -246,6 +246,33 @@ select.field { appearance: none; cursor: pointer; background-image: url("data:im
 .xfer__swap { display: flex; justify-content: center; margin: calc(-1 * var(--sp-2)) 0; }
 .xfer__swap .iconbtn { background: var(--surface-2); transform: rotate(90deg); }
 
+/* ============================ FINANCE / EARN =========================== */
+.fin__hero { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: var(--sp-6); color: #fff; background: linear-gradient(120deg, #11162b, #2f49d6); margin-bottom: var(--sp-4); }
+.fin__hero-txt h2 { color: #fff; } .fin__hero-txt p { opacity: .9; margin: var(--sp-2) 0 var(--sp-4); max-width: 30ch; }
+.fin__hero-glow { position: absolute; right: -30px; bottom: -40px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, var(--up), transparent 70%); opacity: .5; }
+.fin__tabs { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.fin__tab { padding: var(--sp-2) 0; font-weight: 600; color: var(--text-3); position: relative; }
+.fin__tab.is-on { color: var(--text); }
+.fin__tab.is-on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 2px; background: var(--brand); border-radius: 2px; }
+.fin__list { display: grid; gap: var(--sp-3); }
+.fin__card { padding: var(--sp-4); }
+.fin__card-top { display: flex; align-items: center; gap: var(--sp-3); }
+.fin__coin { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: var(--font-display); flex: none; }
+.fin__id { flex: 1; min-width: 0; } .fin__id b { font-size: var(--fs-body); }
+.fin__badges { display: flex; gap: 6px; margin-top: 4px; }
+.fin__spark { width: 84px; height: 40px; flex: none; }
+.fin__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); margin: var(--sp-4) 0; }
+.fin__stats div { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-caption); }
+.fin__stats b { font-size: var(--fs-body); }
+.fin__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); border-top: 1px solid var(--border-2); padding-top: var(--sp-3); }
+
+/* Bottom sheet (reusable) */
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; background: var(--surface); border-radius: var(--r-xl) var(--r-xl) 0 0; padding: var(--sp-5); padding-bottom: calc(var(--sp-6) + env(safe-area-inset-bottom, 0)); box-shadow: var(--shadow-lg); max-width: 520px; margin: 0 auto; }
+.sheet__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4); }
+.sheet__row { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) 0; font-size: var(--fs-small); }
+.sheet-enter-active, .sheet-leave-active { transition: transform var(--dur) var(--ease-out); }
+.sheet-enter-from, .sheet-leave-to { transform: translateY(100%); }
+
 /* ---- Desktop refinements ------------------------------------------------ */
 @media (min-width: 1024px) {
     .quickrow { max-width: 560px; }
