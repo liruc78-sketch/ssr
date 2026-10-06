@@ -5,7 +5,12 @@
 // Tables: users, portfolios, positions. Session key: tw_user_session.
 // ============================================================================
 import { sb } from './supabase.js';
-import { setSession, clearSession, setPortfolio, store, emptyPortfolio } from './store.js';
+import { setSession, setSessionMem, clearSession, setPortfolio, store } from './store.js';
+
+// Build the in-memory session object from a users row.
+function sessionFromUser(user) {
+    return { userId: user.id, walletAddress: user.wallet_address || null, email: user.email || null, username: user.username, displayName: user.display_name };
+}
 
 // Mirror of legacy getUserPortfolio(userId).
 export async function fetchPortfolio(userId) {
@@ -64,8 +69,56 @@ export async function connectWallet() {
     return loginWithWallet(demo);
 }
 
-// Restore a saved session on startup (legacy shape: { userId, walletAddress }).
+// ---- Email / password (Supabase Auth; credentials never touch our tables) ----
+// Requires the one-time backend setup in db/2026-email-auth.sql + enabling the
+// Email provider in the Supabase dashboard.
+async function linkedUser(authUser, { email } = {}) {
+    let { data: user, error } = await sb.from('users').select('*').eq('auth_id', authUser.id).single();
+    if (error && error.code === 'PGRST116') {
+        const handle = (email || authUser.email || 'user').split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 12) || 'user';
+        const uname = `${handle}_${Math.floor(Math.random() * 9000 + 1000)}`;
+        const { data: nu, error: ce } = await sb.from('users').insert({
+            auth_id: authUser.id, email: email || authUser.email, display_name: handle, username: uname,
+        }).select().single();
+        if (ce) throw ce;
+        user = nu;
+        await sb.from('portfolios').insert({ user_id: user.id, usd_balance: 0 });
+    } else if (error) throw error;
+    return user;
+}
+
+export async function signUpEmail(email, password) {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) throw error;
+    if (!data.user) throw new Error('Check your email to confirm your account, then sign in.');
+    const user = await linkedUser(data.user, { email });
+    setSessionMem(sessionFromUser(user));
+    try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+    return { user };
+}
+
+export async function signInEmail(email, password) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    const user = await linkedUser(data.user, { email });
+    setSessionMem(sessionFromUser(user));
+    try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+    return { user };
+}
+
+// Restore a saved session on startup. Prefer an active Supabase Auth (email)
+// session; otherwise fall back to the legacy wallet session shape.
 export async function restoreSession() {
+    try {
+        const { data } = await sb.auth.getSession();
+        if (data?.session?.user) {
+            const user = await linkedUser(data.session.user);
+            setSessionMem(sessionFromUser(user));
+            try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+            return;
+        }
+    } catch (e) { /* email auth not set up yet — fall through to wallet */ }
+
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem('tw_user_session') || 'null'); } catch {}
     if (!saved?.walletAddress) { if (saved && !saved.walletAddress) clearSession(); return; }
@@ -80,4 +133,7 @@ export async function refreshPortfolio() {
     catch { store.connectionLost = true; }
 }
 
-export function disconnect() { clearSession(); }
+export async function disconnect() {
+    try { await sb.auth.signOut(); } catch {}
+    clearSession();
+}

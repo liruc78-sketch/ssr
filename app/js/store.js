@@ -61,6 +61,9 @@ export function clearSession() {
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
 }
 export function setPortfolio(p) { store.portfolio = p; store.balanceLoaded = true; store.connectionLost = false; }
+// Email sessions are persisted by Supabase Auth itself, so set state only
+// (don't write tw_user_session, which the wallet-only legacy site would reject).
+export function setSessionMem(session) { store.session = session; }
 
 // ---- UI actions ---------------------------------------------------------
 export function applyTheme(t) {

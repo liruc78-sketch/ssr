@@ -41,9 +41,13 @@ export default {
         };
         const identity = () => store.session?.displayName || store.session?.username || store.session?.walletAddress || 'Account';
         const initials = () => identity().replace(/^0x/, '').trim().charAt(0).toUpperCase() || 'U';
-        const maskWallet = () => { const w = store.session?.walletAddress || ''; return w.length > 10 ? w.slice(0, 6) + '…' + w.slice(-4) : w; };
+        const subId = () => {
+            const w = store.session?.walletAddress || '';
+            if (w) return w.length > 10 ? w.slice(0, 6) + '…' + w.slice(-4) : w;
+            return store.session?.email || store.session?.username || '';
+        };
         const doLogout = () => { disconnect(); closeDrawer(); toast('Disconnected', 'info'); go('/'); };
-        return { store, nav, closeDrawer, groups, toggleMode, identity, initials, maskWallet, toggleTheme, doLogout };
+        return { store, nav, closeDrawer, groups, toggleMode, identity, initials, subId, toggleTheme, doLogout };
     },
     template: /*html*/`
     <div class="drawer" role="dialog" aria-label="Menu">
@@ -66,7 +70,7 @@ export default {
                     <span class="chip" :class="store.session?.verified ? 'chip--up' : ''">{{ store.session?.verified ? 'Verified' : 'Not Verified' }}</span>
                 </div>
                 <div class="drawer__uid">
-                    <span class="num muted" style="font-size:var(--fs-small)">{{ maskWallet() }}</span>
+                    <span class="num muted" style="font-size:var(--fs-small)">{{ subId() }}</span>
                     <span class="muted" style="font-size:var(--fs-small)">Credit <b class="up">{{ store.session?.creditScore ?? 100 }}</b></span>
                 </div>
             </div>
