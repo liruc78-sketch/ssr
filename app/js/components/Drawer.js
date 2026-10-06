@@ -1,7 +1,8 @@
 // Side drawer — full menu, account card, Live/Simulated toggle
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
-import { store, closeDrawer, setMode, toast, toggleTheme, logout } from '../store.js';
+import { store, closeDrawer, setMode, toast, toggleTheme } from '../store.js';
+import { disconnect } from '../auth.js';
 
 export default {
     name: 'Drawer',
@@ -38,11 +39,11 @@ export default {
             setMode(next);
             toast(next === 'sim' ? 'Switched to Simulated Trading' : 'Switched to Live Trading', 'info');
         };
-        const initials = () => (store.session?.displayName || store.session?.username || 'U').trim().charAt(0).toUpperCase();
-        const handle = () => store.session?.phone || store.session?.email || store.session?.username || '';
-        const maskHandle = () => { const h = handle(); return h.length > 6 ? h.slice(0, 3) + '****' + h.slice(-2) : h; };
-        const doLogout = () => { logout(); closeDrawer(); toast('Logged out', 'info'); go('/'); };
-        return { store, nav, closeDrawer, groups, toggleMode, initials, maskHandle, toggleTheme, doLogout };
+        const identity = () => store.session?.displayName || store.session?.username || store.session?.walletAddress || 'Account';
+        const initials = () => identity().replace(/^0x/, '').trim().charAt(0).toUpperCase() || 'U';
+        const maskWallet = () => { const w = store.session?.walletAddress || ''; return w.length > 10 ? w.slice(0, 6) + '…' + w.slice(-4) : w; };
+        const doLogout = () => { disconnect(); closeDrawer(); toast('Disconnected', 'info'); go('/'); };
+        return { store, nav, closeDrawer, groups, toggleMode, identity, initials, maskWallet, toggleTheme, doLogout };
     },
     template: /*html*/`
     <div class="drawer" role="dialog" aria-label="Menu">
@@ -61,11 +62,11 @@ export default {
             <div class="drawer__avatar">{{ initials() }}</div>
             <div style="flex:1; min-width:0">
                 <div style="display:flex; align-items:center; gap:8px">
-                    <strong style="font-size:var(--fs-h4)">{{ maskHandle() }}</strong>
+                    <strong style="font-size:var(--fs-h4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ identity() }}</strong>
                     <span class="chip" :class="store.session?.verified ? 'chip--up' : ''">{{ store.session?.verified ? 'Verified' : 'Not Verified' }}</span>
                 </div>
                 <div class="drawer__uid">
-                    <span class="num muted" style="font-size:var(--fs-small)">UID: {{ store.session?.uid || '—' }}</span>
+                    <span class="num muted" style="font-size:var(--fs-small)">{{ maskWallet() }}</span>
                     <span class="muted" style="font-size:var(--fs-small)">Credit <b class="up">{{ store.session?.creditScore ?? 100 }}</b></span>
                 </div>
             </div>

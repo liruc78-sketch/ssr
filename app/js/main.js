@@ -4,6 +4,7 @@
 import { createApp } from 'vue';
 import { router, startRouter } from './router.js';
 import { store, closeDrawer } from './store.js';
+import { restoreSession, refreshPortfolio } from './auth.js';
 
 import TopNav from './components/TopNav.js';
 import TopBar from './components/TopBar.js';
@@ -44,3 +45,7 @@ const App = {
 
 createApp(App).mount('#app');
 startRouter();
+
+// Restore a shared wallet session (if any) and keep balances fresh.
+restoreSession();
+setInterval(refreshPortfolio, 8000);

@@ -15,7 +15,7 @@ export default {
         const to = ref('Trading Account');
         const currency = ref('USDT');
         const amount = ref('');
-        const available = computed(() => store.isAuthed ? +(store.session?.spotBalance || 0) : 0);
+        const available = computed(() => (store.isAuthed && currency.value === 'USDT') ? store.portfolio.usdBalance : 0);
 
         const swap = () => { const t = from.value; from.value = to.value; to.value = t; };
         const setAll = () => { amount.value = String(available.value); };
