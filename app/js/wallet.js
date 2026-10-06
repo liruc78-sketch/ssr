@@ -32,32 +32,27 @@ export async function depositRate(coin) {
     try { return await cgPrice(coin.cgId); } catch { return Number(coin.rate) || 1; }
 }
 
-// Create a pending recharge order against an admin-configured receiving address.
+// Create a pending recharge order server-side (create_recharge_order RPC):
+// the receiving address lookup + order insert happen server-side for the caller.
 // Returns { orderId, orderIdShort, address, uniqueAmt, usdAmt, expireAt }.
 export async function createRechargeOrder({ coin, network, cryptoAmount, rate }) {
     if (!store.session?.userId) { const e = new Error('Please sign in first'); e.code = 'AUTH'; throw e; }
     const base = parseFloat(cryptoAmount);
     if (!(base > 0)) throw new Error('Enter an amount');
     if (base < coin.minAmt) throw new Error(`Minimum deposit is ${coin.minAmt} ${coin.symbol}`);
-
-    const { data: addrs } = await sb.from('payment_addresses').select('address').eq('coin_id', coin.id).eq('network', network.id).limit(1);
-    const address = addrs?.[0]?.address;
-    if (!address) { const e = new Error(`No receiving address is configured for ${coin.symbol} on ${network.label} yet. Please contact support.`); e.code = 'NOADDR'; throw e; }
-
-    const fraction = (Math.floor(Math.random() * 998) + 1) / 1000;      // collision-avoidance suffix
-    const uniqueAmt = parseFloat((base + fraction * (coin.minAmt < 1 ? coin.minAmt * 0.1 : 1)).toFixed(6));
     const usdAmt = base * (rate || 1);
 
-    const { data: order, error } = await sb.from('recharge_orders').insert({
-        user_id: store.session.userId, usdt_amount: uniqueAmt, usd_amount: usdAmt, points_amount: usdAmt,
-        status: 'pending', coin_id: coin.id, coin_symbol: coin.symbol, network: network.id, network_label: network.label, wallet_address: address,
-    }).select().single();
-    if (error) throw error;
+    const { data, error } = await sb.rpc('create_recharge_order', {
+        p_coin_id: coin.id, p_coin_symbol: coin.symbol, p_network: network.id, p_network_label: network.label,
+        p_crypto_amount: base, p_usd_amount: usdAmt,
+    });
+    if (error) throw new Error(error.message || 'Could not create order');
+    if (data && data.ok === false) { const e = new Error(data.error || 'Could not create order'); e.code = 'NOADDR'; throw e; }
 
     return {
-        orderId: order.id,
-        orderIdShort: order.id.replace(/-/g, '').toUpperCase().slice(0, 16),
-        address, uniqueAmt, usdAmt,
+        orderId: data.orderId,
+        orderIdShort: String(data.orderId).replace(/-/g, '').toUpperCase().slice(0, 16),
+        address: data.address, uniqueAmt: Number(data.uniqueAmt), usdAmt,
         decimals: coin.minAmt < 0.01 ? 6 : coin.minAmt < 1 ? 4 : 3,
         expireAt: Date.now() + 60 * 60 * 1000,
     };
