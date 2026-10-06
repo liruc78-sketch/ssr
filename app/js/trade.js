@@ -6,11 +6,6 @@
 import { sb, SUPABASE_ANON, EDGE_BASE } from './supabase.js';
 import { store } from './store.js';
 import { refreshPortfolio } from './auth.js';
-import { cgPrice } from './data.js';
-
-// Fees: 0.2% trading fee + $0.5 platform fee (same as legacy).
-export const tradeFee = (amount) => amount * 0.002 + 0.5;
-export const tradeTotal = (amount) => amount + tradeFee(amount);
 
 // Settle one position via the edge function, then refresh balances.
 export async function settlePosition(positionId) {
@@ -39,34 +34,26 @@ export async function sweepPositions() {
     finally { sweepInFlight = false; }
 }
 
-// Open a binary (Options) position. tier: { sec, min, payout }.
-// Returns { ok, position } or throws with a user-facing message.
+// Open a binary (Options) position via the server (trade-open edge function):
+// price fetch, tier gate, balance check, debit and insert all happen server-side
+// with the caller's session. No client-side balance write.
 export async function openOptionPosition({ coin, type, amount, tier }) {
     if (!store.session?.userId) { const e = new Error('Please sign in to trade'); e.code = 'AUTH'; throw e; }
+    if (!coin?.cg) throw new Error('This asset is not available for options yet');
     const amt = parseFloat(amount);
     if (!(amt > 0)) throw new Error('Please enter a valid amount');
-    if (!coin?.cg) throw new Error('This asset is not available for options yet');
-    if (store.portfolio.usdBalance < (tier.min || 0)) {
-        const need = tier.min >= 1e6 ? '$' + tier.min / 1e6 + 'M' : '$' + tier.min / 1e3 + 'K';
-        const e = new Error(`${tier.label} tier requires balance ≥ ${need} — deposit first`); e.code = 'TIER'; throw e;
+
+    const { data, error } = await sb.functions.invoke('trade-open', {
+        body: { coinId: coin.cg, type, amount: amt, durationSeconds: tier.sec },
+    });
+    if (error) {
+        let msg = 'Could not place trade';
+        try { msg = (await error.context.json())?.error || msg; } catch {}
+        throw new Error(msg);
     }
-
-    const price = await cgPrice(coin.cg);
-    const total = tradeTotal(amt);
-
-    // Re-read balance server-side (fail safe — never assume broke on a blip).
-    const { data: pd, error: balErr } = await sb.from('portfolios').select('usd_balance').eq('user_id', store.session.userId).single();
-    if (balErr || !pd) { store.connectionLost = true; const e = new Error('Connection error, please try again'); e.code = 'CONN'; throw e; }
-    if (parseFloat(pd.usd_balance) < total) { const e = new Error('Insufficient balance (incl. fees)'); e.code = 'FUNDS'; throw e; }
-
-    // Deduct principal + fees, then record the position (principal only in `amount`).
-    await sb.from('portfolios').update({ usd_balance: parseFloat(pd.usd_balance) - total }).eq('user_id', store.session.userId);
-    const { data: pos, error } = await sb.from('positions').insert({
-        user_id: store.session.userId, coin_id: coin.cg, type, amount: amt, entry_price: price, status: 'Active', duration_seconds: tier.sec,
-    }).select().single();
-    if (error) throw error;
+    if (data && data.ok === false) throw new Error(data.error || 'Could not place trade');
 
     await refreshPortfolio();
-    setTimeout(() => settlePosition(pos.id), tier.sec * 1000);
-    return { ok: true, position: pos };
+    setTimeout(() => settlePosition(data.positionId), tier.sec * 1000);
+    return { ok: true, positionId: data.positionId };
 }

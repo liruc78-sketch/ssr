@@ -70,27 +70,13 @@ export async function checkRechargeStatus(orderId) {
     return data?.status || 'pending';
 }
 
-// Submit a withdrawal: deduct principal+fee, record a pending request (rollback on failure).
+// Submit a withdrawal — server-side (request_withdrawal RPC): deduct + record
+// atomically, enforced for the signed-in caller. No client-side balance write.
 export async function submitWithdrawal({ amount, address }) {
     if (!store.session?.userId) { const e = new Error('Please sign in first'); e.code = 'AUTH'; throw e; }
-    if (!address) throw new Error('Enter a withdrawal address');
-    const amt = parseFloat(amount);
-    if (!(amt >= WITHDRAW_MIN)) throw new Error(`Minimum withdrawal is $${WITHDRAW_MIN}`);
-    const total = withdrawTotal(amt);
-
-    const { data: pd, error: balErr } = await sb.from('portfolios').select('usd_balance').eq('user_id', store.session.userId).single();
-    if (balErr || !pd) { store.connectionLost = true; throw new Error('Connection error, please try again'); }
-    const before = parseFloat(pd.usd_balance);
-    if (before < total) throw new Error('Insufficient balance (incl. fees)');
-
-    await sb.from('portfolios').update({ usd_balance: before - total }).eq('user_id', store.session.userId);
-    const { error: insErr } = await sb.from('withdrawals').insert({
-        user_id: store.session.userId, amount: amt, fee: withdrawFee(amt), wallet_address: address, status: 'pending',
-    });
-    if (insErr) {
-        await sb.from('portfolios').update({ usd_balance: before }).eq('user_id', store.session.userId);  // rollback
-        throw new Error('Withdrawal failed — please try again');
-    }
+    const { data, error } = await sb.rpc('request_withdrawal', { p_amount: parseFloat(amount), p_address: address });
+    if (error) throw new Error(error.message || 'Withdrawal failed');
+    if (data && data.ok === false) throw new Error(data.error || 'Withdrawal failed');
     await refreshPortfolio();
     return { ok: true };
 }
