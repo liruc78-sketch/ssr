@@ -1,0 +1,112 @@
+/* ============================================================================
+   Crypto.ssr — Design tokens
+   Direction: light-first trustworthy trading terminal. One indigo brand accent;
+   market green/red reserved strictly for price data; tabular mono numerals.
+   Theme is driven by [data-theme] on <html> (set pre-paint in index.html).
+   ========================================================================== */
+
+:root {
+    /* ---- Brand & market semantics (hue-stable across themes) ---- */
+    --brand:        #3b5bfd;   /* the single accent — actions, active nav, focus */
+    --brand-ink:    #ffffff;   /* text/icon on a brand-filled surface */
+    --brand-weak:   rgba(59, 91, 253, 0.10);
+    --brand-strong: #2f49d6;
+
+    --up:        #0ecb81;      /* price up / long / success — market green */
+    --up-weak:   rgba(14, 203, 129, 0.12);
+    --down:      #f6465d;      /* price down / short / danger — market red */
+    --down-weak: rgba(246, 70, 93, 0.12);
+    --gold:      #f0a020;      /* value, credit score, highlights */
+    --gold-weak: rgba(240, 160, 32, 0.12);
+
+    /* ---- Light theme (default) ---- */
+    --bg:         #f5f7fb;     /* page canvas */
+    --surface:    #ffffff;     /* cards, bars */
+    --surface-2:  #eef2f8;     /* insets, inputs, muted chips */
+    --surface-3:  #ffffff;     /* elevated popovers (lift via shadow) */
+    --surface-inset: #f0f3f9;
+
+    --text:    #0b1220;        /* primary */
+    --text-2:  #42526b;        /* secondary */
+    --text-3:  #667085;        /* tertiary / meta */
+    --text-muted: #98a2b3;     /* disabled / faint */
+
+    --border:       rgba(16, 24, 40, 0.08);
+    --border-2:     rgba(16, 24, 40, 0.06);  /* softest separation */
+    --border-strong:rgba(16, 24, 40, 0.16);  /* emphasis */
+    --focus-ring:   rgba(59, 91, 253, 0.35);
+
+    /* Elevation — light leans on layered soft shadows */
+    --shadow-sm: 0 0 0 1px rgba(16,24,40,.04), 0 1px 2px -1px rgba(16,24,40,.08), 0 2px 4px rgba(16,24,40,.04);
+    --shadow-md: 0 0 0 1px rgba(16,24,40,.04), 0 4px 8px -2px rgba(16,24,40,.10), 0 8px 20px -6px rgba(16,24,40,.10);
+    --shadow-lg: 0 0 0 1px rgba(16,24,40,.05), 0 12px 28px -6px rgba(16,24,40,.16), 0 24px 48px -12px rgba(16,24,40,.14);
+
+    /* ---- Type ---- */
+    --font-display: 'Space Grotesk', 'Space Grotesk Fallback', system-ui, sans-serif;
+    --font-ui:      'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+    --fs-caption: 0.75rem;   /* 12 */
+    --fs-small:   0.8125rem; /* 13 */
+    --fs-body:    0.9375rem; /* 15 — base */
+    --fs-h4:      1.0625rem; /* 17 */
+    --fs-h3:      1.25rem;   /* 20 */
+    --fs-h2:      1.5rem;    /* 24 */
+    --fs-h1:      1.875rem;  /* 30 */
+    --fs-display: 2.5rem;    /* 40 */
+
+    /* ---- Spacing (4px grid) ---- */
+    --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+    --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+
+    /* ---- Radius ---- */
+    --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px; --r-pill: 999px;
+
+    /* ---- Layout ---- */
+    --nav-h: 64px;         /* desktop top bar */
+    --topbar-h: 56px;      /* mobile top bar */
+    --bottomnav-h: 64px;   /* mobile bottom nav */
+    --maxw: 1200px;        /* desktop content width */
+    --chart-up: var(--up); --chart-down: var(--down);
+
+    /* ---- Motion ---- */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-mid: cubic-bezier(0.77, 0, 0.175, 1);
+    --dur-fast: 130ms; --dur: 200ms; --dur-slow: 320ms;
+
+    color-scheme: light;
+}
+
+[data-theme="dark"] {
+    --bg:         #0b0e14;
+    --surface:    #141a24;
+    --surface-2:  #1b2230;   /* inputs / insets */
+    --surface-3:  #1f2838;   /* elevated popovers */
+    --surface-inset: #10151e;
+
+    --text:    #e7eef8;
+    --text-2:  #9fb0c3;
+    --text-3:  #6f7f93;
+    --text-muted: #566376;
+
+    --brand:      #5b73ff;
+    --brand-weak: rgba(91, 115, 255, 0.16);
+    --brand-strong:#4257e6;
+    --up:         #2ebd85;
+    --up-weak:    rgba(46, 189, 133, 0.16);
+    --down:       #f6465d;
+    --down-weak:  rgba(246, 70, 93, 0.16);
+    --gold:       #f5b544;
+
+    --border:       rgba(255, 255, 255, 0.09);
+    --border-2:     rgba(255, 255, 255, 0.06);
+    --border-strong:rgba(255, 255, 255, 0.16);
+    --focus-ring:   rgba(91, 115, 255, 0.45);
+
+    /* dark: shadows barely read — lean on the 1px ring */
+    --shadow-sm: 0 0 0 1px rgba(255,255,255,.06);
+    --shadow-md: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px -8px rgba(0,0,0,.6);
+    --shadow-lg: 0 0 0 1px rgba(255,255,255,.10), 0 16px 40px -10px rgba(0,0,0,.7);
+
+    color-scheme: dark;
+}
