@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Icon } from '../icons.js';
 import { CoinIcon } from '../components/CoinIcon.js';
+import { WALLETS } from '../components/wallets.js';
 import { go } from '../router.js';
 import { COINS, fmtPrice, fmtChg, genFeed, FAQ } from '../data.js';
 
@@ -32,12 +33,24 @@ export default {
         const openFaq = ref(0);
 
         const trust = [
-            { icon: 'shield', title: 'Encrypted by default', body: 'Balances and keys protected with encrypted storage and cloud backup.' },
-            { icon: 'user',   title: 'Zero personal tracking', body: 'We never track your IP or balance across the web.' },
-            { icon: 'bell',   title: 'Proactive risk alerts', body: 'Withdrawal-address and DApp-connection alerts keep you safe.' },
+            {
+                title: 'Enhanced security via encryption',
+                body: 'Balances and keys are protected with encrypted storage and cloud backup, so your assets stay safe.',
+                img: 'assets/why/security.svg',
+            },
+            {
+                title: 'Zero personal tracking',
+                body: 'We never track any personal information, including your IP address or balance, across the web.',
+                img: 'assets/why/tracking.svg',
+            },
+            {
+                title: 'Proactive risk alerts',
+                body: 'Withdrawal-address and DApp-connection alerts flag risky activity before it becomes a problem.',
+                img: 'assets/why/alerts.svg',
+            },
         ];
 
-        return { actions, slides, slide, goSlide, coins, feed, faq, openFaq, trust, go, fmtPrice, fmtChg };
+        return { actions, slides, slide, goSlide, coins, feed, faq, openFaq, trust, wallets: WALLETS, go, fmtPrice, fmtChg };
     },
     template: /*html*/`
     <section class="home">
@@ -93,13 +106,21 @@ export default {
             </div>
         </div>
 
-        <!-- Why choose us -->
-        <div class="sec-head"><h2>Why Crypto.ssr</h2></div>
+        <!-- Why trade with us -->
+        <div class="sec-head"><h2>Why trade with us</h2></div>
         <div class="trust">
             <div v-for="t in trust" :key="t.title" class="trust__card card">
-                <span class="trust__ico"><Icon :name="t.icon" :size="22" /></span>
+                <span class="trust__ico"><img :src="t.img" :alt="t.title" draggable="false" /></span>
                 <h4>{{ t.title }}</h4>
                 <p class="muted" style="font-size:var(--fs-small)">{{ t.body }}</p>
+            </div>
+        </div>
+
+        <!-- Partners / supported wallets -->
+        <div class="sec-head"><h2>Partners</h2><span class="muted" style="font-size:var(--fs-small)">Connect the wallet you already use</span></div>
+        <div class="partners">
+            <div v-for="w in wallets" :key="w.name" class="partner">
+                <img class="partner__logo" :src="w.img" :alt="w.name" loading="lazy" draggable="false" />
             </div>
         </div>
 
