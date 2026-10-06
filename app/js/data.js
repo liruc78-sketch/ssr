@@ -5,16 +5,16 @@
 
 // --- Crypto (live-capable via Binance) -----------------------------------
 export const COINS = [
-    { sym: 'BTC',  name: 'Bitcoin',  binance: 'BTCUSDT',  price: 85849.30, chg: -0.93, vol: '1.4B',  color: '#f7931a' },
-    { sym: 'ETH',  name: 'Ethereum', binance: 'ETHUSDT',  price: 2714.58,  chg: -0.54, vol: '820M',  color: '#627eea' },
-    { sym: 'BNB',  name: 'BNB',      binance: 'BNBUSDT',  price: 786.20,   chg: -1.32, vol: '240M',  color: '#f0b90b' },
-    { sym: 'SOL',  name: 'Solana',   binance: 'SOLUSDT',  price: 142.07,   chg:  3.11, vol: '610M',  color: '#14f195' },
-    { sym: 'XRP',  name: 'XRP',      binance: 'XRPUSDT',  price: 1.5092,   chg: -0.91, vol: '430M',  color: '#1b1f24' },
-    { sym: 'ADA',  name: 'Cardano',  binance: 'ADAUSDT',  price: 0.2707,   chg:  2.69, vol: '180M',  color: '#0033ad' },
-    { sym: 'LTC',  name: 'Litecoin', binance: 'LTCUSDT',  price: 69.85,    chg: -1.33, vol: '96M',   color: '#345d9d' },
-    { sym: 'DOGE', name: 'Dogecoin', binance: 'DOGEUSDT', price: 0.1584,   chg:  1.22, vol: '210M',  color: '#c3a634' },
-    { sym: 'TRX',  name: 'TRON',     binance: 'TRXUSDT',  price: 0.2412,   chg:  0.45, vol: '88M',   color: '#eb0029' },
-    { sym: 'NEO',  name: 'NEO',      binance: 'NEOUSDT',  price: 2.558,    chg: -0.62, vol: '41M',   color: '#00e599' },
+    { sym: 'BTC',  name: 'Bitcoin',  binance: 'BTCUSDT',  cg: 'bitcoin',     price: 85849.30, chg: -0.93, vol: '1.4B',  color: '#f7931a' },
+    { sym: 'ETH',  name: 'Ethereum', binance: 'ETHUSDT',  cg: 'ethereum',    price: 2714.58,  chg: -0.54, vol: '820M',  color: '#627eea' },
+    { sym: 'BNB',  name: 'BNB',      binance: 'BNBUSDT',  cg: 'binancecoin', price: 786.20,   chg: -1.32, vol: '240M',  color: '#f0b90b' },
+    { sym: 'SOL',  name: 'Solana',   binance: 'SOLUSDT',  cg: 'solana',      price: 142.07,   chg:  3.11, vol: '610M',  color: '#14f195' },
+    { sym: 'XRP',  name: 'XRP',      binance: 'XRPUSDT',  cg: 'ripple',      price: 1.5092,   chg: -0.91, vol: '430M',  color: '#1b1f24' },
+    { sym: 'ADA',  name: 'Cardano',  binance: 'ADAUSDT',  cg: 'cardano',     price: 0.2707,   chg:  2.69, vol: '180M',  color: '#0033ad' },
+    { sym: 'LTC',  name: 'Litecoin', binance: 'LTCUSDT',  cg: 'litecoin',    price: 69.85,    chg: -1.33, vol: '96M',   color: '#345d9d' },
+    { sym: 'DOGE', name: 'Dogecoin', binance: 'DOGEUSDT', cg: 'dogecoin',    price: 0.1584,   chg:  1.22, vol: '210M',  color: '#c3a634' },
+    { sym: 'TRX',  name: 'TRON',     binance: 'TRXUSDT',  cg: 'tron',        price: 0.2412,   chg:  0.45, vol: '88M',   color: '#eb0029' },
+    { sym: 'NEO',  name: 'NEO',      binance: 'NEOUSDT',  cg: 'neo',         price: 2.558,    chg: -0.62, vol: '41M',   color: '#00e599' },
 ];
 
 // --- US stocks (generated charts; no public no-key source) ---------------
