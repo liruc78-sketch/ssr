@@ -3,21 +3,14 @@
 // Mirrors the legacy openPosition + trade-settle flow exactly, against the same
 // positions + portfolios tables and the same trade-settle edge function.
 // ============================================================================
-import { sb, SUPABASE_ANON, EDGE_BASE, CG_KEY } from './supabase.js';
+import { sb, SUPABASE_ANON, EDGE_BASE } from './supabase.js';
 import { store } from './store.js';
 import { refreshPortfolio } from './auth.js';
+import { cgPrice } from './data.js';
 
 // Fees: 0.2% trading fee + $0.5 platform fee (same as legacy).
 export const tradeFee = (amount) => amount * 0.002 + 0.5;
 export const tradeTotal = (amount) => amount + tradeFee(amount);
-
-async function cgPrice(cgId) {
-    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd&x_cg_demo_api_key=${CG_KEY}`);
-    const data = await res.json();
-    const p = data?.[cgId]?.usd;
-    if (!p) throw new Error('Unable to fetch price');
-    return p;
-}
 
 // Settle one position via the edge function, then refresh balances.
 export async function settlePosition(positionId) {
