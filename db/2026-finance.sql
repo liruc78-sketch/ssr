@@ -60,6 +60,9 @@ begin
 end; $$;
 grant execute on function public.finance_redeem(uuid) to anon, authenticated;
 
+-- finance_accrue runs only from the cron (not the public API).
+revoke execute on function public.finance_accrue() from anon, authenticated;
+
 -- Schedule daily accrual at 00:05 UTC.
 create extension if not exists pg_cron;
 select cron.schedule('finance-accrue-daily', '5 0 * * *', $$ select public.finance_accrue(); $$);

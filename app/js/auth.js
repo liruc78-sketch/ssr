@@ -1,11 +1,12 @@
 // ============================================================================
-// Crypto.ssr — Wallet auth + portfolio (shares the legacy backend & session)
-// Mirrors the current site's loginWithWallet / getUserPortfolio / restore so a
-// session created here works on the legacy site and admin panel, and vice versa.
-// Tables: users, portfolios, positions. Session key: tw_user_session.
+// Crypto.ssr — Auth + portfolio
+// Every user (email OR wallet) gets a real Supabase Auth session (JWT), so
+// auth.uid() identifies them for RLS. Wallet login uses SIWE (sign-in with
+// Ethereum) verified server-side by the `wallet-auth` edge function.
+// Tables: users (linked by auth_id), portfolios, positions.
 // ============================================================================
-import { sb } from './supabase.js';
-import { setSession, setSessionMem, clearSession, setPortfolio, store } from './store.js';
+import { sb, edge } from './supabase.js';
+import { setSessionMem, clearSession, setPortfolio, store } from './store.js';
 
 // Build the in-memory session object from a users row.
 function sessionFromUser(user) {
@@ -33,40 +34,35 @@ export async function fetchPortfolio(userId) {
     };
 }
 
-// Mirror of legacy loginWithWallet(address).
-export async function loginWithWallet(address) {
-    const normalized = String(address).toLowerCase();
-    let { data: user, error } = await sb.from('users').select('*').eq('wallet_address', normalized).single();
-    let isNew = false;
-    if (error && error.code === 'PGRST116') {
-        isNew = true;
-        const shortAddr = normalized.slice(0, 6) + '...' + normalized.slice(-4);
-        const { data: newUser, error: ce } = await sb.from('users').insert({
-            wallet_address: normalized, display_name: `User ${shortAddr}`, username: `wallet_${normalized.slice(2, 10)}`,
-        }).select().single();
-        if (ce) throw ce;
-        user = newUser;
-        await sb.from('portfolios').insert({ user_id: user.id, usd_balance: 0 });
-    } else if (error) throw error;
-    else {
-        await sb.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
-    }
-
-    setSession({ userId: user.id, walletAddress: user.wallet_address, username: user.username, displayName: user.display_name });
-    try { setPortfolio(await fetchPortfolio(user.id)); }
-    catch (e) { store.connectionLost = true; console.warn('Portfolio load failed; will retry:', e); }
-    return { user, isNew };
+// Load the users row linked to the current Supabase Auth session into the store.
+async function loadLinkedUser() {
+    const { data: { user: authUser } } = await sb.auth.getUser();
+    if (!authUser) throw new Error('No active session');
+    const user = await linkedUser(authUser);        // find-or-create by auth_id
+    setSessionMem(sessionFromUser(user));
+    try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+    return user;
 }
 
-// Connect an injected wallet (MetaMask, Trust, …); demo-address fallback when
-// none is present — same behavior as the legacy site.
+// Wallet login via SIWE: the `wallet-auth` edge function verifies the signature
+// server-side and issues a real Supabase session. No wallet key or direct table
+// write happens on the client.
 export async function connectWallet() {
-    if (typeof window.ethereum !== 'undefined') {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accounts?.[0]) return loginWithWallet(accounts[0]);
+    if (typeof window.ethereum === 'undefined') {
+        throw new Error('No Web3 wallet detected. Install MetaMask or a compatible wallet to connect.');
     }
-    const demo = '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    return loginWithWallet(demo);
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const address = String(accounts?.[0] || '').toLowerCase();
+    if (!address) throw new Error('No wallet account available');
+
+    const { message } = await edge('wallet-auth', { body: { action: 'nonce', address } });
+    const signature = await window.ethereum.request({ method: 'personal_sign', params: [message, address] });
+    const res = await edge('wallet-auth', { body: { action: 'verify', address, signature } });
+    if (!res?.token_hash) throw new Error(res?.error || 'Wallet verification failed');
+
+    const { error } = await sb.auth.verifyOtp({ token_hash: res.token_hash, type: 'magiclink' });
+    if (error) throw error;
+    return loadLinkedUser();
 }
 
 // ---- Email / password (Supabase Auth; credentials never touch our tables) ----
@@ -107,24 +103,12 @@ export async function signInEmail(email, password) {
     return { user };
 }
 
-// Restore a saved session on startup. Prefer an active Supabase Auth (email)
-// session; otherwise fall back to the legacy wallet session shape.
+// Restore an active Supabase Auth session on startup (email or wallet).
 export async function restoreSession() {
     try {
         const { data } = await sb.auth.getSession();
-        if (data?.session?.user) {
-            const user = await linkedUser(data.session.user);
-            setSessionMem(sessionFromUser(user));
-            try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
-            return;
-        }
-    } catch (e) { /* email auth not set up yet — fall through to wallet */ }
-
-    let saved = null;
-    try { saved = JSON.parse(localStorage.getItem('tw_user_session') || 'null'); } catch {}
-    if (!saved?.walletAddress) { if (saved && !saved.walletAddress) clearSession(); return; }
-    try { await loginWithWallet(saved.walletAddress); }
-    catch (e) { console.warn('Session restore failed:', e); }
+        if (data?.session?.user) await loadLinkedUser();
+    } catch (e) { console.warn('Session restore failed:', e); }
 }
 
 // 8s refresh loop (mirrors legacy setInterval(fetchPortfolio, 8000)).
