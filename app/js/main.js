@@ -11,11 +11,11 @@ import TopNav from './components/TopNav.js';
 import TopBar from './components/TopBar.js';
 import BottomNav from './components/BottomNav.js';
 import Drawer from './components/Drawer.js';
-import { ChatButton, Toast, Placeholder } from './components/common.js';
+import { ChatButton, SupportSheet, Toast, Placeholder } from './components/common.js';
 
 const App = {
     name: 'App',
-    components: { TopNav, TopBar, BottomNav, Drawer, ChatButton, Toast, Placeholder },
+    components: { TopNav, TopBar, BottomNav, Drawer, ChatButton, SupportSheet, Toast, Placeholder },
     setup() {
         return { router, store, closeDrawer };
     },
@@ -34,6 +34,7 @@ const App = {
 
     <BottomNav />
     <ChatButton />
+    <SupportSheet />
     <Toast />
 
     <transition name="scrim">
