@@ -1,9 +1,10 @@
-// Finance / Earn — Current & AI-Quant products, My Holding, Buy sheet
-import { ref, computed } from 'vue';
+// Finance / Earn — Current & AI-Quant products, My Holding, Subscribe sheet
+import { ref, computed, watch, onMounted } from 'vue';
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { FINANCE_PRODUCTS, genSpark, fmtAmt } from '../data.js';
+import { subscribeFinance, loadHoldings, FINANCE_MIN_USD } from '../finance.js';
 
 export default {
     name: 'Finance',
@@ -14,22 +15,41 @@ export default {
         const sparks = Object.fromEntries(FINANCE_PRODUCTS.map(p => [p.id, genSpark(24, true)]));
         const sparkPath = (pts) => pts.map((v, i) => `${(i / (pts.length - 1)) * 100},${100 - v}`).join(' ');
 
-        // Buy sheet
+        // Holdings
+        const holdings = ref([]);
+        const loadingHoldings = ref(false);
+        const refreshHoldings = async () => {
+            if (!store.isAuthed) { holdings.value = []; return; }
+            loadingHoldings.value = true;
+            try { holdings.value = await loadHoldings(); } catch { holdings.value = []; }
+            finally { loadingHoldings.value = false; }
+        };
+        onMounted(() => { if (tab.value === 'holding') refreshHoldings(); });
+        watch(tab, (t) => { if (t === 'holding') refreshHoldings(); });
+
+        // Subscribe sheet — USD-funded (min $100).
         const buying = ref(null);          // product or null
-        const amount = ref('');
+        const amount = ref('');            // USD
+        const submitting = ref(false);
         const openBuy = (p) => { buying.value = p; amount.value = ''; };
         const closeBuy = () => { buying.value = null; };
-        const estDaily = computed(() => {
-            const a = parseFloat(amount.value) || 0; return (a * buying.value?.dmax / 100 || 0);
-        });
+        const estDaily = computed(() => (parseFloat(amount.value) || 0) * (buying.value?.dmax || 0) / 100);
         const estTotal = computed(() => estDaily.value * (buying.value?.term || 1));
-        const confirmBuy = () => {
+        const confirmBuy = async () => {
             if (!store.isAuthed) { closeBuy(); go('/login'); return; }
-            if (!(parseFloat(amount.value) > 0)) { toast('Enter an amount', 'error'); return; }
-            toast('Subscribed (demo)', 'success'); closeBuy();
+            submitting.value = true;
+            try {
+                await subscribeFinance({ product: buying.value, amountUsd: amount.value });
+                toast('Subscribed', 'success');
+                closeBuy();
+                tab.value = 'holding';
+                refreshHoldings();
+            } catch (e) { toast(e?.message || 'Subscription failed', 'error', 4000); }
+            finally { submitting.value = false; }
         };
 
-        return { tab, products, sparks, sparkPath, buying, amount, openBuy, closeBuy, estDaily, estTotal, confirmBuy, go, fmtAmt, store };
+        return { tab, products, sparks, sparkPath, holdings, loadingHoldings, buying, amount, submitting,
+                 openBuy, closeBuy, estDaily, estTotal, confirmBuy, FINANCE_MIN_USD, go, fmtAmt, store };
     },
     template: /*html*/`
     <section class="fin">
@@ -70,7 +90,7 @@ export default {
                     <div><span class="muted">Subscribers</span><b class="num">{{ p.buyers.toLocaleString() }}</b></div>
                 </div>
                 <div class="fin__foot">
-                    <span class="muted" style="font-size:var(--fs-caption)">Limit {{ fmtAmt(p.min) }}–{{ fmtAmt(p.max) }} {{ p.asset }}</span>
+                    <span class="muted" style="font-size:var(--fs-caption)">Min \${{ FINANCE_MIN_USD }} · USD-funded</span>
                     <button class="btn btn--brand btn--sm" @click="openBuy(p)">Subscribe</button>
                 </div>
             </div>
@@ -78,15 +98,32 @@ export default {
         </div>
 
         <!-- My Holding -->
-        <div v-else class="card">
-            <div class="placeholder" style="border:0; padding:var(--sp-12)">
-                <Icon name="finance" class="placeholder__icon" :size="44" />
-                <p class="muted">{{ store.isAuthed ? 'No active subscriptions yet.' : 'Log in to view your holdings.' }}</p>
-                <button class="btn btn--brand btn--sm btn--pill" @click="store.isAuthed ? (tab = 'current') : go('/login')">{{ store.isAuthed ? 'Browse products' : 'Log in' }}</button>
+        <div v-else>
+            <div v-if="loadingHoldings" class="card" style="display:grid; place-items:center; padding:var(--sp-10)"><span class="spinner"></span></div>
+            <div v-else-if="holdings.length" class="fin__list">
+                <div v-for="h in holdings" :key="h.id" class="card fin__hold">
+                    <div class="fin__hold-top">
+                        <b>{{ h.asset }} · {{ h.product_name }}</b>
+                        <span class="chip" :class="h.status === 'active' ? 'chip--up' : ''">{{ h.status }}</span>
+                    </div>
+                    <div class="fin__stats">
+                        <div><span class="muted">Principal</span><b class="num">\${{ fmtAmt(h.amount) }}</b></div>
+                        <div><span class="muted">Daily rate</span><b class="num up">+{{ h.daily_rate }}%</b></div>
+                        <div><span class="muted">Earned</span><b class="num up">+\${{ fmtAmt(h.accrued || 0) }}</b></div>
+                    </div>
+                    <div class="muted" style="font-size:var(--fs-caption)">{{ h.term_days ? h.term_days + '-day term' : 'Flexible' }}</div>
+                </div>
+            </div>
+            <div v-else class="card">
+                <div class="placeholder" style="border:0; padding:var(--sp-12)">
+                    <Icon name="finance" class="placeholder__icon" :size="44" />
+                    <p class="muted">{{ store.isAuthed ? 'No active subscriptions yet.' : 'Log in to view your holdings.' }}</p>
+                    <button class="btn btn--brand btn--sm btn--pill" @click="store.isAuthed ? (tab = 'current') : go('/login')">{{ store.isAuthed ? 'Browse products' : 'Log in' }}</button>
+                </div>
             </div>
         </div>
 
-        <!-- Buy sheet -->
+        <!-- Subscribe sheet -->
         <transition name="scrim"><div v-if="buying" class="drawer-scrim" @click="closeBuy"></div></transition>
         <transition name="sheet">
             <div v-if="buying" class="sheet">
@@ -95,12 +132,15 @@ export default {
                 <div class="sheet__row"><span class="muted">Est. daily rate</span><b class="up">up to +{{ buying.dmax }}%</b></div>
                 <label class="fieldrow" style="margin:var(--sp-3) 0">
                     <span class="fieldrow__lbl">Amount</span>
-                    <input class="fieldrow__in num" placeholder="0" v-model="amount" />
-                    <span class="fieldrow__suf">{{ buying.asset }}</span>
+                    <input class="fieldrow__in num" :placeholder="'min ' + FINANCE_MIN_USD" v-model="amount" />
+                    <span class="fieldrow__suf">USD</span>
                 </label>
-                <div class="sheet__row"><span class="muted">Est. daily earnings</span><b class="num up">+{{ fmtAmt(estDaily) }} {{ buying.asset }}</b></div>
-                <div v-if="buying.term" class="sheet__row"><span class="muted">Est. total ({{ buying.term }}d)</span><b class="num up">+{{ fmtAmt(estTotal) }} {{ buying.asset }}</b></div>
-                <button class="btn btn--brand btn--block btn--lg" style="margin-top:var(--sp-4)" @click="confirmBuy">{{ store.isAuthed ? 'Confirm subscription' : 'Log in to subscribe' }}</button>
+                <div class="sheet__row"><span class="muted">Est. daily earnings</span><b class="num up">+\${{ fmtAmt(estDaily) }}</b></div>
+                <div v-if="buying.term" class="sheet__row"><span class="muted">Est. total ({{ buying.term }}d)</span><b class="num up">+\${{ fmtAmt(estTotal) }}</b></div>
+                <button class="btn btn--brand btn--block btn--lg" style="margin-top:var(--sp-4)" :disabled="submitting" @click="confirmBuy">
+                    <span v-if="submitting" class="spinner" style="border-top-color:#fff"></span>
+                    <template v-else>{{ store.isAuthed ? 'Confirm subscription' : 'Log in to subscribe' }}</template>
+                </button>
             </div>
         </transition>
     </section>`,
