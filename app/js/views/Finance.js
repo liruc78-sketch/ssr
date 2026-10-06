@@ -4,7 +4,7 @@ import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { FINANCE_PRODUCTS, genSpark, fmtAmt } from '../data.js';
-import { subscribeFinance, loadHoldings, FINANCE_MIN_USD } from '../finance.js';
+import { subscribeFinance, loadHoldings, redeemSubscription, FINANCE_MIN_USD } from '../finance.js';
 
 export default {
     name: 'Finance',
@@ -48,8 +48,17 @@ export default {
             finally { submitting.value = false; }
         };
 
+        // Redeem a holding
+        const redeemingId = ref(null);
+        const redeem = async (h) => {
+            redeemingId.value = h.id;
+            try { await redeemSubscription(h.id); toast('Redeemed — balance credited', 'success'); await refreshHoldings(); }
+            catch (e) { toast(e?.message || 'Could not redeem', 'error', 3600); }
+            finally { redeemingId.value = null; }
+        };
+
         return { tab, products, sparks, sparkPath, holdings, loadingHoldings, buying, amount, submitting,
-                 openBuy, closeBuy, estDaily, estTotal, confirmBuy, FINANCE_MIN_USD, go, fmtAmt, store };
+                 openBuy, closeBuy, estDaily, estTotal, confirmBuy, redeem, redeemingId, FINANCE_MIN_USD, go, fmtAmt, store };
     },
     template: /*html*/`
     <section class="fin">
@@ -111,7 +120,13 @@ export default {
                         <div><span class="muted">Daily rate</span><b class="num up">+{{ h.daily_rate }}%</b></div>
                         <div><span class="muted">Earned</span><b class="num up">+\${{ fmtAmt(h.accrued || 0) }}</b></div>
                     </div>
-                    <div class="muted" style="font-size:var(--fs-caption)">{{ h.term_days ? h.term_days + '-day term' : 'Flexible' }}</div>
+                    <div class="fin__hold-foot">
+                        <span class="muted" style="font-size:var(--fs-caption)">{{ h.term_days ? h.term_days + '-day term' : 'Flexible' }}</span>
+                        <button v-if="h.status === 'active'" class="btn btn--sm" :class="h.term_days ? 'btn--ghost' : 'btn--brand'" :disabled="redeemingId === h.id" @click="redeem(h)">
+                            <span v-if="redeemingId === h.id" class="spinner" style="border-top-color:#fff"></span>
+                            <template v-else>Redeem</template>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div v-else class="card">

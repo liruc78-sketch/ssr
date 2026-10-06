@@ -40,3 +40,15 @@ export async function loadHoldings() {
     const { data } = await sb.from('finance_subscriptions').select('*').eq('user_id', store.session.userId).order('created_at', { ascending: false }).limit(50);
     return data || [];
 }
+
+// Redeem a subscription (flexible, or matured fixed): credits principal + accrued.
+export async function redeemSubscription(subId) {
+    const { data, error } = await sb.rpc('finance_redeem', { p_sub_id: subId });
+    if (error) {
+        if (/function|does not exist|schema cache|404/i.test(error.message || '')) throw new Error('Redemption isn’t enabled on the backend yet — run the finance accrual migration.');
+        throw error;
+    }
+    if (data && data.ok === false) throw new Error(data.error || 'Could not redeem');
+    await refreshPortfolio();
+    return data;
+}
