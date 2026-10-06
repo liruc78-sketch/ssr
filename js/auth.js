@@ -71,14 +71,12 @@ export async function connectWallet() {
 async function linkedUser(authUser, { email } = {}) {
     let { data: user, error } = await sb.from('users').select('*').eq('auth_id', authUser.id).single();
     if (error && error.code === 'PGRST116') {
+        // Provision server-side (users row + zero-balance portfolio); client can't set a balance.
         const handle = (email || authUser.email || 'user').split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 12) || 'user';
-        const uname = `${handle}_${Math.floor(Math.random() * 9000 + 1000)}`;
-        const { data: nu, error: ce } = await sb.from('users').insert({
-            auth_id: authUser.id, email: email || authUser.email, display_name: handle, username: uname,
-        }).select().single();
-        if (ce) throw ce;
-        user = nu;
-        await sb.from('portfolios').insert({ user_id: user.id, usd_balance: 0 });
+        const { error: pe } = await sb.rpc('provision_me', { p_email: email || authUser.email || null, p_display: handle });
+        if (pe) throw pe;
+        ({ data: user, error } = await sb.from('users').select('*').eq('auth_id', authUser.id).single());
+        if (error) throw error;
     } else if (error) throw error;
     return user;
 }
