@@ -9,28 +9,16 @@ import { refreshPortfolio } from './auth.js';
 
 export const FINANCE_MIN_USD = 100;
 
-// Subscribe `amountUsd` (USD) to a finance product; debits the USD balance.
+// Subscribe `amountUsd` (USD) — server-side (finance_subscribe RPC): debit +
+// record atomically for the signed-in caller. No client-side balance write.
 export async function subscribeFinance({ product, amountUsd }) {
     if (!store.session?.userId) { const e = new Error('Please sign in first'); e.code = 'AUTH'; throw e; }
-    const amt = parseFloat(amountUsd);
-    if (!(amt > 0)) throw new Error('Enter an amount');
-    if (amt < FINANCE_MIN_USD) throw new Error(`Minimum subscription is $${FINANCE_MIN_USD}`);
-
-    const { data: pd, error: balErr } = await sb.from('portfolios').select('usd_balance').eq('user_id', store.session.userId).single();
-    if (balErr || !pd) { store.connectionLost = true; throw new Error('Connection error, please try again'); }
-    const before = parseFloat(pd.usd_balance);
-    if (before < amt) throw new Error('Insufficient balance');
-
-    await sb.from('portfolios').update({ usd_balance: before - amt }).eq('user_id', store.session.userId);
-    const { error: insErr } = await sb.from('finance_subscriptions').insert({
-        user_id: store.session.userId, product_id: product.id, product_name: product.name, asset: product.asset,
-        amount: amt, daily_rate: product.dmax, term_days: product.term, status: 'active',
+    const { data, error } = await sb.rpc('finance_subscribe', {
+        p_product_id: product.id, p_product_name: product.name, p_asset: product.asset,
+        p_amount: parseFloat(amountUsd), p_daily_rate: product.dmax, p_term_days: product.term || 0,
     });
-    if (insErr) {
-        await sb.from('portfolios').update({ usd_balance: before }).eq('user_id', store.session.userId);  // rollback
-        if (/relation|does not exist|schema cache|404/i.test(insErr.message || '')) throw new Error('Finance isn’t enabled on the backend yet — run db/2026-finance.sql.');
-        throw new Error('Subscription failed — please try again');
-    }
+    if (error) throw new Error(error.message || 'Subscription failed');
+    if (data && data.ok === false) throw new Error(data.error || 'Subscription failed');
     await refreshPortfolio();
     return { ok: true };
 }
