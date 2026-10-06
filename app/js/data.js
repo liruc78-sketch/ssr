@@ -85,6 +85,16 @@ export function fmtVol(v) {
     return v.toFixed(2);
 }
 
+// CoinGecko spot price in USD (used for deposit crediting + options entry).
+import { CG_KEY } from './supabase.js';
+export async function cgPrice(cgId) {
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd&x_cg_demo_api_key=${CG_KEY}`);
+    const data = await res.json();
+    const p = data?.[cgId]?.usd;
+    if (!p) throw new Error('Unable to fetch price');
+    return p;
+}
+
 // --- Live data (Binance public REST; falls back silently) ----------------
 const BINANCE = 'https://api.binance.com/api/v3';
 

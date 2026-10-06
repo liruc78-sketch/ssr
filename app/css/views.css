@@ -250,6 +250,22 @@ select.field { appearance: none; cursor: pointer; background-image: url("data:im
 .xfer__swap { display: flex; justify-content: center; margin: calc(-1 * var(--sp-2)) 0; }
 .xfer__swap .iconbtn { background: var(--surface-2); transform: rotate(90deg); }
 
+/* Deposit coin/network picker + order */
+.dep-coins { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+.dep-coin { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--sp-3) 2px; border-radius: var(--r-sm); background: var(--surface-2); border: 1.5px solid transparent; }
+.dep-coin b { font-size: var(--fs-body); } .dep-coin .muted { font-size: 10px; }
+.dep-coin.is-on { border-color: var(--brand); background: var(--brand-weak); }
+.dep-nets { display: flex; flex-direction: column; gap: var(--sp-2); }
+.dep-net { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-sm); background: var(--surface-2); border: 1.5px solid transparent; text-align: left; color: var(--brand); }
+.dep-net b { color: var(--text); } .dep-net.is-on { border-color: var(--brand); background: var(--brand-weak); }
+.dep-timer { text-align: center; font-size: var(--fs-small); color: var(--text-2); background: var(--gold-weak); border-radius: var(--r-sm); padding: var(--sp-2); }
+.dep-timer b { color: var(--gold); }
+
+/* History records */
+.rec-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-1); }
+.rec-row + .rec-row { border-top: 1px solid var(--border-2); }
+.rec-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
 /* ============================ FINANCE / EARN =========================== */
 .fin__hero { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: var(--sp-6); color: #fff; background: linear-gradient(120deg, #11162b, #2f49d6); margin-bottom: var(--sp-4); }
 .fin__hero-txt h2 { color: #fff; } .fin__hero-txt p { opacity: .9; margin: var(--sp-2) 0 var(--sp-4); max-width: 30ch; }
