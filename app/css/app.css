@@ -1,0 +1,210 @@
+/* ============================================================================
+   Crypto.ssr — App shell & navigation (responsive)
+   Desktop (>=1024px): top nav bar.  Mobile: top bar + bottom nav + drawer.
+   ========================================================================== */
+
+#app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.app-main {
+    flex: 1;
+    width: 100%;
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: var(--sp-4) var(--sp-4) calc(var(--bottomnav-h) + var(--sp-6));
+}
+@media (min-width: 1024px) {
+    .app-main { padding: var(--sp-8) var(--sp-6) var(--sp-16); }
+}
+
+/* Route transition */
+.route-fade-enter-active { transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+.route-fade-enter-from { opacity: 0; transform: translateY(6px); }
+
+/* ---- Brand lockup -------------------------------------------------------- */
+.brand { display: inline-flex; align-items: center; gap: var(--sp-2); font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; }
+.brand__mark {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+    color: #fff; font-size: 17px; font-weight: 700; flex: none;
+    box-shadow: 0 2px 8px -2px var(--brand);
+}
+.brand__name { font-size: var(--fs-h4); }
+.brand__name b { color: var(--brand); }
+
+/* ======================= DESKTOP TOP NAV ================================= */
+.topnav { display: none; }
+@media (min-width: 1024px) {
+    .topnav {
+        position: sticky; top: 0; z-index: 50;
+        display: flex; align-items: center; gap: var(--sp-6);
+        height: var(--nav-h); padding: 0 var(--sp-6);
+        background: color-mix(in srgb, var(--surface) 88%, transparent);
+        backdrop-filter: saturate(180%) blur(12px);
+        border-bottom: 1px solid var(--border);
+    }
+    .topnav__links { display: flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-4); }
+    .topnav__link {
+        position: relative; padding: var(--sp-2) var(--sp-3);
+        font-size: var(--fs-body); font-weight: 500; color: var(--text-2);
+        border-radius: var(--r-sm); transition: color var(--dur-fast), background var(--dur-fast);
+    }
+    .topnav__link:hover { color: var(--text); background: var(--surface-2); }
+    .topnav__link.is-active { color: var(--brand); }
+    .topnav__link.is-active::after {
+        content: ''; position: absolute; left: var(--sp-3); right: var(--sp-3); bottom: -1px;
+        height: 2px; background: var(--brand); border-radius: 2px;
+    }
+    .topnav__spacer { flex: 1; }
+    .topnav__actions { display: flex; align-items: center; gap: var(--sp-2); }
+}
+
+/* ======================= MOBILE TOP BAR ================================== */
+.topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    height: var(--topbar-h); padding: 0 var(--sp-4);
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+}
+.topbar__actions { display: flex; align-items: center; gap: var(--sp-1); }
+@media (min-width: 1024px) { .topbar { display: none; } }
+
+/* Icon button (used in both bars) */
+.iconbtn {
+    width: 40px; height: 40px; border-radius: var(--r-sm);
+    display: grid; place-items: center; color: var(--text-2);
+    transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+    position: relative;
+}
+.iconbtn:hover { background: var(--surface-2); color: var(--text); }
+.iconbtn:active { transform: scale(0.94); }
+.iconbtn svg { width: 22px; height: 22px; }
+.iconbtn__dot {
+    position: absolute; top: 8px; right: 8px; width: 7px; height: 7px;
+    background: var(--down); border-radius: 50%; border: 2px solid var(--surface);
+}
+
+/* ======================= MOBILE BOTTOM NAV =============================== */
+.bottomnav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: flex-end; justify-content: space-around;
+    height: var(--bottomnav-h); padding-bottom: env(safe-area-inset-bottom, 0);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-top: 1px solid var(--border);
+}
+@media (min-width: 1024px) { .bottomnav { display: none; } }
+.bottomnav__item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: var(--sp-2) 0; color: var(--text-3);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.01em;
+    transition: color var(--dur-fast);
+}
+.bottomnav__item svg { width: 24px; height: 24px; }
+.bottomnav__item.is-active { color: var(--brand); }
+/* Center "Trade" — raised accent button */
+.bottomnav__center { position: relative; }
+.bottomnav__center .bottomnav__fab {
+    width: 52px; height: 52px; margin-top: -22px; border-radius: 50%;
+    display: grid; place-items: center; color: #fff;
+    background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+    box-shadow: 0 6px 16px -4px var(--brand);
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+.bottomnav__center:active .bottomnav__fab { transform: scale(0.94); }
+.bottomnav__center .bottomnav__fab svg { width: 26px; height: 26px; }
+
+/* ======================= DRAWER ========================================== */
+.drawer-scrim {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(8, 12, 20, 0.5);
+    backdrop-filter: blur(2px);
+}
+.drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 61;
+    width: min(360px, 88vw);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+}
+.drawer__head { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4); }
+.drawer__account {
+    margin: 0 var(--sp-4) var(--sp-4);
+    padding: var(--sp-4); border-radius: var(--r-md);
+    background: var(--surface-2);
+    display: flex; align-items: center; gap: var(--sp-3);
+}
+.drawer__avatar {
+    width: 48px; height: 48px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--brand), var(--gold));
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 18px;
+    font-family: var(--font-display);
+}
+.drawer__uid { display: flex; gap: var(--sp-3); margin-top: 2px; }
+.drawer__section { padding: var(--sp-2) var(--sp-4) var(--sp-4); }
+.drawer__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-2) var(--sp-1); }
+.drawer__cell {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: var(--sp-3) 2px; border-radius: var(--r-sm);
+    font-size: var(--fs-caption); color: var(--text-2); text-align: center; line-height: 1.2;
+    transition: background var(--dur-fast);
+}
+.drawer__cell:hover { background: var(--surface-2); }
+.drawer__cell svg { width: 24px; height: 24px; color: var(--text); }
+
+/* drawer slide / scrim fade */
+.drawer-enter-active, .drawer-leave-active { transition: transform var(--dur) var(--ease-out); }
+.drawer-enter-from, .drawer-leave-to { transform: translateX(100%); }
+.scrim-enter-active, .scrim-leave-active { transition: opacity var(--dur) var(--ease-out); }
+.scrim-enter-from, .scrim-leave-to { opacity: 0; }
+
+/* Mode toggle (Live / Simulated) */
+.modepill {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+    margin: 0 var(--sp-4) var(--sp-4); padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-md); background: var(--brand-weak); color: var(--brand);
+    font-weight: 600;
+}
+
+/* ======================= FLOATING CHAT =================================== */
+.chatfab {
+    position: fixed; z-index: 55;
+    right: var(--sp-4); bottom: calc(var(--bottomnav-h) + var(--sp-4));
+    width: 54px; height: 54px; border-radius: 50%;
+    display: grid; place-items: center; color: #fff;
+    background: linear-gradient(135deg, var(--up), #0ea5a5);
+    box-shadow: 0 8px 20px -6px rgba(14, 203, 129, .6);
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+.chatfab:hover { transform: translateY(-2px); }
+.chatfab:active { transform: scale(0.94); }
+.chatfab svg { width: 28px; height: 28px; }
+@media (min-width: 1024px) { .chatfab { bottom: var(--sp-6); right: var(--sp-6); } }
+
+/* ======================= GENERIC PAGE HEADER / EMPTY ===================== */
+.page-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.page-head__back { margin-left: -8px; }
+.page-title { font-size: var(--fs-h2); }
+
+.placeholder {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--sp-3); padding: var(--sp-16) var(--sp-4); text-align: center; color: var(--text-3);
+    border: 1px dashed var(--border-strong); border-radius: var(--r-lg);
+}
+.placeholder__icon { width: 56px; height: 56px; color: var(--text-muted); }
+
+/* ======================= TOAST ========================================== */
+.toast {
+    position: fixed; left: 50%; bottom: calc(var(--bottomnav-h) + var(--sp-5)); transform: translateX(-50%);
+    z-index: 80; max-width: calc(100vw - var(--sp-8));
+    padding: var(--sp-3) var(--sp-5); border-radius: var(--r-pill);
+    background: var(--text); color: var(--bg);
+    font-size: var(--fs-small); font-weight: 600; box-shadow: var(--shadow-lg);
+}
+.toast--info    { background: var(--text); }
+.toast--success { background: var(--up); color: #fff; }
+.toast--error   { background: var(--down); color: #fff; }
+@media (min-width: 1024px) { .toast { bottom: var(--sp-8); } }

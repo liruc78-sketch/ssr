@@ -1,0 +1,82 @@
+// Markets — category tabs, search, watchlist, live crypto prices
+import { ref, computed, onMounted } from 'vue';
+import { Icon } from '../icons.js';
+import { go, router } from '../router.js';
+import { COINS, US_STOCKS, FX, CATEGORIES, fetchTickers, fmtPrice, fmtChg } from '../data.js';
+
+const WATCH_KEY = 'ssr_watch';
+function loadWatch() {
+    try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) || 'null'); return new Set(v || COINS.map(c => c.sym)); }
+    catch { return new Set(COINS.map(c => c.sym)); }
+}
+
+export default {
+    name: 'Market',
+    components: { Icon },
+    setup() {
+        const cat = ref(['us', 'fx', 'crypto', 'watch'].includes(router.query.cat) ? router.query.cat : 'crypto');
+        const query = ref('');
+        const coins = ref(COINS.map(c => ({ ...c })));   // live-updatable
+        const watch = ref(loadWatch());
+
+        onMounted(async () => {
+            try { coins.value = await fetchTickers(coins.value); } catch { /* keep seed */ }
+        });
+
+        const base = computed(() => {
+            if (cat.value === 'crypto') return coins.value;
+            if (cat.value === 'us') return US_STOCKS;
+            if (cat.value === 'fx') return FX;
+            // watchlist: any instrument whose sym is starred
+            return [...coins.value, ...US_STOCKS, ...FX].filter(c => watch.value.has(c.sym));
+        });
+        const list = computed(() => {
+            const q = query.value.trim().toUpperCase();
+            return q ? base.value.filter(c => c.sym.includes(q) || c.name.toUpperCase().includes(q)) : base.value;
+        });
+
+        const isWatched = (sym) => watch.value.has(sym);
+        const toggleWatch = (sym) => {
+            const s = new Set(watch.value);
+            s.has(sym) ? s.delete(sym) : s.add(sym);
+            watch.value = s;
+            try { localStorage.setItem(WATCH_KEY, JSON.stringify([...s])); } catch {}
+        };
+        const open = (c) => go('/coin?sym=' + c.sym);
+
+        return { cat, query, CATEGORIES, list, isWatched, toggleWatch, open, go, fmtPrice, fmtChg };
+    },
+    template: /*html*/`
+    <section class="market">
+        <div class="market__head">
+            <div class="tabs">
+                <button v-for="c in CATEGORIES" :key="c.key" class="tab" :class="{ 'is-on': cat === c.key }" @click="cat = c.key">{{ c.label }}</button>
+            </div>
+            <label class="search">
+                <Icon name="search" :size="18" />
+                <input v-model="query" class="search__input" placeholder="Search markets, e.g. BTC" />
+            </label>
+        </div>
+
+        <div class="market__list card">
+            <div class="market__row market__row--head">
+                <span>Pair</span><span>Last price</span><span>24h</span><span></span>
+            </div>
+            <div v-if="!list.length" class="placeholder" style="border:0; padding:var(--sp-10)">
+                <Icon name="star" class="placeholder__icon" :size="48" />
+                <p class="muted">No instruments here yet — star some from Crypto to build your watchlist.</p>
+            </div>
+            <button v-for="c in list" :key="c.sym" class="market__row" @click="open(c)">
+                <span class="market__pair">
+                    <span class="market__ico" :style="{ background: c.color }">{{ c.sym.slice(0,1) }}</span>
+                    <span class="market__id"><b>{{ c.sym }}</b><span class="muted" style="font-size:var(--fs-caption)">{{ c.name }}</span></span>
+                </span>
+                <span class="market__px num">{{ fmtPrice(c.price) }}</span>
+                <span class="market__chg num" :class="c.chg >= 0 ? 'chip chip--up' : 'chip chip--down'">{{ fmtChg(c.chg) }}</span>
+                <button class="market__star" :class="{ 'is-on': isWatched(c.sym) }" @click.stop="toggleWatch(c.sym)" :aria-label="isWatched(c.sym) ? 'Unwatch' : 'Watch'">
+                    <Icon name="star" :size="18" />
+                </button>
+            </button>
+        </div>
+    </section>`,
+};
