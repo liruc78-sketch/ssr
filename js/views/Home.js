@@ -28,6 +28,7 @@ export default {
         onBeforeUnmount(() => clearInterval(timer));
 
         const coins = COINS;
+        const topCoins = COINS.slice(0, 20);   // compact home preview; full list on /market
         const feed = genFeed(8);
         const faq = FAQ;
         const openFaq = ref(0);
@@ -54,7 +55,7 @@ export default {
             },
         ];
 
-        return { actions, slides, slide, goSlide, coins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg };
+        return { actions, slides, slide, goSlide, coins, topCoins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg };
     },
     template: /*html*/`
     <section class="home">
@@ -94,15 +95,14 @@ export default {
             <h2>Markets</h2>
             <button class="btn btn--ghost btn--sm" @click="go('/market')">View all <Icon name="chevronR" :size="16" /></button>
         </div>
-        <div class="quotes card">
-            <button v-for="c in coins" :key="c.sym" class="quote" @click="go('/coin?sym=' + c.sym)">
-                <CoinIcon :sym="c.sym" :color="c.color" cls="quote__ico" />
-                <span class="quote__id">
+        <div class="quotes-scroll">
+            <button v-for="c in topCoins" :key="c.sym" class="qcard" @click="go('/coin?sym=' + c.sym)">
+                <span class="qcard__top">
+                    <CoinIcon :sym="c.sym" :color="c.color" cls="qcard__ico" />
                     <b>{{ c.sym }}</b>
-                    <span class="muted num" style="font-size:var(--fs-caption)">Vol {{ c.vol }}</span>
                 </span>
-                <span class="quote__px num">{{ fmtPrice(c.price) }}</span>
-                <span class="quote__chg num" :class="c.chg >= 0 ? 'chip chip--up' : 'chip chip--down'">{{ fmtChg(c.chg) }}</span>
+                <span class="qcard__px num">{{ fmtPrice(c.price) }}</span>
+                <span class="qcard__chg num" :class="c.chg >= 0 ? 'chip chip--up' : 'chip chip--down'">{{ fmtChg(c.chg) }}</span>
             </button>
         </div>
 
