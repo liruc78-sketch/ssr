@@ -1,5 +1,5 @@
 // Home — landing dashboard
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { Icon } from '../icons.js';
 import { CoinIcon } from '../components/CoinIcon.js';
 import { WALLETS } from '../components/wallets.js';
@@ -28,7 +28,7 @@ export default {
         onBeforeUnmount(() => clearInterval(timer));
 
         const coins = COINS;
-        const topCoins = COINS.slice(0, 20);   // compact home preview; full list on /market
+        const topCoins = COINS.slice(0, 12);   // compact home preview; full list on /market
         const feed = genFeed(8);
         const faq = FAQ;
         const openFaq = ref(0);
@@ -37,28 +37,49 @@ export default {
         const q = ref('');
         const search = () => go('/market' + (q.value.trim() ? '?q=' + encodeURIComponent(q.value.trim()) : ''));
 
-        // Drag-to-scroll for the markets row (mouse); touch/trackpad use native scroll.
-        const scroller = ref(null);
-        const drag = { down: false, startX: 0, startLeft: 0, moved: false };
-        const onDown = (e) => {
-            if (e.pointerType && e.pointerType !== 'mouse') return;   // let touch scroll natively
-            const el = scroller.value; if (!el) return;
-            drag.down = true; drag.moved = false; drag.startX = e.clientX; drag.startLeft = el.scrollLeft;
+        // Markets carousel: paged horizontal slider (drag + animated slide + dots).
+        const PER_PAGE = 3;
+        const marketPages = computed(() => {
+            const out = [];
+            for (let i = 0; i < topCoins.length; i += PER_PAGE) out.push(topCoins.slice(i, i + PER_PAGE));
+            return out;
+        });
+        const mcarEl = ref(null);
+        const mpage = ref(0);
+        const mTx = ref(0);          // track translateX in px
+        const mAnim = ref(true);     // slide transition on (off while finger-dragging)
+        const mDrag = { down: false, startX: 0, dx: 0, moved: false };
+        const relayout = () => { mTx.value = -mpage.value * (mcarEl.value ? mcarEl.value.clientWidth : 0); };
+        const setPage = (i) => {
+            mpage.value = Math.max(0, Math.min(marketPages.value.length - 1, i));
+            mAnim.value = true; relayout();
+        };
+        const onMDown = (e) => {
+            const el = mcarEl.value; if (!el) return;
+            mDrag.down = true; mDrag.moved = false; mDrag.startX = e.clientX; mDrag.dx = 0;
+            mAnim.value = false;                 // follow the finger 1:1
             try { el.setPointerCapture(e.pointerId); } catch {}
         };
-        const onMove = (e) => {
-            if (!drag.down) return;
-            const dx = e.clientX - drag.startX;
-            if (Math.abs(dx) > 4) drag.moved = true;
-            scroller.value.scrollLeft = drag.startLeft - dx;
+        const onMMove = (e) => {
+            if (!mDrag.down) return;
+            mDrag.dx = e.clientX - mDrag.startX;
+            if (Math.abs(mDrag.dx) > 4) mDrag.moved = true;
+            mTx.value = -mpage.value * mcarEl.value.clientWidth + mDrag.dx;
         };
-        const onUp = (e) => {
-            if (!drag.down) return;
-            try { scroller.value?.releasePointerCapture(e.pointerId); } catch {}
-            drag.down = false;
+        const onMUp = (e) => {
+            if (!mDrag.down) return;
+            mDrag.down = false;
+            try { mcarEl.value && mcarEl.value.releasePointerCapture(e.pointerId); } catch {}
+            const w = mcarEl.value.clientWidth || 1;
+            const threshold = w * 0.18;
+            let target = mpage.value;
+            if (mDrag.dx <= -threshold) target++; else if (mDrag.dx >= threshold) target--;
+            setPage(target);                     // animated snap to the resolved page
         };
-        // A drag shouldn't also open the coin it ended on.
-        const openCoin = (c) => { if (drag.moved) { drag.moved = false; return; } go('/coin?sym=' + c.sym); };
+        // A drag shouldn't also open the coin it ends on.
+        const openCoin = (c) => { if (mDrag.moved) { mDrag.moved = false; return; } go('/coin?sym=' + c.sym); };
+        onMounted(() => { relayout(); window.addEventListener('resize', relayout); });
+        onBeforeUnmount(() => window.removeEventListener('resize', relayout));
 
         const trust = [
             {
@@ -79,7 +100,7 @@ export default {
         ];
 
         return { actions, slides, slide, goSlide, coins, topCoins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg,
-                 scroller, onDown, onMove, onUp, openCoin };
+                 marketPages, mcarEl, mpage, mTx, mAnim, setPage, onMDown, onMMove, onMUp, openCoin };
     },
     template: /*html*/`
     <section class="home">
@@ -119,15 +140,22 @@ export default {
             <h2>Markets</h2>
             <button class="btn btn--ghost btn--sm" @click="go('/market')">View all <Icon name="chevronR" :size="16" /></button>
         </div>
-        <div class="quotes-scroll" ref="scroller" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp">
-            <button v-for="c in topCoins" :key="c.sym" class="qcard" @click="openCoin(c)">
-                <span class="qcard__top">
-                    <CoinIcon :sym="c.sym" :color="c.color" cls="qcard__ico" />
-                    <b>{{ c.sym }}</b>
-                </span>
-                <span class="qcard__px num">{{ fmtPrice(c.price) }}</span>
-                <span class="qcard__chg num" :class="c.chg >= 0 ? 'chip chip--up' : 'chip chip--down'">{{ fmtChg(c.chg) }}</span>
-            </button>
+        <div class="mcar" ref="mcarEl" @pointerdown="onMDown" @pointermove="onMMove" @pointerup="onMUp" @pointercancel="onMUp">
+            <div class="mcar__track" :class="{ 'is-anim': mAnim }" :style="{ transform: 'translateX(' + mTx + 'px)' }">
+                <div v-for="(pg, pi) in marketPages" :key="pi" class="mcar__page">
+                    <button v-for="c in pg" :key="c.sym" class="qcard" @click="openCoin(c)">
+                        <span class="qcard__top">
+                            <CoinIcon :sym="c.sym" :color="c.color" cls="qcard__ico" />
+                            <b>{{ c.sym }}</b>
+                        </span>
+                        <span class="qcard__px num">{{ fmtPrice(c.price) }}</span>
+                        <span class="qcard__chg num" :class="c.chg >= 0 ? 'chip chip--up' : 'chip chip--down'">{{ fmtChg(c.chg) }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="mcar__dots">
+            <button v-for="(pg, pi) in marketPages" :key="pi" class="dot" :class="{ 'is-on': pi === mpage }" @click="setPage(pi)" :aria-label="'Markets page ' + (pi + 1)"></button>
         </div>
 
         <!-- Real-time transactions -->
