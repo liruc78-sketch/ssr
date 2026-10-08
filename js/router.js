@@ -23,6 +23,7 @@ const routes = {
     '/kyc':      { load: () => import('./views/Kyc.js'),      label: 'KYC Verification' },
     '/security': { load: () => import('./views/Security.js'), label: 'Security Center' },
     '/news':     { load: () => import('./views/News.js'),     nav: 'market', label: 'News' },
+    '/sim':      { load: () => import('./views/SimWallet.js'), label: 'Simulated Wallet' },
     '/bulletin': { load: () => import('./views/Bulletin.js'), label: 'Bulletin' },
     '/live':     { load: () => import('./views/Live.js'),     label: 'Live Streaming' },
     '/academy':  { load: () => import('./views/Academy.js'),  label: 'Beginner Academy' },

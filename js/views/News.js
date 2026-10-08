@@ -1,47 +1,98 @@
-// News — crypto news feed with sentiment (sample content; wires to a feed later)
-import { ref, computed } from 'vue';
+// News — live crypto headlines. Fetches current articles from the `news` edge
+// function (server-side feed aggregation) and links each card straight out to
+// the publisher's page. No in-app reader: clicking opens the real article.
+import { ref, computed, onMounted } from 'vue';
 import { Icon } from '../icons.js';
+import { edge } from '../supabase.js';
 
-const ARTICLES = [
-    { src: 'Market Desk', time: '12m', coins: ['BTC'], sent: 'bull', title: 'Bitcoin holds above key support as volatility cools', summary: 'Spot volumes ticked higher into the session while implied volatility eased, suggesting traders are positioning for a calmer range near-term.' },
-    { src: 'Chain Weekly', time: '48m', coins: ['ETH'], sent: 'neutral', title: 'Ethereum staking inflows steady after protocol update', summary: 'Validator queues normalized this week; net staking flows were broadly flat as the latest upgrade bedded in.' },
-    { src: 'Desk Notes', time: '2h', coins: ['SOL', 'ADA'], sent: 'bull', title: 'Layer-1 majors outperform as risk appetite returns', summary: 'Higher-beta layer-1 tokens led gains, with turnover concentrated in the top pairs during Asian hours.' },
-    { src: 'Macro Brief', time: '4h', coins: ['BTC'], sent: 'bear', title: 'Stronger dollar weighs on risk assets into month-end', summary: 'A firmer dollar and higher yields pressured risk assets broadly; crypto majors drifted lower in thin liquidity.' },
-    { src: 'Regulatory', time: '6h', coins: [], sent: 'neutral', title: 'Exchanges expand proof-of-reserves disclosures', summary: 'Several venues published updated reserve attestations, continuing a trend toward greater on-chain transparency.' },
-];
-const TAGS = ['BTC', 'ETH', 'DeFi', 'Regulation', 'Layer-1', 'Stablecoins'];
+const TAGS = ['BTC', 'ETH', 'Bitcoin', 'Ethereum', 'ETF', 'Regulation', 'DeFi', 'Solana'];
+
+// "12m ago" / "3h ago" / "2d ago" from an epoch-ms timestamp.
+function timeAgo(ms) {
+    const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+    const d = Math.floor(h / 24); return d + 'd ago';
+}
 
 export default {
     name: 'News',
     components: { Icon },
     setup() {
         const q = ref('');
+        const articles = ref([]);
+        const loading = ref(true);
+        const error = ref(false);
+
+        const load = async () => {
+            loading.value = true; error.value = false;
+            try {
+                const data = await edge('news', { method: 'GET' });
+                articles.value = Array.isArray(data?.articles) ? data.articles : [];
+                if (!articles.value.length) error.value = true;
+            } catch (e) {
+                error.value = true; articles.value = [];
+            } finally { loading.value = false; }
+        };
+        onMounted(load);
+
         const list = computed(() => {
             const s = q.value.trim().toLowerCase();
-            return s ? ARTICLES.filter(a => (a.title + a.summary + a.coins.join()).toLowerCase().includes(s)) : ARTICLES;
+            if (!s) return articles.value;
+            return articles.value.filter(a =>
+                (a.title + ' ' + (a.body || '') + ' ' + (a.source || '') + ' ' + (a.categories || []).join(' '))
+                    .toLowerCase().includes(s));
         });
-        const sentLabel = { bull: 'Bullish', bear: 'Bearish', neutral: 'Neutral' };
-        return { q, list, TAGS, sentLabel };
+
+        return { q, list, loading, error, TAGS, timeAgo, load };
     },
     template: /*html*/`
     <section>
         <div class="page-head"><h1 class="page-title">News</h1></div>
-        <label class="search" style="margin-top:0"><Icon name="search" :size="18" /><input class="search__input" v-model="q" placeholder="Search topics, e.g. BTC, DeFi" /></label>
+        <label class="search" style="margin-top:0"><Icon name="search" :size="18" /><input class="search__input" v-model="q" placeholder="Search headlines, e.g. BTC, ETF" /></label>
         <div class="news__tags">
             <span class="muted" style="font-size:var(--fs-caption)">Trending:</span>
             <button v-for="t in TAGS" :key="t" class="chip" style="background:var(--surface-2)" @click="q = t">{{ t }}</button>
         </div>
 
-        <div class="news__list">
-            <article v-for="(a, i) in list" :key="i" class="card news__card">
+        <!-- Loading -->
+        <div v-if="loading" class="news__list">
+            <div v-for="n in 5" :key="n" class="card news__card">
+                <div class="skeleton" style="height:12px; width:40%; margin-bottom:12px"></div>
+                <div class="skeleton" style="height:18px; width:90%; margin-bottom:8px"></div>
+                <div class="skeleton" style="height:14px; width:100%"></div>
+            </div>
+        </div>
+
+        <!-- Error / empty feed -->
+        <div v-else-if="error" class="placeholder" style="padding:var(--sp-10)">
+            <Icon name="info" class="placeholder__icon" :size="48" />
+            <h3>Couldn't load the news</h3>
+            <p class="muted" style="max-width:34ch">The feed is unavailable right now. Please try again in a moment.</p>
+            <button class="btn btn--brand" style="margin-top:var(--sp-4)" @click="load()">Retry</button>
+        </div>
+
+        <!-- No search matches -->
+        <div v-else-if="!list.length" class="placeholder" style="padding:var(--sp-10)">
+            <Icon name="search" class="placeholder__icon" :size="48" />
+            <p class="muted">No headlines match “{{ q }}”.</p>
+        </div>
+
+        <!-- Live headlines — each card links out to the publisher -->
+        <div v-else class="news__list">
+            <a v-for="a in list" :key="a.id" class="card news__card news__card--link" :href="a.url" target="_blank" rel="noopener noreferrer">
                 <div class="news__meta">
-                    <span class="num">{{ a.src }}</span><span class="news__dot">·</span><span>{{ a.time }} ago</span>
-                    <span class="chip" :class="a.sent === 'bull' ? 'chip--up' : a.sent === 'bear' ? 'chip--down' : ''" style="margin-left:auto">{{ sentLabel[a.sent] }}</span>
+                    <span class="num news__src">{{ a.source }}</span>
+                    <span class="news__dot">·</span><span>{{ timeAgo(a.published) }}</span>
+                    <span class="news__ext">Read <Icon name="chevronR" :size="14" /></span>
                 </div>
                 <h3 class="news__title">{{ a.title }}</h3>
-                <p class="muted news__sum">{{ a.summary }}</p>
-                <div class="news__coins"><span v-for="c in a.coins" :key="c" class="chip chip--brand">{{ c }}</span></div>
-            </article>
+                <p v-if="a.body" class="muted news__sum">{{ a.body }}</p>
+                <div v-if="a.categories && a.categories.length" class="news__coins">
+                    <span v-for="c in a.categories" :key="c" class="chip chip--brand">{{ c }}</span>
+                </div>
+            </a>
         </div>
     </section>`,
 };

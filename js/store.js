@@ -8,7 +8,6 @@ import { reactive, watch } from 'vue';
 import { STORAGE_KEY } from './supabase.js';
 
 const THEME_KEY = 'theme';
-const MODE_KEY  = 'ssr_account_mode';   // 'live' | 'sim'
 
 function read(key, fallback) {
     try { const v = localStorage.getItem(key); return v == null ? fallback : v; } catch { return fallback; }
@@ -17,7 +16,7 @@ function readJSON(key) {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
 }
 export function emptyPortfolio() {
-    return { usdBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
+    return { usdBalance: 0, simBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
 }
 
 export const store = reactive({
@@ -35,10 +34,6 @@ export const store = reactive({
     portfolio: emptyPortfolio(),
     balanceLoaded: false,     // distinguishes a real 0 from "not loaded yet"
     connectionLost: false,    // last portfolio fetch failed (keep last-known-good)
-
-    // ---- account mode ----------------------------------------------------
-    mode: read(MODE_KEY, 'live'),             // live | sim
-    get isSim() { return this.mode === 'sim'; },
 
     // ---- shell UI --------------------------------------------------------
     drawerOpen: false,
@@ -72,7 +67,6 @@ export function applyTheme(t) {
     if (meta) meta.setAttribute('content', t === 'dark' ? '#0b0e14' : '#f5f7fb');
 }
 export function toggleTheme() { store.theme = store.theme === 'dark' ? 'light' : 'dark'; }
-export function setMode(mode) { store.mode = mode; }
 export function openDrawer()  { store.drawerOpen = true;  document.body.style.overflow = 'hidden'; }
 export function closeDrawer() { store.drawerOpen = false; document.body.style.overflow = ''; }
 
@@ -84,4 +78,3 @@ export function toast(msg, type = 'info', ms = 2600) {
 
 // ---- persistence (reactive -> localStorage) -----------------------------
 watch(() => store.theme, (t) => { applyTheme(t); try { localStorage.setItem(THEME_KEY, t); } catch {} }, { immediate: true });
-watch(() => store.mode,  (m) => { try { localStorage.setItem(MODE_KEY, m); } catch {} });

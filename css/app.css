@@ -168,12 +168,14 @@
 .scrim-enter-from, .scrim-leave-to { opacity: 0; }
 
 /* Mode toggle (Live / Simulated) */
-.modepill {
+.drawer__simbtn {
     display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
     margin: 0 var(--sp-4) var(--sp-4); padding: var(--sp-3) var(--sp-4);
-    border-radius: var(--r-md); background: var(--brand-weak); color: var(--brand);
-    font-weight: 600;
+    border-radius: var(--r-md); background: var(--gold-weak); color: var(--gold);
+    font-weight: 600; text-align: left; transition: filter var(--dur-fast);
 }
+.drawer__simbtn:hover { filter: brightness(1.04); }
+.drawer__simbtn b { color: var(--gold); }
 
 /* ======================= FLOATING CHAT =================================== */
 .chatfab {

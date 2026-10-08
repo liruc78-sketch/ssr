@@ -37,14 +37,14 @@ export async function sweepPositions() {
 // Open a binary (Options) position via the server (trade-open edge function):
 // price fetch, tier gate, balance check, debit and insert all happen server-side
 // with the caller's session. No client-side balance write.
-export async function openOptionPosition({ coin, type, amount, tier }) {
+export async function openOptionPosition({ coin, type, amount, tier, sim = false }) {
     if (!store.session?.userId) { const e = new Error('Please sign in to trade'); e.code = 'AUTH'; throw e; }
     if (!coin?.cg) throw new Error('This asset is not available for options yet');
     const amt = parseFloat(amount);
     if (!(amt > 0)) throw new Error('Please enter a valid amount');
 
     const { data, error } = await sb.functions.invoke('trade-open', {
-        body: { coinId: coin.cg, type, amount: amt, durationSeconds: tier.sec },
+        body: { coinId: coin.cg, type, amount: amt, durationSeconds: tier.sec, sim },
     });
     if (error) {
         let msg = 'Could not place trade';
@@ -55,5 +55,7 @@ export async function openOptionPosition({ coin, type, amount, tier }) {
 
     await refreshPortfolio();
     setTimeout(() => settlePosition(data.positionId), tier.sec * 1000);
-    return { ok: true, positionId: data.positionId };
+    // entryPrice is the server-stamped fill price — the wait screen shows it as
+    // the "Entry price" so the client never has to guess the exact fill.
+    return { ok: true, positionId: data.positionId, entryPrice: data.entryPrice };
 }
