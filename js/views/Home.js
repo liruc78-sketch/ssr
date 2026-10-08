@@ -21,11 +21,30 @@ export default {
             { kKey: 'home.slide2.kicker', tKey: 'home.slide2.title', sKey: 'home.slide2.sub', tone: 'up' },
             { kKey: 'home.slide3.kicker', tKey: 'home.slide3.title', sKey: 'home.slide3.sub', tone: 'gold' },
         ];
+        // Hero banner: autoplaying slider that also supports drag-to-swipe.
         const slide = ref(0);
+        const carEl = ref(null);
+        const cTx = ref(0);        // hero track translateX in px (pixel-based so drag can follow the finger)
+        const cAnim = ref(true);   // slide transition on (off while dragging)
         let timer = null;
-        const goSlide = (i) => { slide.value = (i + slides.length) % slides.length; };
-        onMounted(() => { timer = setInterval(() => goSlide(slide.value + 1), 5000); });
-        onBeforeUnmount(() => clearInterval(timer));
+        const relayoutHero = () => { cTx.value = -slide.value * (carEl.value ? carEl.value.clientWidth : 0); };
+        const goSlide = (i) => { slide.value = (i + slides.length) % slides.length; cAnim.value = true; relayoutHero(); };
+        const startAuto = () => { clearInterval(timer); timer = setInterval(() => goSlide(slide.value + 1), 5000); };
+        const stopAuto = () => clearInterval(timer);
+        const cDrag = { down: false, startX: 0, dx: 0 };
+        const onCDown = (e) => { const el = carEl.value; if (!el) return; stopAuto(); cDrag.down = true; cDrag.startX = e.clientX; cDrag.dx = 0; cAnim.value = false; try { el.setPointerCapture(e.pointerId); } catch {} };
+        const onCMove = (e) => { if (!cDrag.down) return; cDrag.dx = e.clientX - cDrag.startX; cTx.value = -slide.value * carEl.value.clientWidth + cDrag.dx; };
+        const onCUp = (e) => {
+            if (!cDrag.down) return;
+            cDrag.down = false;
+            try { carEl.value && carEl.value.releasePointerCapture(e.pointerId); } catch {}
+            const w = carEl.value.clientWidth || 1;
+            const th = w * 0.18;
+            let t = slide.value;
+            if (cDrag.dx <= -th) t++; else if (cDrag.dx >= th) t--;
+            t = Math.max(0, Math.min(slides.length - 1, t));   // drag clamps (autoplay still wraps)
+            goSlide(t); startAuto();
+        };
 
         const coins = COINS;
         const topCoins = COINS.slice(0, 12);   // compact home preview; full list on /market
@@ -78,8 +97,9 @@ export default {
         };
         // A drag shouldn't also open the coin it ends on.
         const openCoin = (c) => { if (mDrag.moved) { mDrag.moved = false; return; } go('/coin?sym=' + c.sym); };
-        onMounted(() => { relayout(); window.addEventListener('resize', relayout); });
-        onBeforeUnmount(() => window.removeEventListener('resize', relayout));
+        const onResize = () => { relayout(); relayoutHero(); };
+        onMounted(() => { relayout(); relayoutHero(); startAuto(); window.addEventListener('resize', onResize); });
+        onBeforeUnmount(() => { stopAuto(); window.removeEventListener('resize', onResize); });
 
         const trust = [
             { titleKey: 'home.trust1.title', bodyKey: 'home.trust1.body', img: 'assets/why/security.svg' },
@@ -88,6 +108,7 @@ export default {
         ];
 
         return { actions, slides, slide, goSlide, coins, topCoins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg,
+                 carEl, cTx, cAnim, onCDown, onCMove, onCUp,
                  marketPages, mcarEl, mpage, mTx, mAnim, setPage, onMDown, onMMove, onMUp, openCoin };
     },
     template: /*html*/`
@@ -109,8 +130,8 @@ export default {
         </div>
 
         <!-- Carousel -->
-        <div class="carousel">
-            <div class="carousel__track" :style="{ transform: 'translateX(-' + (slide * 100) + '%)' }">
+        <div class="carousel" ref="carEl" @pointerdown="onCDown" @pointermove="onCMove" @pointerup="onCUp" @pointercancel="onCUp">
+            <div class="carousel__track" :class="{ 'is-anim': cAnim }" :style="{ transform: 'translateX(' + cTx + 'px)' }">
                 <div v-for="(s, i) in slides" :key="i" class="slide" :class="'slide--' + s.tone">
                     <div class="slide__kicker">{{ $t(s.kKey) }}</div>
                     <div class="slide__title">{{ $t(s.tKey) }}</div>
@@ -118,7 +139,7 @@ export default {
                     <span class="slide__glow"></span>
                 </div>
             </div>
-            <div class="carousel__dots">
+            <div class="carousel__dots" @pointerdown.stop>
                 <button v-for="(s, i) in slides" :key="i" class="dot" :class="{ 'is-on': i === slide }" @click="goSlide(i)" :aria-label="'Slide ' + (i+1)"></button>
             </div>
         </div>

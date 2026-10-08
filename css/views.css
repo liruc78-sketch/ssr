@@ -31,8 +31,10 @@
 }
 
 /* ---- Home: carousel ----------------------------------------------------- */
-.carousel { margin-top: var(--sp-4); border-radius: var(--r-lg); overflow: hidden; position: relative; }
-.carousel__track { display: flex; transition: transform var(--dur-slow) var(--ease-out); }
+.carousel { margin-top: var(--sp-4); border-radius: var(--r-lg); overflow: hidden; position: relative; cursor: grab; user-select: none; touch-action: pan-y; }
+.carousel:active { cursor: grabbing; }
+.carousel__track { display: flex; }
+.carousel__track.is-anim { transition: transform var(--dur-slow) var(--ease-out); }
 .slide {
     position: relative; flex: 0 0 100%; min-height: 150px; overflow: hidden;
     padding: var(--sp-6); color: #fff; display: flex; flex-direction: column; justify-content: center;
