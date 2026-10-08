@@ -9,7 +9,13 @@
 // ============================================================================
 import { h, ref, watch } from 'vue';
 
-const BASE = 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/';
+// Icon sources, tried in order per ticker: spothq (crisp SVG, great for the
+// majors) then CoinCap (covers newer coins spothq lacks). If both 404, we fall
+// back to the coloured-initial disc.
+const SOURCES = [
+    s => `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${s}.svg`,
+    s => `https://assets.coincap.io/assets/icons/${s}@2x.png`,
+];
 
 export const CoinIcon = {
     name: 'CoinIcon',
@@ -23,8 +29,9 @@ export const CoinIcon = {
     },
     setup(props) {
         const failed = ref(false);
-        // A new symbol gets a fresh chance to load its artwork.
-        watch(() => props.sym, () => { failed.value = false; });
+        const idx = ref(0);   // which SOURCES entry we're currently trying
+        // A new symbol gets a fresh chance to load its artwork from the first source.
+        watch(() => props.sym, () => { failed.value = false; idx.value = 0; });
 
         return () => {
             const classes = ['coin-ic', props.cls];
@@ -35,13 +42,14 @@ export const CoinIcon = {
             }
             return h('img', {
                 class: classes,
-                src: BASE + props.sym.toLowerCase() + '.svg',
+                src: SOURCES[idx.value](props.sym.toLowerCase()),
                 alt: props.sym,
                 loading: 'lazy',
                 draggable: 'false',
                 // Coloured disc shows while the artwork loads, so there is no white flash.
                 style: { background: props.color },
-                onError: () => { failed.value = true; },
+                // Try the next source on error; fall back to the disc only when all fail.
+                onError: () => { if (idx.value < SOURCES.length - 1) idx.value++; else failed.value = true; },
             });
         };
     },

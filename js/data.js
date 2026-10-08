@@ -8,6 +8,8 @@ export const COINS = [
     { sym: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT', cg: 'bitcoin', price: 82868.99, chg: -1.51, vol: '1.7B', color: '#f7931a' },
     { sym: 'ETH', name: 'Ethereum', binance: 'ETHUSDT', cg: 'ethereum', price: 2573.07, chg: -1.34, vol: '928M', color: '#627eea' },
     { sym: 'BNB', name: 'BNB', binance: 'BNBUSDT', cg: 'binancecoin', price: 768.48, chg: 0.23, vol: '72M', color: '#f0b90b' },
+    { sym: 'USDT', name: 'Tether', binance: '', cg: 'tether', price: 1.0, chg: 0, vol: '—', color: '#26a17b' },
+    { sym: 'USDC', name: 'USD Coin', binance: 'USDCUSDT', cg: 'usd-coin', price: 1.0004, chg: 0.03, vol: '4.5B', color: '#2775ca' },
     { sym: 'SOL', name: 'Solana', binance: 'SOLUSDT', cg: 'solana', price: 115.53, chg: -2.33, vol: '207M', color: '#14f195' },
     { sym: 'XRP', name: 'XRP', binance: 'XRPUSDT', cg: 'ripple', price: 1.409, chg: -3.75, vol: '194M', color: '#1b1f24' },
     { sym: 'ADA', name: 'Cardano', binance: 'ADAUSDT', cg: 'cardano', price: 0.2546, chg: 0.04, vol: '41M', color: '#0033ad' },
