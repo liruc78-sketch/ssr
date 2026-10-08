@@ -346,7 +346,7 @@ export default {
             <div v-if="wait.open" ref="sheetEl" class="sheet optwait" role="dialog" aria-modal="true" :aria-label="$t('trade.orderCountdown')">
                 <div class="optwait__head">
                     <span class="optwait__sym">
-                        <CoinIcon :sym="coin?.sym" :color="coin?.color" cls="optwait__ico" />
+                        <CoinIcon :sym="coin?.sym" :color="coin?.color" :domain="coin?.domain" :fxbase="coin?.base" :fxquote="coin?.quote" cls="optwait__ico" />
                         {{ coin?.sym }}<span class="muted">/USDT</span>
                         <span v-if="sim" class="chip chip--gold" style="height:20px">{{ $t('trade.sim') }}</span>
                     </span>

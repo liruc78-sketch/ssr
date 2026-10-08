@@ -63,6 +63,13 @@
 /* CoinIcon: real artwork fills the size class; the colored-initial fallback keeps the old look. */
 img.coin-ic { object-fit: cover; }
 .coin-ic--fallback { font-size: 0.82em; letter-spacing: -0.01em; }
+/* Stock logos sit on white and fit inside the circle (not cropped). */
+img.coin-ic--logo { object-fit: contain; background: #fff; padding: 2px; }
+/* FX pairs show the two currencies' flags as a split circle. */
+.coin-ic--fx { position: relative; overflow: hidden; background: var(--surface-2); }
+.coin-ic--fx > img { position: absolute; top: 0; width: 50%; height: 100%; object-fit: cover; }
+.coin-ic--fx > img:first-child { left: 0; border-right: 1px solid rgba(255,255,255,.65); }
+.coin-ic--fx > img:last-child { right: 0; }
 .quote__id { display: flex; flex-direction: column; gap: 1px; }
 .quote__id b { font-size: var(--fs-body); }
 .quote__px { font-weight: 600; font-size: var(--fs-body); }

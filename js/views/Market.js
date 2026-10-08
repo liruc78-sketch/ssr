@@ -77,7 +77,7 @@ export default {
             </div>
             <button v-for="c in list" :key="c.sym" class="market__row" @click="open(c)">
                 <span class="market__pair">
-                    <CoinIcon :sym="c.sym" :color="c.color" :crypto="CRYPTO_SYMS.has(c.sym)" cls="market__ico" />
+                    <CoinIcon :sym="c.sym" :color="c.color" :crypto="CRYPTO_SYMS.has(c.sym)" :domain="c.domain" :fxbase="c.base" :fxquote="c.quote" cls="market__ico" />
                     <span class="market__id"><b>{{ c.sym }}</b><span class="muted" style="font-size:var(--fs-caption)">{{ c.name }}</span></span>
                 </span>
                 <span class="market__px num">{{ fmtPrice(c.price) }}</span>
