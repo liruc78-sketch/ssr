@@ -67,7 +67,8 @@ img.coin-ic { object-fit: cover; }
 .quote__chg { justify-self: end; min-width: 72px; justify-content: center; }
 
 /* Home markets: compact horizontal swipe row (full list lives on /market) */
-.quotes-scroll { display: flex; gap: var(--sp-3); overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+.quotes-scroll { display: flex; gap: var(--sp-3); overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; cursor: grab; user-select: none; touch-action: pan-x; }
+.quotes-scroll:active { cursor: grabbing; }
 .quotes-scroll::-webkit-scrollbar { display: none; }
 .qcard { flex: 0 0 auto; width: 132px; scroll-snap-align: start; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-sm); text-align: left; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast); }
 .qcard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }

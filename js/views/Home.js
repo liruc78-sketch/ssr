@@ -37,6 +37,29 @@ export default {
         const q = ref('');
         const search = () => go('/market' + (q.value.trim() ? '?q=' + encodeURIComponent(q.value.trim()) : ''));
 
+        // Drag-to-scroll for the markets row (mouse); touch/trackpad use native scroll.
+        const scroller = ref(null);
+        const drag = { down: false, startX: 0, startLeft: 0, moved: false };
+        const onDown = (e) => {
+            if (e.pointerType && e.pointerType !== 'mouse') return;   // let touch scroll natively
+            const el = scroller.value; if (!el) return;
+            drag.down = true; drag.moved = false; drag.startX = e.clientX; drag.startLeft = el.scrollLeft;
+            try { el.setPointerCapture(e.pointerId); } catch {}
+        };
+        const onMove = (e) => {
+            if (!drag.down) return;
+            const dx = e.clientX - drag.startX;
+            if (Math.abs(dx) > 4) drag.moved = true;
+            scroller.value.scrollLeft = drag.startLeft - dx;
+        };
+        const onUp = (e) => {
+            if (!drag.down) return;
+            try { scroller.value?.releasePointerCapture(e.pointerId); } catch {}
+            drag.down = false;
+        };
+        // A drag shouldn't also open the coin it ended on.
+        const openCoin = (c) => { if (drag.moved) { drag.moved = false; return; } go('/coin?sym=' + c.sym); };
+
         const trust = [
             {
                 title: 'Enhanced security via encryption',
@@ -55,7 +78,8 @@ export default {
             },
         ];
 
-        return { actions, slides, slide, goSlide, coins, topCoins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg };
+        return { actions, slides, slide, goSlide, coins, topCoins, feed, faq, openFaq, trust, wallets: WALLETS, q, search, go, fmtPrice, fmtChg,
+                 scroller, onDown, onMove, onUp, openCoin };
     },
     template: /*html*/`
     <section class="home">
@@ -95,8 +119,8 @@ export default {
             <h2>Markets</h2>
             <button class="btn btn--ghost btn--sm" @click="go('/market')">View all <Icon name="chevronR" :size="16" /></button>
         </div>
-        <div class="quotes-scroll">
-            <button v-for="c in topCoins" :key="c.sym" class="qcard" @click="go('/coin?sym=' + c.sym)">
+        <div class="quotes-scroll" ref="scroller" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp">
+            <button v-for="c in topCoins" :key="c.sym" class="qcard" @click="openCoin(c)">
                 <span class="qcard__top">
                     <CoinIcon :sym="c.sym" :color="c.color" cls="qcard__ico" />
                     <b>{{ c.sym }}</b>
