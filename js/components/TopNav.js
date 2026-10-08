@@ -2,6 +2,7 @@
 import { Icon } from '../icons.js';
 import { router, go } from '../router.js';
 import { store, toggleTheme, openDrawer, openLang } from '../store.js';
+import { notif, openNotifications } from '../notifications.js';
 
 export default {
     name: 'TopNav',
@@ -21,7 +22,7 @@ export default {
             const base = path.split('?')[0];
             return router.path === base;
         };
-        return { links, router, go, store, toggleTheme, openDrawer, openLang, isActive };
+        return { links, router, go, store, toggleTheme, openDrawer, openLang, isActive, notif, openNotifications };
     },
     template: /*html*/`
     <header class="topnav">
@@ -40,7 +41,9 @@ export default {
             <button class="iconbtn" @click="toggleTheme()" :aria-label="store.theme === 'dark' ? $t('common.lightMode') : $t('common.darkMode')">
                 <Icon :name="store.theme === 'dark' ? 'sun' : 'moon'" />
             </button>
-            <button class="iconbtn" :aria-label="$t('common.notifications')"><Icon name="bell" /><span class="iconbtn__dot"></span></button>
+            <button class="iconbtn" @click="openNotifications()" :aria-label="$t('common.notifications')">
+                <Icon name="bell" /><span v-if="notif.unread > 0" class="iconbtn__badge">{{ notif.unread > 99 ? '99+' : notif.unread }}</span>
+            </button>
             <button class="iconbtn" @click="openLang()" :aria-label="$t('common.language')"><Icon name="globe" /></button>
             <button v-if="store.isAuthed" class="iconbtn" @click="openDrawer()" :aria-label="$t('common.account')"><Icon name="user" /></button>
             <button v-else class="btn btn--brand btn--sm btn--pill" @click="go('/login')">{{ $t('common.login') }}</button>

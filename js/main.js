@@ -7,19 +7,21 @@ import { store, closeDrawer, closeLang } from './store.js';
 import { restoreSession, refreshPortfolio } from './auth.js';
 import { sweepPositions } from './trade.js';
 import { t, initLocale } from './i18n.js';
+import { notif, closeNotifications } from './notifications.js';
 
 import TopNav from './components/TopNav.js';
 import TopBar from './components/TopBar.js';
 import BottomNav from './components/BottomNav.js';
 import Drawer from './components/Drawer.js';
 import LanguagePicker from './components/LanguagePicker.js';
+import NotificationPanel from './components/NotificationPanel.js';
 import { ChatButton, SupportSheet, Toast, Placeholder } from './components/common.js';
 
 const App = {
     name: 'App',
-    components: { TopNav, TopBar, BottomNav, Drawer, LanguagePicker, ChatButton, SupportSheet, Toast, Placeholder },
+    components: { TopNav, TopBar, BottomNav, Drawer, LanguagePicker, NotificationPanel, ChatButton, SupportSheet, Toast, Placeholder },
     setup() {
-        return { router, store, closeDrawer, closeLang };
+        return { router, store, closeDrawer, closeLang, notif, closeNotifications };
     },
     template: /*html*/`
     <TopNav />
@@ -51,6 +53,13 @@ const App = {
     </transition>
     <transition name="langpop">
         <LanguagePicker v-if="store.langOpen" />
+    </transition>
+
+    <transition name="scrim">
+        <div v-if="notif.open" class="notif-scrim" @click="closeNotifications()"></div>
+    </transition>
+    <transition name="notifpop">
+        <NotificationPanel v-if="notif.open" />
     </transition>`,
 };
 
