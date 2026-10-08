@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
+import { t } from '../i18n.js';
 
 const PAYS = ['Bank Transfer', 'Wise', 'PayPal', 'Revolut', 'SEPA'];
 function genOffers(side) {
@@ -32,16 +33,17 @@ export default {
         const coin = ref('USDT');
         const fiat = ref('USD');
         const offers = computed(() => genOffers(side.value));
-        const act = (o) => { if (!store.isAuthed) { go('/login'); return; } toast(`${side.value === 'buy' ? 'Buy' : 'Sell'} order to ${o.name} (demo)`, 'success'); };
-        return { side, coin, fiat, offers, act, go, store };
+        const payLabel = (p) => p === 'Bank Transfer' ? t('c2c.payBankTransfer') : p;
+        const act = (o) => { if (!store.isAuthed) { go('/login'); return; } toast(t(side.value === 'buy' ? 'c2c.toastBuy' : 'c2c.toastSell', { name: o.name }), 'success'); };
+        return { side, coin, fiat, offers, act, go, store, payLabel };
     },
     template: /*html*/`
     <section class="c2c">
-        <div class="page-head"><h1 class="page-title">C2C</h1></div>
+        <div class="page-head"><h1 class="page-title">{{ $t('nav.c2c') }}</h1></div>
 
         <div class="seg seg--side" style="max-width:260px; margin-bottom:var(--sp-4)">
-            <button class="seg__btn" :class="{ 'is-on up-on': side === 'buy' }" @click="side = 'buy'">Buy</button>
-            <button class="seg__btn" :class="{ 'is-on down-on': side === 'sell' }" @click="side = 'sell'">Sell</button>
+            <button class="seg__btn" :class="{ 'is-on up-on': side === 'buy' }" @click="side = 'buy'">{{ $t('c2c.buy') }}</button>
+            <button class="seg__btn" :class="{ 'is-on down-on': side === 'sell' }" @click="side = 'sell'">{{ $t('c2c.sell') }}</button>
         </div>
 
         <div class="c2c__filters">
@@ -55,18 +57,18 @@ export default {
                     <span class="c2c__ava">{{ o.name.slice(0,1) }}</span>
                     <div>
                         <b>{{ o.name }}</b>
-                        <div class="muted" style="font-size:var(--fs-caption)">{{ o.orders }} orders · {{ o.done }}%</div>
+                        <div class="muted" style="font-size:var(--fs-caption)">{{ $t('c2c.ordersCount', { n: o.orders }) }} · {{ o.done }}%</div>
                     </div>
                 </div>
                 <div class="c2c__body">
                     <div class="c2c__price"><b class="num">{{ o.price }}</b> <span class="muted">{{ fiat }}/{{ coin }}</span></div>
-                    <div class="muted" style="font-size:var(--fs-caption)">Available <span class="num">{{ o.available }}</span> {{ coin }}</div>
-                    <div class="muted" style="font-size:var(--fs-caption)">Limit {{ o.min }}–{{ o.max }} {{ fiat }}</div>
+                    <div class="muted" style="font-size:var(--fs-caption)">{{ $t('c2c.available') }} <span class="num">{{ o.available }}</span> {{ coin }}</div>
+                    <div class="muted" style="font-size:var(--fs-caption)">{{ $t('c2c.limit') }} {{ o.min }}–{{ o.max }} {{ fiat }}</div>
                     <div class="c2c__pays">
-                        <span v-for="p in o.pays" :key="p" class="chip" style="background:var(--surface-2)">{{ p }}</span>
+                        <span v-for="p in o.pays" :key="p" class="chip" style="background:var(--surface-2)">{{ payLabel(p) }}</span>
                     </div>
                 </div>
-                <button class="btn btn--sm" :class="side === 'buy' ? 'btn--up' : 'btn--down'" @click="act(o)">{{ side === 'buy' ? 'Buy' : 'Sell' }} {{ coin }}</button>
+                <button class="btn btn--sm" :class="side === 'buy' ? 'btn--up' : 'btn--down'" @click="act(o)">{{ side === 'buy' ? $t('c2c.buy') : $t('c2c.sell') }} {{ coin }}</button>
             </div>
         </div>
     </section>`,

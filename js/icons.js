@@ -39,6 +39,7 @@ export const ICONS = {
     options:  '<path d="M4 14c3 0 3-6 6-6s3 8 6 8 4-4 4-4"/><path d="M4 18h16" opacity=".0"/>',
     logout:   '<path d="M14 7V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2"/><path d="M10 12h10m0 0-3-3m3 3-3 3"/>',
     info:     '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5m0-8.2v.2"/>',
+    check:    '<path d="m5 12.5 4.5 4.5L19 7"/>',
 };
 
 export const Icon = {

@@ -104,10 +104,10 @@ export const FX = [
 ];
 
 export const CATEGORIES = [
-    { key: 'watch',  label: 'Watchlists' },
-    { key: 'crypto', label: 'Crypto' },
-    { key: 'us',     label: 'US stocks' },
-    { key: 'fx',     label: 'FX' },
+    { key: 'watch',  tkey: 'cat.watch' },
+    { key: 'crypto', tkey: 'cat.crypto' },
+    { key: 'us',     tkey: 'cat.us' },
+    { key: 'fx',     tkey: 'cat.fx' },
 ];
 
 export function listFor(cat) {
@@ -238,13 +238,13 @@ export const LEVERAGES = [1, 25, 50, 75, 100];
 // Finance / Earn products (daily-return model). Flexible term = 0.
 export const FINANCE_PRODUCTS = [
     // Current (flexible)
-    { id: 'usdt-flex', cat: 'current', asset: 'USDT', name: 'USDT Flexible', yield: 'Low Yield', dmin: 0.0685, dmax: 0.481, buyers: 55973, min: 100, max: 1000000, term: 0, color: '#26a17b' },
-    { id: 'btc-flex',  cat: 'current', asset: 'BTC',  name: 'BTC Flexible',  yield: 'Low Yield', dmin: 0.0210, dmax: 0.118, buyers: 12430, min: 0.001, max: 50, term: 0, color: '#f7931a' },
-    { id: 'eth-flex',  cat: 'current', asset: 'ETH',  name: 'ETH Flexible',  yield: 'Low Yield', dmin: 0.0320, dmax: 0.140, buyers: 9871,  min: 0.01, max: 500, term: 0, color: '#627eea' },
+    { id: 'usdt-flex', cat: 'current', asset: 'USDT', name: 'USDT Flexible', yieldKey: 'yield.low', dmin: 0.0685, dmax: 0.481, buyers: 55973, min: 100, max: 1000000, term: 0, color: '#26a17b' },
+    { id: 'btc-flex',  cat: 'current', asset: 'BTC',  name: 'BTC Flexible',  yieldKey: 'yield.low', dmin: 0.0210, dmax: 0.118, buyers: 12430, min: 0.001, max: 50, term: 0, color: '#f7931a' },
+    { id: 'eth-flex',  cat: 'current', asset: 'ETH',  name: 'ETH Flexible',  yieldKey: 'yield.low', dmin: 0.0320, dmax: 0.140, buyers: 9871,  min: 0.01, max: 500, term: 0, color: '#627eea' },
     // AI Quant (fixed term)
-    { id: 'quant-7',   cat: 'quant', asset: 'USDT', name: 'Quant Alpha', yield: 'High Yield', dmin: 0.201, dmax: 0.482, buyers: 8221, min: 500,  max: 500000, term: 7,  color: '#5b73ff' },
-    { id: 'quant-15',  cat: 'quant', asset: 'USDT', name: 'Neural Grid', yield: 'High Yield', dmin: 0.284, dmax: 0.556, buyers: 5002, min: 1000, max: 800000, term: 15, color: '#e24fe2' },
-    { id: 'quant-30',  cat: 'quant', asset: 'USDT', name: 'Quant Pro',   yield: 'High Yield', dmin: 0.351, dmax: 0.628, buyers: 3140, min: 2000, max: 1000000, term: 30, color: '#f0a020' },
+    { id: 'quant-7',   cat: 'quant', asset: 'USDT', name: 'Quant Alpha', yieldKey: 'yield.high', dmin: 0.201, dmax: 0.482, buyers: 8221, min: 500,  max: 500000, term: 7,  color: '#5b73ff' },
+    { id: 'quant-15',  cat: 'quant', asset: 'USDT', name: 'Neural Grid', yieldKey: 'yield.high', dmin: 0.284, dmax: 0.556, buyers: 5002, min: 1000, max: 800000, term: 15, color: '#e24fe2' },
+    { id: 'quant-30',  cat: 'quant', asset: 'USDT', name: 'Quant Pro',   yieldKey: 'yield.high', dmin: 0.351, dmax: 0.628, buyers: 3140, min: 2000, max: 1000000, term: 30, color: '#f0a020' },
 ];
 
 // Mini sparkline points (0..100 range) for finance cards.
@@ -254,18 +254,22 @@ export function genSpark(n = 24, up = true) {
     return pts;
 }
 
-// --- Activity feed & FAQ (unchanged shape) -------------------------------
-const PRODUCTS = ['Spot', 'Contract', 'Follow orders', 'AI Quant'];
+// --- Activity feed & FAQ -------------------------------------------------
+// Feed rows carry translation keys (productKey/agoKey) + a numeric agoN so the
+// consuming view renders them reactively with $t(agoKey, { n: agoN }).
+const PRODUCT_KEYS = ['product.spot', 'product.contract', 'product.followOrders', 'product.aiQuant'];
 export function genFeed(n = 8) {
     const out = [];
     for (let i = 0; i < n; i++) {
         const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
         const amt = (Math.random() * 9000 + 120);
         const mins = Math.floor(Math.random() * 230) + 2;
+        const isMin = mins < 60;
         out.push({
             user: 'z∗∗∗∗∗∗' + letter,
-            product: PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)],
-            ago: mins < 60 ? `${mins} min ago` : `${Math.floor(mins / 60)} h ago`,
+            productKey: PRODUCT_KEYS[Math.floor(Math.random() * PRODUCT_KEYS.length)],
+            agoKey: isMin ? 'feed.minAgo' : 'feed.hAgo',
+            agoN: isMin ? mins : Math.floor(mins / 60),
             amount: fmtAmt(amt),
             up: Math.random() > 0.4,
         });
@@ -273,9 +277,11 @@ export function genFeed(n = 8) {
     return out;
 }
 
+// FAQ content lives in the i18n dictionaries (faq.q1..q4 / faq.a1..a4); this
+// just lists the key pairs so the view can map over them.
 export const FAQ = [
-    { q: 'What products does the platform offer?', a: 'Crypto.ssr offers spot trading across hundreds of pairs, perpetual contracts with up to 100× leverage, short-term options, and finance products that let you earn on idle balances — all from one account.' },
-    { q: 'Is my account secure?', a: 'Balances are protected with encrypted storage, device and withdrawal-address alerts, and optional two-factor authentication. You control which devices and DApps can connect.' },
-    { q: 'Who can trade on Crypto.ssr?', a: 'Any verified user in a supported region can open an account. Simulated Trading lets you practice risk-free before going live.' },
-    { q: 'How are trades settled?', a: 'We use off-chain matching with on-chain settlement, so you get exchange-grade speed while keeping the transparency of on-chain records.' },
+    { qKey: 'faq.q1', aKey: 'faq.a1' },
+    { qKey: 'faq.q2', aKey: 'faq.a2' },
+    { qKey: 'faq.q3', aKey: 'faq.a3' },
+    { qKey: 'faq.q4', aKey: 'faq.a4' },
 ];

@@ -194,9 +194,9 @@ export default {
     template: /*html*/`
     <section class="coin">
         <div class="coin__bar">
-            <button class="iconbtn" @click="go('/market')" aria-label="Back"><Icon name="chevronR" style="transform:rotate(180deg)" /></button>
+            <button class="iconbtn" @click="go('/market')" :aria-label="$t('coin.back')"><Icon name="chevronR" style="transform:rotate(180deg)" /></button>
             <h1 class="coin__pair">{{ coin?.sym }}<span class="muted">/USDT</span></h1>
-            <button class="iconbtn" aria-label="Favorite"><Icon name="star" /></button>
+            <button class="iconbtn" :aria-label="$t('coin.favorite')"><Icon name="star" /></button>
         </div>
 
         <div class="coin__stats card">
@@ -205,9 +205,9 @@ export default {
                 <div class="chip" :class="stats.chg >= 0 ? 'chip--up' : 'chip--down'">{{ fmtChg(stats.chg) }}</div>
             </div>
             <div class="coin__meta">
-                <div><span class="muted">24h High</span><b class="num">{{ stats.high ? fmtNum(stats.high) : '—' }}</b></div>
-                <div><span class="muted">24h Low</span><b class="num">{{ stats.low ? fmtNum(stats.low) : '—' }}</b></div>
-                <div><span class="muted">24h Vol</span><b class="num">{{ stats.vol }}</b></div>
+                <div><span class="muted">{{ $t('coin.high24h') }}</span><b class="num">{{ stats.high ? fmtNum(stats.high) : '—' }}</b></div>
+                <div><span class="muted">{{ $t('coin.low24h') }}</span><b class="num">{{ stats.low ? fmtNum(stats.low) : '—' }}</b></div>
+                <div><span class="muted">{{ $t('coin.vol24h') }}</span><b class="num">{{ stats.vol }}</b></div>
             </div>
         </div>
 
@@ -226,10 +226,10 @@ export default {
         </div>
 
         <!-- Entrusted order (book preview) -->
-        <div class="sec-head"><h2>Entrusted order</h2></div>
+        <div class="sec-head"><h2>{{ $t('coin.entrustedOrder') }}</h2></div>
         <div class="card book">
             <div class="book__col">
-                <div class="book__h"><span>Price(USDT)</span><span>Amount</span></div>
+                <div class="book__h"><span>{{ $t('coin.priceUsdt') }}</span><span>{{ $t('coin.amount') }}</span></div>
                 <div v-for="(a, i) in book.asks" :key="'a'+i" class="book__row">
                     <span class="book__bar down" :style="{ width: (a.amount * 120) + '%' }"></span>
                     <span class="num down">{{ fmtNum(a.price) }}</span><span class="num">{{ a.amount.toFixed(4) }}</span>
@@ -244,6 +244,6 @@ export default {
             </div>
         </div>
 
-        <button class="btn btn--brand btn--block btn--lg coin__cta" @click="go('/trade?pair=' + coin?.sym)">Trade {{ coin?.sym }}</button>
+        <button class="btn btn--brand btn--block btn--lg coin__cta" @click="go('/trade?pair=' + coin?.sym)">{{ $t('coin.tradeSym', { sym: coin?.sym }) }}</button>
     </section>`,
 };

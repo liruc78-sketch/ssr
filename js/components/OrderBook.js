@@ -41,7 +41,7 @@ export default {
     },
     template: /*html*/`
     <div class="ob">
-        <div class="ob__h"><span>Price</span><span>Amount</span></div>
+        <div class="ob__h"><span>{{ $t('orderbook.price') }}</span><span>{{ $t('orderbook.amount') }}</span></div>
         <button v-for="(a, i) in asks" :key="'a'+i" class="ob__row" @click="pick(a)">
             <span class="ob__bar down" :style="{ width: a.pct + '%' }"></span>
             <span class="num down">{{ fmtNum(a.price) }}</span><span class="num ob__amt">{{ a.amount.toFixed(4) }}</span>

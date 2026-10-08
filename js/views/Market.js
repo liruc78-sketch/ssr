@@ -52,21 +52,21 @@ export default {
     <section class="market">
         <div class="market__head">
             <div class="tabs">
-                <button v-for="c in CATEGORIES" :key="c.key" class="tab" :class="{ 'is-on': cat === c.key }" @click="cat = c.key">{{ c.label }}</button>
+                <button v-for="c in CATEGORIES" :key="c.key" class="tab" :class="{ 'is-on': cat === c.key }" @click="cat = c.key">{{ $t(c.tkey) }}</button>
             </div>
             <label class="search">
                 <Icon name="search" :size="18" />
-                <input v-model="query" class="search__input" placeholder="Search markets, e.g. BTC" />
+                <input v-model="query" class="search__input" :placeholder="$t('market.searchPlaceholder')" />
             </label>
         </div>
 
         <div class="market__list card">
             <div class="market__row market__row--head">
-                <span>Pair</span><span>Last price</span><span>24h</span><span></span>
+                <span>{{ $t('market.pair') }}</span><span>{{ $t('market.lastPrice') }}</span><span>24h</span><span></span>
             </div>
             <div v-if="!list.length" class="placeholder" style="border:0; padding:var(--sp-10)">
                 <Icon name="star" class="placeholder__icon" :size="48" />
-                <p class="muted">No instruments here yet — star some from Crypto to build your watchlist.</p>
+                <p class="muted">{{ $t('market.watchlistEmpty') }}</p>
             </div>
             <button v-for="c in list" :key="c.sym" class="market__row" @click="open(c)">
                 <span class="market__pair">
@@ -75,7 +75,7 @@ export default {
                 </span>
                 <span class="market__px num">{{ fmtPrice(c.price) }}</span>
                 <span class="market__chg num" :class="c.chg >= 0 ? 'chip chip--up' : 'chip chip--down'">{{ fmtChg(c.chg) }}</span>
-                <button class="market__star" :class="{ 'is-on': isWatched(c.sym) }" @click.stop="toggleWatch(c.sym)" :aria-label="isWatched(c.sym) ? 'Unwatch' : 'Watch'">
+                <button class="market__star" :class="{ 'is-on': isWatched(c.sym) }" @click.stop="toggleWatch(c.sym)" :aria-label="isWatched(c.sym) ? $t('market.unwatch') : $t('market.watch')">
                     <Icon name="star" :size="18" />
                 </button>
             </button>

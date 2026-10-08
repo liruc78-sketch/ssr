@@ -4,16 +4,17 @@
 import { ref, computed, onMounted } from 'vue';
 import { Icon } from '../icons.js';
 import { edge } from '../supabase.js';
+import { t } from '../i18n.js';
 
 const TAGS = ['BTC', 'ETH', 'Bitcoin', 'Ethereum', 'ETF', 'Regulation', 'DeFi', 'Solana'];
 
 // "12m ago" / "3h ago" / "2d ago" from an epoch-ms timestamp.
 function timeAgo(ms) {
     const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-    if (s < 60) return 'just now';
-    const m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
-    const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
-    const d = Math.floor(h / 24); return d + 'd ago';
+    if (s < 60) return t('news.justNow');
+    const m = Math.floor(s / 60); if (m < 60) return t('news.minAgo', { n: m });
+    const h = Math.floor(m / 60); if (h < 24) return t('news.hourAgo', { n: h });
+    const d = Math.floor(h / 24); return t('news.dayAgo', { n: d });
 }
 
 export default {
@@ -49,10 +50,10 @@ export default {
     },
     template: /*html*/`
     <section>
-        <div class="page-head"><h1 class="page-title">News</h1></div>
-        <label class="search" style="margin-top:0"><Icon name="search" :size="18" /><input class="search__input" v-model="q" placeholder="Search headlines, e.g. BTC, ETF" /></label>
+        <div class="page-head"><h1 class="page-title">{{ $t('news.title') }}</h1></div>
+        <label class="search" style="margin-top:0"><Icon name="search" :size="18" /><input class="search__input" v-model="q" :placeholder="$t('news.searchPlaceholder')" /></label>
         <div class="news__tags">
-            <span class="muted" style="font-size:var(--fs-caption)">Trending:</span>
+            <span class="muted" style="font-size:var(--fs-caption)">{{ $t('news.trending') }}</span>
             <button v-for="t in TAGS" :key="t" class="chip" style="background:var(--surface-2)" @click="q = t">{{ t }}</button>
         </div>
 
@@ -68,15 +69,15 @@ export default {
         <!-- Error / empty feed -->
         <div v-else-if="error" class="placeholder" style="padding:var(--sp-10)">
             <Icon name="info" class="placeholder__icon" :size="48" />
-            <h3>Couldn't load the news</h3>
-            <p class="muted" style="max-width:34ch">The feed is unavailable right now. Please try again in a moment.</p>
-            <button class="btn btn--brand" style="margin-top:var(--sp-4)" @click="load()">Retry</button>
+            <h3>{{ $t('news.errorTitle') }}</h3>
+            <p class="muted" style="max-width:34ch">{{ $t('news.errorBody') }}</p>
+            <button class="btn btn--brand" style="margin-top:var(--sp-4)" @click="load()">{{ $t('common.retry') }}</button>
         </div>
 
         <!-- No search matches -->
         <div v-else-if="!list.length" class="placeholder" style="padding:var(--sp-10)">
             <Icon name="search" class="placeholder__icon" :size="48" />
-            <p class="muted">No headlines match “{{ q }}”.</p>
+            <p class="muted">{{ $t('news.noMatch', { q }) }}</p>
         </div>
 
         <!-- Live headlines — each card links out to the publisher -->
@@ -85,7 +86,7 @@ export default {
                 <div class="news__meta">
                     <span class="num news__src">{{ a.source }}</span>
                     <span class="news__dot">·</span><span>{{ timeAgo(a.published) }}</span>
-                    <span class="news__ext">Read <Icon name="chevronR" :size="14" /></span>
+                    <span class="news__ext">{{ $t('news.read') }} <Icon name="chevronR" :size="14" /></span>
                 </div>
                 <h3 class="news__title">{{ a.title }}</h3>
                 <p v-if="a.body" class="muted news__sum">{{ a.body }}</p>

@@ -68,14 +68,14 @@ export const PositionDetail = {
     <div>
         <transition name="scrim"><div v-if="pos" class="drawer-scrim" @click="close()"></div></transition>
         <transition name="sheet">
-            <div v-if="pos" ref="sheetEl" class="sheet optwait" role="dialog" aria-modal="true" aria-label="Trade details" tabindex="-1" style="outline:none">
+            <div v-if="pos" ref="sheetEl" class="sheet optwait" role="dialog" aria-modal="true" :aria-label="$t('posdetail.title')" tabindex="-1" style="outline:none">
                 <div class="optwait__head">
                     <span class="optwait__sym">
                         <CoinIcon :sym="sym" :color="coin?.color" cls="optwait__ico" />
                         {{ sym }}<span class="muted">/USDT</span>
-                        <span v-if="pos.isSim" class="chip chip--gold" style="height:20px">SIM</span>
+                        <span v-if="pos.isSim" class="chip chip--gold" style="height:20px">{{ $t('posdetail.sim') }}</span>
                     </span>
-                    <button class="iconbtn" @click="close()" aria-label="Close"><Icon name="close" /></button>
+                    <button class="iconbtn" @click="close()" :aria-label="$t('common.close')"><Icon name="close" /></button>
                 </div>
 
                 <div class="optwait__ringwrap" aria-hidden="true">
@@ -84,24 +84,24 @@ export const PositionDetail = {
                         <circle class="optwait__arc" cx="60" cy="60" r="54" :stroke-dasharray="RING_C" stroke-dashoffset="0" />
                     </svg>
                     <div class="optwait__center">
-                        <b class="optwait__result" :class="won ? 'up' : lost ? 'down' : 'muted'">{{ settled ? pos.status : 'ACTIVE' }}</b>
+                        <b class="optwait__result" :class="won ? 'up' : lost ? 'down' : 'muted'">{{ settled ? (pos.status === 'Won' ? $t('posdetail.won') : (pos.status === 'Lost' ? $t('posdetail.lost') : pos.status)) : $t('posdetail.active') }}</b>
                     </div>
                 </div>
 
                 <div class="optwait__rows">
-                    <div class="optwait__row"><span class="muted">Direction</span><b :class="pos.type === 'up' ? 'up' : 'down'">{{ pos.type === 'up' ? 'Up ▲' : 'Down ▼' }}</b></div>
-                    <div class="optwait__row"><span class="muted">Entry price</span><b class="num">{{ fmtNum(pos.entryPrice) }}</b></div>
-                    <div class="optwait__row"><span class="muted">Settlement price</span><b class="num">{{ pos.settlementPrice != null ? fmtNum(pos.settlementPrice) : '—' }}</b></div>
-                    <div class="optwait__row"><span class="muted">Duration · payout</span><b class="num">{{ durationLabel }}<template v-if="payoutPct != null"> · +{{ payoutPct }}%</template></b></div>
-                    <div class="optwait__row"><span class="muted">Amount</span><b class="num">{{ fmtNum(pos.amount) }} USDT</b></div>
-                    <div class="optwait__row"><span class="muted">Fee rate</span><b class="num">0%</b></div>
-                    <div v-if="pos.payout != null" class="optwait__row"><span class="muted">Payout</span><b class="num" :class="won ? 'up' : 'down'">{{ fmtNum(pos.payout) }} USDT</b></div>
-                    <div v-if="pnl != null" class="optwait__row"><span class="muted">Net P&L</span><b class="num" :class="pnl >= 0 ? 'up' : 'down'">{{ signed(pnl) }} USDT</b></div>
-                    <div class="optwait__row"><span class="muted">Opened</span><b class="num">{{ fmtTime(pos.createdAt) }}</b></div>
-                    <div v-if="pos.settledAt" class="optwait__row"><span class="muted">Settled</span><b class="num">{{ fmtTime(pos.settledAt) }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.direction') }}</span><b :class="pos.type === 'up' ? 'up' : 'down'">{{ pos.type === 'up' ? $t('posdetail.upArrow') : $t('posdetail.downArrow') }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.entryPrice') }}</span><b class="num">{{ fmtNum(pos.entryPrice) }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.settlementPrice') }}</span><b class="num">{{ pos.settlementPrice != null ? fmtNum(pos.settlementPrice) : '—' }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.durationPayout') }}</span><b class="num">{{ durationLabel }}<template v-if="payoutPct != null"> · +{{ payoutPct }}%</template></b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.amount') }}</span><b class="num">{{ fmtNum(pos.amount) }} USDT</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.feeRate') }}</span><b class="num">0%</b></div>
+                    <div v-if="pos.payout != null" class="optwait__row"><span class="muted">{{ $t('posdetail.payout') }}</span><b class="num" :class="won ? 'up' : 'down'">{{ fmtNum(pos.payout) }} USDT</b></div>
+                    <div v-if="pnl != null" class="optwait__row"><span class="muted">{{ $t('posdetail.netPnl') }}</span><b class="num" :class="pnl >= 0 ? 'up' : 'down'">{{ signed(pnl) }} USDT</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('posdetail.opened') }}</span><b class="num">{{ fmtTime(pos.createdAt) }}</b></div>
+                    <div v-if="pos.settledAt" class="optwait__row"><span class="muted">{{ $t('posdetail.settled') }}</span><b class="num">{{ fmtTime(pos.settledAt) }}</b></div>
                 </div>
 
-                <button class="btn btn--dark btn--block btn--lg optwait__close" @click="close()">Close</button>
+                <button class="btn btn--dark btn--block btn--lg optwait__close" @click="close()">{{ $t('common.close') }}</button>
             </div>
         </transition>
     </div>`,
