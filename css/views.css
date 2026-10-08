@@ -31,8 +31,10 @@
 }
 
 /* ---- Home: carousel ----------------------------------------------------- */
-.carousel { margin-top: var(--sp-4); border-radius: var(--r-lg); overflow: hidden; position: relative; }
-.carousel__track { display: flex; transition: transform var(--dur-slow) var(--ease-out); }
+.carousel { margin-top: var(--sp-4); border-radius: var(--r-lg); overflow: hidden; position: relative; cursor: grab; user-select: none; touch-action: pan-y; }
+.carousel:active { cursor: grabbing; }
+.carousel__track { display: flex; }
+.carousel__track.is-anim { transition: transform var(--dur-slow) var(--ease-out); }
 .slide {
     position: relative; flex: 0 0 100%; min-height: 150px; overflow: hidden;
     padding: var(--sp-6); color: #fff; display: flex; flex-direction: column; justify-content: center;
@@ -61,10 +63,34 @@
 /* CoinIcon: real artwork fills the size class; the colored-initial fallback keeps the old look. */
 img.coin-ic { object-fit: cover; }
 .coin-ic--fallback { font-size: 0.82em; letter-spacing: -0.01em; }
+/* Stock logos sit on white and fit inside the circle (not cropped). */
+img.coin-ic--logo { object-fit: contain; background: #fff; padding: 2px; }
+/* FX pairs show the two currencies' flags as a split circle. */
+.coin-ic--fx { position: relative; overflow: hidden; background: var(--surface-2); }
+.coin-ic--fx > img { position: absolute; top: 0; width: 50%; height: 100%; object-fit: cover; }
+.coin-ic--fx > img:first-child { left: 0; border-right: 1px solid rgba(255,255,255,.65); }
+.coin-ic--fx > img:last-child { right: 0; }
 .quote__id { display: flex; flex-direction: column; gap: 1px; }
 .quote__id b { font-size: var(--fs-body); }
 .quote__px { font-weight: 600; font-size: var(--fs-body); }
 .quote__chg { justify-self: end; min-width: 72px; justify-content: center; }
+
+/* Home markets: paged slider (drag/swipe, animated slide, page dots) */
+.mcar { overflow: hidden; cursor: grab; user-select: none; touch-action: pan-y; }
+.mcar:active { cursor: grabbing; }
+.mcar__track { display: flex; }
+.mcar__track.is-anim { transition: transform 0.35s var(--ease-out); }
+.mcar__page { flex: 0 0 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+.qcard { min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: var(--sp-3) var(--sp-2); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-sm); text-align: left; transition: box-shadow var(--dur-fast); }
+.qcard:hover { box-shadow: var(--shadow-md); }
+.qcard__top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.qcard__ico { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: var(--font-display); font-size: 11px; }
+.qcard__top b { font-size: var(--fs-small); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.qcard__px { font-size: var(--fs-body); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qcard__chg { align-self: flex-start; }
+.mcar__dots { display: flex; justify-content: center; gap: var(--sp-2); margin-top: var(--sp-3); }
+.mcar__dots .dot { background: var(--border-strong); cursor: pointer; }
+.mcar__dots .dot.is-on { background: var(--brand); }
 
 /* ---- Home: real-time feed ---------------------------------------------- */
 .feed { padding: var(--sp-2) var(--sp-3); }

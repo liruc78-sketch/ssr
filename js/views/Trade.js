@@ -6,6 +6,7 @@ import { store } from '../store.js';
 import { toast } from '../store.js';
 import { findSym, fetchTickers, COINS, OPTION_TIERS, LEVERAGES, fmtNum, fmtPrice } from '../data.js';
 import { openOptionPosition } from '../trade.js';
+import { t } from '../i18n.js';
 import OrderBook from '../components/OrderBook.js';
 import { CoinIcon } from '../components/CoinIcon.js';
 import { PositionDetail } from '../components/PositionDetail.js';
@@ -15,7 +16,7 @@ export default {
     components: { Icon, OrderBook, CoinIcon, PositionDetail },
     setup() {
         const coin = findSym(router.query.pair) || findSym('BTC');
-        const MODES = [{ k: 'spot', label: 'Spot' }, { k: 'perp', label: 'Perpetual contract' }, { k: 'options', label: 'Options' }];
+        const MODES = [{ k: 'spot', tkey: 'trade.modeSpot' }, { k: 'perp', tkey: 'trade.modePerp' }, { k: 'options', tkey: 'trade.modeOptions' }];
         const mode = ref(['spot', 'perp', 'options'].includes(router.query.mode) ? router.query.mode : 'spot');
         // Simulated account for this session — set only when reached from the sim wallet (/trade?...&sim=1).
         const sim = router.query.sim === '1';
@@ -57,7 +58,7 @@ export default {
         // Spot/Perp execution is wired in a later step — demo for now.
         const act = (label) => {
             if (needAuth.value) { go('/login'); return; }
-            toast(`${label} order placed (demo)`, 'success');
+            toast(t('trade.orderPlaced', { side: label }), 'success');
         };
 
         // ---- Options wait screen ------------------------------------------
@@ -145,7 +146,7 @@ export default {
                 o.amount = '';
                 ledgerTab.value = 'open';
             } catch (e) {
-                toast(e?.message || 'Could not place trade', 'error', 3400);
+                toast(e?.message || t('trade.couldNotPlace'), 'error', 3400);
             } finally { placing.value = false; }
         };
 
@@ -158,10 +159,21 @@ export default {
         });
 
         const ledgerTabs = computed(() => mode.value === 'spot'
-            ? [{ k: 'open', l: 'Current Order' }, { k: 'hist', l: 'Trade History' }, { k: 'assets', l: 'Assets' }]
+            ? [{ k: 'open', tkey: 'trade.tabCurrentOrder' }, { k: 'hist', tkey: 'trade.tabTradeHistory' }, { k: 'assets', tkey: 'trade.tabAssets' }]
             : mode.value === 'perp'
-                ? [{ k: 'open', l: 'My Holding' }, { k: 'pos', l: 'Current Position' }, { k: 'hist', l: 'Transaction Records' }]
-                : [{ k: 'open', l: 'Positions' }, { k: 'hist', l: 'History' }]);
+                ? [{ k: 'open', tkey: 'trade.tabMyHolding' }, { k: 'pos', tkey: 'trade.tabCurrentPosition' }, { k: 'hist', tkey: 'trade.tabTransactionRecords' }]
+                : [{ k: 'open', tkey: 'trade.tabPositions' }, { k: 'hist', tkey: 'trade.tabHistory' }]);
+
+        // Composed aria-label for a ledger row, translated segment by segment.
+        const posLabel = (p) => {
+            const dir = t(p.type === 'up' ? 'trade.up' : 'trade.down');
+            const status = p.status === 'Active' ? t('trade.settlingLow')
+                : t(p.status === 'Won' ? 'trade.won' : 'trade.lost');
+            let s = t('trade.posAria', { dir, sym: symOf(p.coinId), amount: fmtNum(p.amount), entry: fmtNum(p.entryPrice), status });
+            if (p.payout != null) s += t('trade.posAriaPayout', { payout: fmtNum(p.payout) });
+            s += t('trade.posAriaDetails');
+            return s;
+        };
 
         // Tap a ledger record to see its full breakdown. Resolve by id from the
         // store so an open active position updates live when it settles.
@@ -171,7 +183,7 @@ export default {
         const openDetail = (p) => { detailId.value = p.id; };
         const closeDetail = () => { detailId.value = null; };
 
-        return { coin, MODES, mode, price, balance, f, o, ledgerTab, ledgerTabs, OPTION_TIERS, LEVERAGES, positions, symOf,
+        return { coin, MODES, mode, price, balance, f, o, ledgerTab, ledgerTabs, OPTION_TIERS, LEVERAGES, positions, symOf, posLabel,
                  setPct, pickPrice, activeTier, tierLocked, optProfit, needAuth, act, placing, placeOption, go, fmtNum, fmtPrice, store,
                  wait, waitClock, ringOffset, RING_C, closeWait, sheetEl, closeBtnEl, sim, detail, openDetail, closeDetail };
     },
@@ -179,19 +191,19 @@ export default {
     <section class="trade">
         <div v-if="sim" class="simbanner">
             <Icon name="shield" :size="16" />
-            <span><b>Simulated Trading</b> — virtual funds only, no real money. Balance resets are managed by support.</span>
+            <span><b>{{ $t('trade.simTitle') }}</b> — {{ $t('trade.simNote') }}</span>
         </div>
         <div class="trade__bar">
-            <button class="iconbtn" @click="go('/coin?sym=' + coin?.sym)" aria-label="Chart"><Icon name="chevronR" style="transform:rotate(180deg)" /></button>
+            <button class="iconbtn" @click="go('/coin?sym=' + coin?.sym)" :aria-label="$t('trade.chart')"><Icon name="chevronR" style="transform:rotate(180deg)" /></button>
             <h1 class="trade__pair">{{ coin?.sym }}<span class="muted">/USDT</span>
                 <span class="num" :class="coin?.chg >= 0 ? 'up' : 'down'" style="font-size:var(--fs-small); margin-left:8px">{{ fmtNum(price) }}</span>
             </h1>
-            <button class="iconbtn" @click="go('/coin?sym=' + coin?.sym)" aria-label="Open chart"><Icon name="market" /></button>
+            <button class="iconbtn" @click="go('/coin?sym=' + coin?.sym)" :aria-label="$t('trade.openChart')"><Icon name="market" /></button>
         </div>
 
         <!-- Mode tabs -->
         <div class="trade__modes">
-            <button v-for="m in MODES" :key="m.k" class="trade__mode" :class="{ 'is-on': mode === m.k }" @click="mode = m.k">{{ m.label }}</button>
+            <button v-for="m in MODES" :key="m.k" class="trade__mode" :class="{ 'is-on': mode === m.k }" @click="mode = m.k">{{ $t(m.tkey) }}</button>
         </div>
 
         <!-- SPOT / PERP: order book + form -->
@@ -200,7 +212,7 @@ export default {
 
             <div class="trade__form">
                 <div v-if="mode === 'perp'" class="lev">
-                    <div class="lev__head"><span class="muted">Leverage</span><b class="num">{{ f.lev }}×</b></div>
+                    <div class="lev__head"><span class="muted">{{ $t('trade.leverage') }}</span><b class="num">{{ f.lev }}×</b></div>
                     <input class="lev__range" type="range" min="1" max="100" step="1" v-model.number="f.lev" />
                     <div class="lev__chips">
                         <button v-for="l in LEVERAGES" :key="l" class="minichip" :class="{ 'is-on': f.lev === l }" @click="f.lev = l">{{ l }}×</button>
@@ -208,22 +220,22 @@ export default {
                 </div>
 
                 <div class="seg seg--side">
-                    <button class="seg__btn" :class="{ 'is-on up-on': f.side === 'buy' }" @click="f.side = 'buy'">{{ mode === 'perp' ? 'Long' : 'Buy' }}</button>
-                    <button class="seg__btn" :class="{ 'is-on down-on': f.side === 'sell' }" @click="f.side = 'sell'">{{ mode === 'perp' ? 'Short' : 'Sell' }}</button>
+                    <button class="seg__btn" :class="{ 'is-on up-on': f.side === 'buy' }" @click="f.side = 'buy'">{{ mode === 'perp' ? $t('trade.long') : $t('trade.buy') }}</button>
+                    <button class="seg__btn" :class="{ 'is-on down-on': f.side === 'sell' }" @click="f.side = 'sell'">{{ mode === 'perp' ? $t('trade.short') : $t('trade.sell') }}</button>
                 </div>
 
                 <div class="seg seg--type">
-                    <button class="seg__btn" :class="{ 'is-on': f.type === 'market' }" @click="f.type = 'market'">Market</button>
-                    <button class="seg__btn" :class="{ 'is-on': f.type === 'limit' }" @click="f.type = 'limit'">Limit</button>
+                    <button class="seg__btn" :class="{ 'is-on': f.type === 'market' }" @click="f.type = 'market'">{{ $t('trade.market') }}</button>
+                    <button class="seg__btn" :class="{ 'is-on': f.type === 'limit' }" @click="f.type = 'limit'">{{ $t('trade.limit') }}</button>
                 </div>
 
                 <label class="fieldrow">
-                    <span class="fieldrow__lbl">Price</span>
-                    <input class="fieldrow__in num" :placeholder="f.type === 'market' ? 'Market' : fmtNum(price)" :disabled="f.type === 'market'" v-model="f.price" />
+                    <span class="fieldrow__lbl">{{ $t('trade.price') }}</span>
+                    <input class="fieldrow__in num" :placeholder="f.type === 'market' ? $t('trade.market') : fmtNum(price)" :disabled="f.type === 'market'" v-model="f.price" />
                     <span class="fieldrow__suf">USDT</span>
                 </label>
                 <label class="fieldrow">
-                    <span class="fieldrow__lbl">Amount</span>
+                    <span class="fieldrow__lbl">{{ $t('trade.amount') }}</span>
                     <input class="fieldrow__in num" placeholder="0" v-model="f.amount" />
                     <span class="fieldrow__suf">{{ mode === 'perp' ? 'USDT' : coin?.sym }}</span>
                 </label>
@@ -233,22 +245,22 @@ export default {
                 </div>
 
                 <label v-if="mode === 'perp'" class="tpsl">
-                    <span>TP / SL</span>
+                    <span>{{ $t('trade.tpsl') }}</span>
                     <input type="checkbox" v-model="f.tpsl" class="switch" />
                 </label>
                 <div v-if="mode === 'perp' && f.tpsl" class="tpsl__fields">
-                    <label class="fieldrow"><span class="fieldrow__lbl">TP</span><input class="fieldrow__in num" placeholder="0" v-model="f.tp" /></label>
-                    <label class="fieldrow"><span class="fieldrow__lbl">SL</span><input class="fieldrow__in num" placeholder="0" v-model="f.sl" /></label>
+                    <label class="fieldrow"><span class="fieldrow__lbl">{{ $t('trade.tp') }}</span><input class="fieldrow__in num" placeholder="0" v-model="f.tp" /></label>
+                    <label class="fieldrow"><span class="fieldrow__lbl">{{ $t('trade.sl') }}</span><input class="fieldrow__in num" placeholder="0" v-model="f.sl" /></label>
                 </div>
 
-                <div class="balrow"><span class="muted">Available</span><b class="num">{{ fmtNum(balance) }} USDT</b></div>
+                <div class="balrow"><span class="muted">{{ $t('trade.available') }}</span><b class="num">{{ fmtNum(balance) }} USDT</b></div>
 
                 <template v-if="needAuth">
-                    <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">Log in or Register</button>
+                    <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">{{ $t('trade.loginRegister') }}</button>
                 </template>
                 <template v-else>
-                    <button class="btn btn--block btn--lg" :class="f.side === 'buy' ? 'btn--up' : 'btn--down'" @click="act(f.side === 'buy' ? (mode==='perp'?'Long':'Buy') : (mode==='perp'?'Short':'Sell'))">
-                        {{ f.side === 'buy' ? (mode === 'perp' ? 'Long' : 'Buy ' + coin?.sym) : (mode === 'perp' ? 'Short' : 'Sell ' + coin?.sym) }}
+                    <button class="btn btn--block btn--lg" :class="f.side === 'buy' ? 'btn--up' : 'btn--down'" @click="act(f.side === 'buy' ? (mode==='perp'? $t('trade.long') : $t('trade.buy')) : (mode==='perp'? $t('trade.short') : $t('trade.sell')))">
+                        {{ f.side === 'buy' ? (mode === 'perp' ? $t('trade.long') : $t('trade.buyCoin', { sym: coin?.sym })) : (mode === 'perp' ? $t('trade.short') : $t('trade.sellCoin', { sym: coin?.sym })) }}
                     </button>
                 </template>
             </div>
@@ -257,17 +269,17 @@ export default {
         <!-- OPTIONS: binary up/down -->
         <div v-else class="trade__options">
             <div class="opt__price card">
-                <div class="muted" style="font-size:var(--fs-caption)">{{ coin?.sym }}/USDT · Last price</div>
+                <div class="muted" style="font-size:var(--fs-caption)">{{ coin?.sym }}/USDT · {{ $t('trade.lastPrice') }}</div>
                 <div class="num opt__last" :class="coin?.chg >= 0 ? 'up' : 'down'">{{ fmtNum(price) }}</div>
-                <button class="btn btn--ghost btn--sm" @click="go('/coin?sym=' + coin?.sym)"><Icon name="market" :size="16" /> View chart</button>
+                <button class="btn btn--ghost btn--sm" @click="go('/coin?sym=' + coin?.sym)"><Icon name="market" :size="16" /> {{ $t('trade.viewChart') }}</button>
             </div>
 
             <div class="seg seg--type">
-                <button class="seg__btn" :class="{ 'is-on': o.tab === 'now' }" @click="o.tab = 'now'">Trade now</button>
-                <button class="seg__btn" :class="{ 'is-on': o.tab === 'scheduled' }" @click="o.tab = 'scheduled'">Scheduled trade</button>
+                <button class="seg__btn" :class="{ 'is-on': o.tab === 'now' }" @click="o.tab = 'now'">{{ $t('trade.tradeNow') }}</button>
+                <button class="seg__btn" :class="{ 'is-on': o.tab === 'scheduled' }" @click="o.tab = 'scheduled'">{{ $t('trade.scheduledTrade') }}</button>
             </div>
 
-            <div class="eyebrow" style="margin-top:var(--sp-4)">Duration · payout</div>
+            <div class="eyebrow" style="margin-top:var(--sp-4)">{{ $t('trade.durationPayout') }}</div>
             <div class="tiers">
                 <button v-for="t in OPTION_TIERS" :key="t.sec" class="tier" :class="{ 'is-on': o.tier === t.sec, 'is-locked': tierLocked(t) }" @click="!tierLocked(t) && (o.tier = t.sec)">
                     <b>{{ t.label }}</b>
@@ -277,27 +289,27 @@ export default {
             </div>
 
             <label class="fieldrow" style="margin-top:var(--sp-4)">
-                <span class="fieldrow__lbl">Amount</span>
+                <span class="fieldrow__lbl">{{ $t('trade.amount') }}</span>
                 <input class="fieldrow__in num" placeholder="0" v-model="o.amount" />
                 <span class="fieldrow__suf">USDT</span>
             </label>
             <div class="opt__payout">
-                <span class="muted">Payout {{ activeTier.payout }}× · Est. profit</span>
+                <span class="muted">{{ $t('trade.payoutEst', { mult: activeTier.payout }) }}</span>
                 <b class="num up">+{{ optProfit }} USDT</b>
             </div>
-            <div class="balrow"><span class="muted">Available</span><b class="num">{{ fmtNum(balance) }} USDT</b></div>
+            <div class="balrow"><span class="muted">{{ $t('trade.available') }}</span><b class="num">{{ fmtNum(balance) }} USDT</b></div>
 
             <template v-if="needAuth">
-                <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">Log in or Register</button>
+                <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">{{ $t('trade.loginRegister') }}</button>
             </template>
             <div v-else class="opt__cta">
                 <button class="btn btn--up btn--lg" :disabled="placing" @click="placeOption('up')">
                     <span v-if="placing" class="spinner" style="border-top-color:#fff"></span>
-                    <template v-else><Icon name="withdraw" :size="20" /> Up</template>
+                    <template v-else><Icon name="withdraw" :size="20" /> {{ $t('trade.up') }}</template>
                 </button>
                 <button class="btn btn--down btn--lg" :disabled="placing" @click="placeOption('down')">
                     <span v-if="placing" class="spinner" style="border-top-color:#fff"></span>
-                    <template v-else><Icon name="deposit" :size="20" /> Down</template>
+                    <template v-else><Icon name="deposit" :size="20" /> {{ $t('trade.down') }}</template>
                 </button>
             </div>
         </div>
@@ -305,24 +317,24 @@ export default {
         <!-- Ledger -->
         <div class="trade__ledger">
             <div class="tabs">
-                <button v-for="t in ledgerTabs" :key="t.k" class="tab" :class="{ 'is-on': ledgerTab === t.k }" @click="ledgerTab = t.k">{{ t.l }}</button>
+                <button v-for="t in ledgerTabs" :key="t.k" class="tab" :class="{ 'is-on': ledgerTab === t.k }" @click="ledgerTab = t.k">{{ $t(t.tkey) }}</button>
             </div>
             <div v-if="mode === 'options' && !needAuth && positions.length" class="pos-list">
                 <div v-for="p in positions" :key="p.id" class="pos-row pos-row--link" role="button" tabindex="0"
                      @click="openDetail(p)" @keydown.enter="openDetail(p)" @keydown.space.prevent="openDetail(p)"
-                     :aria-label="(p.type === 'up' ? 'Up' : 'Down') + ' ' + symOf(p.coinId) + ', ' + fmtNum(p.amount) + ' at ' + fmtNum(p.entryPrice) + ', ' + (p.status === 'Active' ? 'settling' : p.status) + (p.payout != null ? (', payout ' + fmtNum(p.payout)) : '') + '. View details'">
-                    <span class="chip" :class="p.type === 'up' ? 'chip--up' : 'chip--down'">{{ p.type === 'up' ? 'Up ▲' : 'Down ▼' }}</span>
+                     :aria-label="posLabel(p)">
+                    <span class="chip" :class="p.type === 'up' ? 'chip--up' : 'chip--down'">{{ p.type === 'up' ? $t('trade.up') + ' ▲' : $t('trade.down') + ' ▼' }}</span>
                     <span class="pos-sym num">{{ symOf(p.coinId) }}</span>
                     <span class="num muted">{{ fmtNum(p.amount) }} @ {{ fmtNum(p.entryPrice) }}</span>
                     <span class="pos-status num" :class="{ up: p.status === 'Won', down: p.status === 'Lost', muted: p.status === 'Active' }">
-                        {{ p.status === 'Active' ? 'Settling…' : p.status }}
+                        {{ p.status === 'Active' ? $t('trade.settling') : (p.status === 'Won' ? $t('trade.won') : $t('trade.lost')) }}
                         <template v-if="p.payout != null"> · {{ p.status === 'Won' ? '+' : '' }}{{ fmtNum(p.payout) }}</template>
                     </span>
                 </div>
             </div>
             <div v-else class="placeholder" style="border:0; padding:var(--sp-8)">
                 <Icon name="doc" class="placeholder__icon" :size="40" />
-                <p class="muted">{{ needAuth ? 'Log in to view your orders.' : 'No records yet.' }}</p>
+                <p class="muted">{{ needAuth ? $t('trade.loginToView') : $t('trade.noRecords') }}</p>
             </div>
         </div>
 
@@ -331,14 +343,14 @@ export default {
             <div v-if="wait.open" class="drawer-scrim" @click="closeWait()"></div>
         </transition>
         <transition name="sheet">
-            <div v-if="wait.open" ref="sheetEl" class="sheet optwait" role="dialog" aria-modal="true" aria-label="Order countdown">
+            <div v-if="wait.open" ref="sheetEl" class="sheet optwait" role="dialog" aria-modal="true" :aria-label="$t('trade.orderCountdown')">
                 <div class="optwait__head">
                     <span class="optwait__sym">
-                        <CoinIcon :sym="coin?.sym" :color="coin?.color" cls="optwait__ico" />
+                        <CoinIcon :sym="coin?.sym" :color="coin?.color" :domain="coin?.domain" :fxbase="coin?.base" :fxquote="coin?.quote" cls="optwait__ico" />
                         {{ coin?.sym }}<span class="muted">/USDT</span>
-                        <span v-if="sim" class="chip chip--gold" style="height:20px">SIM</span>
+                        <span v-if="sim" class="chip chip--gold" style="height:20px">{{ $t('trade.sim') }}</span>
                     </span>
-                    <button class="iconbtn" @click="closeWait()" aria-label="Close"><Icon name="close" /></button>
+                    <button class="iconbtn" @click="closeWait()" :aria-label="$t('common.close')"><Icon name="close" /></button>
                 </div>
 
                 <!-- Visual countdown is hidden from AT (it ticks every second); the
@@ -349,32 +361,32 @@ export default {
                         <circle class="optwait__arc" cx="60" cy="60" r="54" :stroke-dasharray="RING_C" :stroke-dashoffset="ringOffset" />
                     </svg>
                     <div class="optwait__center">
-                        <b v-if="wait.settled" class="optwait__result" :class="wait.status === 'Won' ? 'up' : 'down'">{{ wait.status }}</b>
+                        <b v-if="wait.settled" class="optwait__result" :class="wait.status === 'Won' ? 'up' : 'down'">{{ wait.status === 'Won' ? $t('trade.won') : $t('trade.lost') }}</b>
                         <template v-else>
                             <b class="optwait__clock num">{{ waitClock }}</b>
-                            <span class="optwait__state muted">Time left</span>
+                            <span class="optwait__state muted">{{ $t('trade.timeLeft') }}</span>
                         </template>
                     </div>
                 </div>
                 <div class="sr-only" role="status">
-                    <template v-if="wait.settled">{{ wait.status }}<template v-if="wait.payout != null">, {{ wait.status === 'Won' ? '+' : '' }}{{ fmtNum(wait.payout) }} USDT</template></template>
-                    <template v-else>Order placed — {{ wait.type === 'up' ? 'Up' : 'Down' }}, settling in {{ wait.tierLabel }}</template>
+                    <template v-if="wait.settled">{{ wait.status === 'Won' ? $t('trade.won') : $t('trade.lost') }}<template v-if="wait.payout != null">, {{ wait.status === 'Won' ? '+' : '' }}{{ fmtNum(wait.payout) }} USDT</template></template>
+                    <template v-else>{{ $t('trade.orderPlacedSr', { dir: wait.type === 'up' ? $t('trade.up') : $t('trade.down'), tier: wait.tierLabel }) }}</template>
                 </div>
 
                 <div class="optwait__rows">
-                    <div class="optwait__row"><span class="muted">Entry price</span><b class="num">{{ fmtNum(wait.entry) }}</b></div>
-                    <div class="optwait__row"><span class="muted">Mark price</span><b class="num">{{ fmtNum(wait.settled && wait.settlePrice != null ? wait.settlePrice : price) }}</b></div>
-                    <div class="optwait__row"><span class="muted">Duration · payout</span><b class="num">{{ wait.tierLabel }} · +{{ wait.payoutPct }}%</b></div>
-                    <div class="optwait__row"><span class="muted">Direction</span><b :class="wait.type === 'up' ? 'up' : 'down'">{{ wait.type === 'up' ? 'Up ▲' : 'Down ▼' }}</b></div>
-                    <div class="optwait__row"><span class="muted">Amount</span><b class="num">{{ fmtNum(wait.amount) }} USDT</b></div>
-                    <div class="optwait__row"><span class="muted">Fee rate</span><b class="num">0%</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.entryPrice') }}</span><b class="num">{{ fmtNum(wait.entry) }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.markPrice') }}</span><b class="num">{{ fmtNum(wait.settled && wait.settlePrice != null ? wait.settlePrice : price) }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.durationPayout') }}</span><b class="num">{{ wait.tierLabel }} · +{{ wait.payoutPct }}%</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.direction') }}</span><b :class="wait.type === 'up' ? 'up' : 'down'">{{ wait.type === 'up' ? $t('trade.up') + ' ▲' : $t('trade.down') + ' ▼' }}</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.amount') }}</span><b class="num">{{ fmtNum(wait.amount) }} USDT</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.feeRate') }}</span><b class="num">0%</b></div>
                     <div v-if="wait.settled && wait.payout != null" class="optwait__row">
-                        <span class="muted">Payout</span>
+                        <span class="muted">{{ $t('trade.payout') }}</span>
                         <b class="num" :class="wait.status === 'Won' ? 'up' : 'down'">{{ wait.status === 'Won' ? '+' : '' }}{{ fmtNum(wait.payout) }} USDT</b>
                     </div>
                 </div>
 
-                <button ref="closeBtnEl" class="btn btn--dark btn--block btn--lg optwait__close" @click="closeWait()">Close</button>
+                <button ref="closeBtnEl" class="btn btn--dark btn--block btn--lg optwait__close" @click="closeWait()">{{ $t('common.close') }}</button>
             </div>
         </transition>
 

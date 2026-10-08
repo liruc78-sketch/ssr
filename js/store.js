@@ -37,6 +37,7 @@ export const store = reactive({
 
     // ---- shell UI --------------------------------------------------------
     drawerOpen: false,
+    langOpen: false,          // language picker modal
 
     // ---- toast -----------------------------------------------------------
     toast: { show: false, msg: '', type: 'info' },
@@ -69,6 +70,10 @@ export function applyTheme(t) {
 export function toggleTheme() { store.theme = store.theme === 'dark' ? 'light' : 'dark'; }
 export function openDrawer()  { store.drawerOpen = true;  document.body.style.overflow = 'hidden'; }
 export function closeDrawer() { store.drawerOpen = false; document.body.style.overflow = ''; }
+// Language picker. Opening from the drawer closes the drawer first so the modal
+// sits over a clean scrim (matches the reference design).
+export function openLang()  { store.drawerOpen = false; store.langOpen = true;  document.body.style.overflow = 'hidden'; }
+export function closeLang() { store.langOpen = false; document.body.style.overflow = ''; }
 
 export function toast(msg, type = 'info', ms = 2600) {
     store.toast = { show: true, msg, type };

@@ -18,7 +18,7 @@ export default {
     components: { Icon },
     setup() {
         const tab = ref('deposit');
-        const title = router.path === '/funding' ? 'Funding Records' : 'History';
+        const titleKey = router.path === '/funding' ? 'history.fundingRecords' : 'history.title';
         const rows = ref([]);
         const loading = ref(false);
 
@@ -31,15 +31,15 @@ export default {
         onMounted(load);
         watch(tab, load);
 
-        return { tab, title, rows, loading, go, store, fmtNum, fmtDate, statusClass };
+        return { tab, titleKey, rows, loading, go, store, fmtNum, fmtDate, statusClass };
     },
     template: /*html*/`
     <section>
-        <div class="page-head"><button class="iconbtn page-head__back" @click="go('/assets')"><Icon name="chevronR" style="transform:rotate(180deg)" /></button><h1 class="page-title">{{ title }}</h1></div>
+        <div class="page-head"><button class="iconbtn page-head__back" @click="go('/assets')"><Icon name="chevronR" style="transform:rotate(180deg)" /></button><h1 class="page-title">{{ $t(titleKey) }}</h1></div>
 
         <div class="seg seg--type" style="margin-bottom:var(--sp-4)">
-            <button class="seg__btn" :class="{ 'is-on': tab === 'deposit' }" @click="tab = 'deposit'">Deposit records</button>
-            <button class="seg__btn" :class="{ 'is-on': tab === 'withdraw' }" @click="tab = 'withdraw'">Withdrawal records</button>
+            <button class="seg__btn" :class="{ 'is-on': tab === 'deposit' }" @click="tab = 'deposit'">{{ $t('history.depositRecords') }}</button>
+            <button class="seg__btn" :class="{ 'is-on': tab === 'withdraw' }" @click="tab = 'withdraw'">{{ $t('history.withdrawalRecords') }}</button>
         </div>
 
         <div v-if="loading" class="card" style="display:grid; place-items:center; padding:var(--sp-10)"><span class="spinner"></span></div>
@@ -49,7 +49,7 @@ export default {
                 <div class="rec-main">
                     <b class="num">{{ tab === 'deposit' ? ('+' + fmtNum(r.usd_amount) + ' USD') : ('-' + fmtNum(r.amount) + ' USD') }}</b>
                     <span class="muted" style="font-size:var(--fs-caption)">
-                        {{ tab === 'deposit' ? (r.coin_symbol + ' · ' + (r.network_label || r.network)) : ('Fee $' + fmtNum(r.fee)) }} · {{ fmtDate(r.created_at) }}
+                        {{ tab === 'deposit' ? (r.coin_symbol + ' · ' + (r.network_label || r.network)) : $t('history.feeAmt', { amt: fmtNum(r.fee) }) }} · {{ fmtDate(r.created_at) }}
                     </span>
                 </div>
                 <span class="chip" :class="statusClass(r.status)">{{ r.status }}</span>
@@ -59,8 +59,8 @@ export default {
         <div v-else class="card">
             <div class="placeholder" style="border:0; padding:var(--sp-12)">
                 <Icon name="history" class="placeholder__icon" :size="44" />
-                <p class="muted">{{ store.isAuthed ? ('No ' + tab + ' records yet.') : 'Log in to view your records.' }}</p>
-                <button v-if="!store.isAuthed" class="btn btn--brand btn--sm btn--pill" @click="go('/login')">Log in</button>
+                <p class="muted">{{ store.isAuthed ? (tab === 'deposit' ? $t('history.noDeposits') : $t('history.noWithdrawals')) : $t('history.loginToView') }}</p>
+                <button v-if="!store.isAuthed" class="btn btn--brand btn--sm btn--pill" @click="go('/login')">{{ $t('common.login') }}</button>
             </div>
         </div>
     </section>`,

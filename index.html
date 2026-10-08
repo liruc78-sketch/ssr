@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Crypto.ssr — Exchange</title>
 
-    <!-- Set theme before paint to avoid a flash -->
+    <!-- Set theme + language before paint to avoid a flash (RTL included) -->
     <script>
         (function () {
             var t = 'light';
@@ -15,6 +15,13 @@
             m.name = 'theme-color';
             m.content = t === 'dark' ? '#0b0e14' : '#f5f7fb';
             document.head.appendChild(m);
+
+            var loc = null;
+            try { loc = localStorage.getItem('locale'); } catch (e) {}
+            if (loc) {
+                document.documentElement.setAttribute('lang', loc);
+                document.documentElement.setAttribute('dir', loc === 'fa' ? 'rtl' : 'ltr');
+            }
         })();
     </script>
 

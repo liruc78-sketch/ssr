@@ -7,6 +7,7 @@
 import { reactive, watch, nextTick } from 'vue';
 import { sb } from './supabase.js';
 import { store, toast } from './store.js';
+import { t } from './i18n.js';
 
 export const support = reactive({ open: false, messages: [], unread: 0, loading: false, sending: false, input: '', bodyEl: null });
 let channel = null;
@@ -48,7 +49,7 @@ export async function sendMessage() {
         support.input = '';
         if (data && !support.messages.some(m => m.id === data.id)) support.messages.push(data);
         scrollDown();
-    } catch (e) { toast('Message failed to send', 'error'); }
+    } catch (e) { toast(t('support.failed'), 'error'); }
     finally { support.sending = false; }
 }
 

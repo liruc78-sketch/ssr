@@ -8,6 +8,8 @@ export const COINS = [
     { sym: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT', cg: 'bitcoin', price: 82868.99, chg: -1.51, vol: '1.7B', color: '#f7931a' },
     { sym: 'ETH', name: 'Ethereum', binance: 'ETHUSDT', cg: 'ethereum', price: 2573.07, chg: -1.34, vol: '928M', color: '#627eea' },
     { sym: 'BNB', name: 'BNB', binance: 'BNBUSDT', cg: 'binancecoin', price: 768.48, chg: 0.23, vol: '72M', color: '#f0b90b' },
+    { sym: 'USDT', name: 'Tether', binance: '', cg: 'tether', price: 1.0, chg: 0, vol: '—', color: '#26a17b' },
+    { sym: 'USDC', name: 'USD Coin', binance: 'USDCUSDT', cg: 'usd-coin', price: 1.0004, chg: 0.03, vol: '4.5B', color: '#2775ca' },
     { sym: 'SOL', name: 'Solana', binance: 'SOLUSDT', cg: 'solana', price: 115.53, chg: -2.33, vol: '207M', color: '#14f195' },
     { sym: 'XRP', name: 'XRP', binance: 'XRPUSDT', cg: 'ripple', price: 1.409, chg: -3.75, vol: '194M', color: '#1b1f24' },
     { sym: 'ADA', name: 'Cardano', binance: 'ADAUSDT', cg: 'cardano', price: 0.2546, chg: 0.04, vol: '41M', color: '#0033ad' },
@@ -82,30 +84,76 @@ export const COINS = [
     { sym: 'FTM', name: 'Fantom', binance: 'FTMUSDT', cg: 'fantom', price: 0.6994, chg: -0.77, vol: '1M', color: '#1969ff' },
 ];
 
-// --- US stocks (generated charts; no public no-key source) ---------------
+// --- US stocks (generated charts; logo by company domain via Clearbit) ----
 export const US_STOCKS = [
-    { sym: 'AAPL', name: 'Apple',     price: 232.14, chg:  0.84, vol: '48M',  color: '#101114' },
-    { sym: 'TSLA', name: 'Tesla',     price: 418.70, chg: -1.92, vol: '92M',  color: '#e82127' },
-    { sym: 'NVDA', name: 'NVIDIA',    price: 138.45, chg:  2.31, vol: '210M', color: '#76b900' },
-    { sym: 'AMZN', name: 'Amazon',    price: 221.30, chg:  0.42, vol: '35M',  color: '#ff9900' },
-    { sym: 'MSFT', name: 'Microsoft', price: 429.18, chg: -0.21, vol: '22M',  color: '#2f7cff' },
-    { sym: 'META', name: 'Meta',      price: 602.55, chg:  1.14, vol: '14M',  color: '#1877f2' },
+    { sym: 'AAPL',  name: 'Apple',           domain: 'apple.com',         price: 232.14, chg:  0.84, vol: '48M',  color: '#101114' },
+    { sym: 'MSFT',  name: 'Microsoft',       domain: 'microsoft.com',     price: 429.18, chg: -0.21, vol: '22M',  color: '#2f7cff' },
+    { sym: 'NVDA',  name: 'NVIDIA',          domain: 'nvidia.com',        price: 138.45, chg:  2.31, vol: '210M', color: '#76b900' },
+    { sym: 'AMZN',  name: 'Amazon',          domain: 'amazon.com',        price: 221.30, chg:  0.42, vol: '35M',  color: '#ff9900' },
+    { sym: 'GOOGL', name: 'Alphabet',        domain: 'google.com',        price: 178.35, chg:  0.67, vol: '28M',  color: '#4285f4' },
+    { sym: 'META',  name: 'Meta Platforms',  domain: 'meta.com',          price: 602.55, chg:  1.14, vol: '14M',  color: '#1877f2' },
+    { sym: 'TSLA',  name: 'Tesla',           domain: 'tesla.com',         price: 418.70, chg: -1.92, vol: '92M',  color: '#e82127' },
+    { sym: 'AVGO',  name: 'Broadcom',        domain: 'broadcom.com',      price: 234.60, chg:  1.48, vol: '18M',  color: '#cc092f' },
+    { sym: 'NFLX',  name: 'Netflix',         domain: 'netflix.com',       price: 835.40, chg:  0.53, vol: '4M',   color: '#e50914' },
+    { sym: 'AMD',   name: 'AMD',             domain: 'amd.com',           price: 138.75, chg: -0.94, vol: '46M',  color: '#ed1c24' },
+    { sym: 'INTC',  name: 'Intel',           domain: 'intel.com',         price: 24.15,  chg: -1.37, vol: '55M',  color: '#0071c5' },
+    { sym: 'JPM',   name: 'JPMorgan Chase',  domain: 'jpmorganchase.com', price: 242.60, chg:  0.38, vol: '9M',   color: '#1a3c6e' },
+    { sym: 'V',     name: 'Visa',            domain: 'visa.com',          price: 312.80, chg:  0.22, vol: '6M',   color: '#1a1f71' },
+    { sym: 'MA',    name: 'Mastercard',      domain: 'mastercard.com',    price: 523.10, chg:  0.44, vol: '3M',   color: '#eb001b' },
+    { sym: 'BAC',   name: 'Bank of America', domain: 'bankofamerica.com', price: 45.20,  chg: -0.31, vol: '38M',  color: '#012169' },
+    { sym: 'DIS',   name: 'Walt Disney',     domain: 'disney.com',        price: 112.45, chg:  0.76, vol: '10M',  color: '#113ccf' },
+    { sym: 'BA',    name: 'Boeing',          domain: 'boeing.com',        price: 178.90, chg: -1.05, vol: '7M',   color: '#0039a6' },
+    { sym: 'KO',    name: 'Coca-Cola',       domain: 'coca-cola.com',     price: 62.80,  chg:  0.18, vol: '12M',  color: '#f40009' },
+    { sym: 'PEP',   name: 'PepsiCo',         domain: 'pepsico.com',       price: 152.30, chg: -0.24, vol: '5M',   color: '#004883' },
+    { sym: 'MCD',   name: "McDonald's",      domain: 'mcdonalds.com',     price: 295.60, chg:  0.31, vol: '3M',   color: '#da291c' },
+    { sym: 'NKE',   name: 'Nike',            domain: 'nike.com',          price: 76.40,  chg: -0.58, vol: '9M',   color: '#111111' },
+    { sym: 'WMT',   name: 'Walmart',         domain: 'walmart.com',       price: 92.15,  chg:  0.49, vol: '16M',  color: '#0071ce' },
+    { sym: 'COST',  name: 'Costco',          domain: 'costco.com',        price: 915.20, chg:  0.37, vol: '2M',   color: '#005daa' },
+    { sym: 'PYPL',  name: 'PayPal',          domain: 'paypal.com',        price: 88.70,  chg:  1.22, vol: '11M',  color: '#003087' },
+    { sym: 'UBER',  name: 'Uber',            domain: 'uber.com',          price: 72.30,  chg: -0.66, vol: '14M',  color: '#0a0a0a' },
+    { sym: 'COIN',  name: 'Coinbase',        domain: 'coinbase.com',      price: 298.50, chg:  3.41, vol: '8M',   color: '#0052ff' },
+    { sym: 'ORCL',  name: 'Oracle',          domain: 'oracle.com',        price: 188.20, chg:  0.52, vol: '7M',   color: '#f80000' },
+    { sym: 'CRM',   name: 'Salesforce',      domain: 'salesforce.com',    price: 345.80, chg: -0.41, vol: '4M',   color: '#00a1e0' },
+    { sym: 'ADBE',  name: 'Adobe',           domain: 'adobe.com',         price: 512.40, chg:  0.29, vol: '3M',   color: '#fa0f00' },
+    { sym: 'QCOM',  name: 'Qualcomm',        domain: 'qualcomm.com',      price: 168.90, chg: -0.73, vol: '8M',   color: '#3253dc' },
+    { sym: 'IBM',   name: 'IBM',             domain: 'ibm.com',           price: 235.10, chg:  0.44, vol: '4M',   color: '#0530ad' },
+    { sym: 'GS',    name: 'Goldman Sachs',   domain: 'goldmansachs.com',  price: 585.30, chg:  0.61, vol: '2M',   color: '#6b7a8f' },
+    { sym: 'XOM',   name: 'ExxonMobil',      domain: 'exxonmobil.com',    price: 118.60, chg: -0.47, vol: '15M',  color: '#e2231a' },
+    { sym: 'PFE',   name: 'Pfizer',          domain: 'pfizer.com',        price: 25.40,  chg:  0.12, vol: '30M',  color: '#0093d0' },
+    { sym: 'SBUX',  name: 'Starbucks',       domain: 'starbucks.com',     price: 98.20,  chg:  0.85, vol: '6M',   color: '#00704a' },
 ];
 
-// --- FX pairs (generated charts) -----------------------------------------
+// --- FX pairs (generated charts; icon = base + quote currency flags) ------
 export const FX = [
-    { sym: 'EURUSD', name: 'Euro / USD',   price: 1.0842, chg:  0.12, vol: '—', color: '#2f49d6' },
-    { sym: 'GBPUSD', name: 'Pound / USD',  price: 1.2718, chg: -0.08, vol: '—', color: '#8b1e3f' },
-    { sym: 'USDJPY', name: 'USD / Yen',    price: 151.34, chg:  0.26, vol: '—', color: '#bc002d' },
-    { sym: 'AUDUSD', name: 'Aussie / USD', price: 0.6612, chg: -0.15, vol: '—', color: '#00843d' },
-    { sym: 'USDCAD', name: 'USD / Loonie', price: 1.3745, chg:  0.09, vol: '—', color: '#d52b1e' },
+    { sym: 'EURUSD', name: 'Euro / US Dollar',      base: 'eu', quote: 'us', price: 1.0842, chg:  0.12, vol: '—', color: '#2f49d6' },
+    { sym: 'GBPUSD', name: 'Pound / US Dollar',     base: 'gb', quote: 'us', price: 1.2718, chg: -0.08, vol: '—', color: '#8b1e3f' },
+    { sym: 'USDJPY', name: 'US Dollar / Yen',       base: 'us', quote: 'jp', price: 151.34, chg:  0.26, vol: '—', color: '#bc002d' },
+    { sym: 'USDCHF', name: 'US Dollar / Franc',     base: 'us', quote: 'ch', price: 0.8824, chg:  0.05, vol: '—', color: '#d52b1e' },
+    { sym: 'AUDUSD', name: 'Aussie / US Dollar',    base: 'au', quote: 'us', price: 0.6612, chg: -0.15, vol: '—', color: '#00843d' },
+    { sym: 'USDCAD', name: 'US Dollar / Loonie',    base: 'us', quote: 'ca', price: 1.3745, chg:  0.09, vol: '—', color: '#d52b1e' },
+    { sym: 'NZDUSD', name: 'Kiwi / US Dollar',      base: 'nz', quote: 'us', price: 0.5921, chg: -0.11, vol: '—', color: '#00247d' },
+    { sym: 'EURGBP', name: 'Euro / Pound',          base: 'eu', quote: 'gb', price: 0.8524, chg:  0.07, vol: '—', color: '#2f49d6' },
+    { sym: 'EURJPY', name: 'Euro / Yen',            base: 'eu', quote: 'jp', price: 164.08, chg:  0.33, vol: '—', color: '#2f49d6' },
+    { sym: 'GBPJPY', name: 'Pound / Yen',           base: 'gb', quote: 'jp', price: 192.51, chg:  0.41, vol: '—', color: '#8b1e3f' },
+    { sym: 'EURCHF', name: 'Euro / Franc',          base: 'eu', quote: 'ch', price: 0.9568, chg: -0.04, vol: '—', color: '#2f49d6' },
+    { sym: 'AUDJPY', name: 'Aussie / Yen',          base: 'au', quote: 'jp', price: 100.06, chg:  0.19, vol: '—', color: '#00843d' },
+    { sym: 'CADJPY', name: 'Loonie / Yen',          base: 'ca', quote: 'jp', price: 110.10, chg:  0.22, vol: '—', color: '#d52b1e' },
+    { sym: 'CHFJPY', name: 'Franc / Yen',           base: 'ch', quote: 'jp', price: 171.52, chg:  0.28, vol: '—', color: '#d52b1e' },
+    { sym: 'EURAUD', name: 'Euro / Aussie',         base: 'eu', quote: 'au', price: 1.6398, chg: -0.12, vol: '—', color: '#2f49d6' },
+    { sym: 'GBPAUD', name: 'Pound / Aussie',        base: 'gb', quote: 'au', price: 1.9235, chg: -0.09, vol: '—', color: '#8b1e3f' },
+    { sym: 'USDCNH', name: 'US Dollar / Yuan',      base: 'us', quote: 'cn', price: 7.2456, chg:  0.14, vol: '—', color: '#de2910' },
+    { sym: 'USDHKD', name: 'US Dollar / HK Dollar', base: 'us', quote: 'hk', price: 7.7821, chg:  0.01, vol: '—', color: '#de2910' },
+    { sym: 'USDSGD', name: 'US Dollar / SG Dollar', base: 'us', quote: 'sg', price: 1.3412, chg:  0.06, vol: '—', color: '#ef3340' },
+    { sym: 'USDMXN', name: 'US Dollar / Peso',      base: 'us', quote: 'mx', price: 20.148, chg:  0.52, vol: '—', color: '#006847' },
+    { sym: 'USDTRY', name: 'US Dollar / Lira',      base: 'us', quote: 'tr', price: 34.287, chg:  0.38, vol: '—', color: '#e30a17' },
+    { sym: 'USDZAR', name: 'US Dollar / Rand',      base: 'us', quote: 'za', price: 18.092, chg: -0.27, vol: '—', color: '#007a4d' },
 ];
 
 export const CATEGORIES = [
-    { key: 'watch',  label: 'Watchlists' },
-    { key: 'crypto', label: 'Crypto' },
-    { key: 'us',     label: 'US stocks' },
-    { key: 'fx',     label: 'FX' },
+    { key: 'watch',  tkey: 'cat.watch' },
+    { key: 'crypto', tkey: 'cat.crypto' },
+    { key: 'us',     tkey: 'cat.us' },
+    { key: 'fx',     tkey: 'cat.fx' },
 ];
 
 export function listFor(cat) {
@@ -236,13 +284,13 @@ export const LEVERAGES = [1, 25, 50, 75, 100];
 // Finance / Earn products (daily-return model). Flexible term = 0.
 export const FINANCE_PRODUCTS = [
     // Current (flexible)
-    { id: 'usdt-flex', cat: 'current', asset: 'USDT', name: 'USDT Flexible', yield: 'Low Yield', dmin: 0.0685, dmax: 0.481, buyers: 55973, min: 100, max: 1000000, term: 0, color: '#26a17b' },
-    { id: 'btc-flex',  cat: 'current', asset: 'BTC',  name: 'BTC Flexible',  yield: 'Low Yield', dmin: 0.0210, dmax: 0.118, buyers: 12430, min: 0.001, max: 50, term: 0, color: '#f7931a' },
-    { id: 'eth-flex',  cat: 'current', asset: 'ETH',  name: 'ETH Flexible',  yield: 'Low Yield', dmin: 0.0320, dmax: 0.140, buyers: 9871,  min: 0.01, max: 500, term: 0, color: '#627eea' },
+    { id: 'usdt-flex', cat: 'current', asset: 'USDT', name: 'USDT Flexible', yieldKey: 'yield.low', dmin: 0.0685, dmax: 0.481, buyers: 55973, min: 100, max: 1000000, term: 0, color: '#26a17b' },
+    { id: 'btc-flex',  cat: 'current', asset: 'BTC',  name: 'BTC Flexible',  yieldKey: 'yield.low', dmin: 0.0210, dmax: 0.118, buyers: 12430, min: 0.001, max: 50, term: 0, color: '#f7931a' },
+    { id: 'eth-flex',  cat: 'current', asset: 'ETH',  name: 'ETH Flexible',  yieldKey: 'yield.low', dmin: 0.0320, dmax: 0.140, buyers: 9871,  min: 0.01, max: 500, term: 0, color: '#627eea' },
     // AI Quant (fixed term)
-    { id: 'quant-7',   cat: 'quant', asset: 'USDT', name: 'Quant Alpha', yield: 'High Yield', dmin: 0.201, dmax: 0.482, buyers: 8221, min: 500,  max: 500000, term: 7,  color: '#5b73ff' },
-    { id: 'quant-15',  cat: 'quant', asset: 'USDT', name: 'Neural Grid', yield: 'High Yield', dmin: 0.284, dmax: 0.556, buyers: 5002, min: 1000, max: 800000, term: 15, color: '#e24fe2' },
-    { id: 'quant-30',  cat: 'quant', asset: 'USDT', name: 'Quant Pro',   yield: 'High Yield', dmin: 0.351, dmax: 0.628, buyers: 3140, min: 2000, max: 1000000, term: 30, color: '#f0a020' },
+    { id: 'quant-7',   cat: 'quant', asset: 'USDT', name: 'Quant Alpha', yieldKey: 'yield.high', dmin: 0.201, dmax: 0.482, buyers: 8221, min: 500,  max: 500000, term: 7,  color: '#5b73ff' },
+    { id: 'quant-15',  cat: 'quant', asset: 'USDT', name: 'Neural Grid', yieldKey: 'yield.high', dmin: 0.284, dmax: 0.556, buyers: 5002, min: 1000, max: 800000, term: 15, color: '#e24fe2' },
+    { id: 'quant-30',  cat: 'quant', asset: 'USDT', name: 'Quant Pro',   yieldKey: 'yield.high', dmin: 0.351, dmax: 0.628, buyers: 3140, min: 2000, max: 1000000, term: 30, color: '#f0a020' },
 ];
 
 // Mini sparkline points (0..100 range) for finance cards.
@@ -252,18 +300,22 @@ export function genSpark(n = 24, up = true) {
     return pts;
 }
 
-// --- Activity feed & FAQ (unchanged shape) -------------------------------
-const PRODUCTS = ['Spot', 'Contract', 'Follow orders', 'AI Quant'];
+// --- Activity feed & FAQ -------------------------------------------------
+// Feed rows carry translation keys (productKey/agoKey) + a numeric agoN so the
+// consuming view renders them reactively with $t(agoKey, { n: agoN }).
+const PRODUCT_KEYS = ['product.spot', 'product.contract', 'product.followOrders', 'product.aiQuant'];
 export function genFeed(n = 8) {
     const out = [];
     for (let i = 0; i < n; i++) {
         const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
         const amt = (Math.random() * 9000 + 120);
         const mins = Math.floor(Math.random() * 230) + 2;
+        const isMin = mins < 60;
         out.push({
             user: 'z∗∗∗∗∗∗' + letter,
-            product: PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)],
-            ago: mins < 60 ? `${mins} min ago` : `${Math.floor(mins / 60)} h ago`,
+            productKey: PRODUCT_KEYS[Math.floor(Math.random() * PRODUCT_KEYS.length)],
+            agoKey: isMin ? 'feed.minAgo' : 'feed.hAgo',
+            agoN: isMin ? mins : Math.floor(mins / 60),
             amount: fmtAmt(amt),
             up: Math.random() > 0.4,
         });
@@ -271,9 +323,11 @@ export function genFeed(n = 8) {
     return out;
 }
 
+// FAQ content lives in the i18n dictionaries (faq.q1..q4 / faq.a1..a4); this
+// just lists the key pairs so the view can map over them.
 export const FAQ = [
-    { q: 'What products does the platform offer?', a: 'Crypto.ssr offers spot trading across hundreds of pairs, perpetual contracts with up to 100× leverage, short-term options, and finance products that let you earn on idle balances — all from one account.' },
-    { q: 'Is my account secure?', a: 'Balances are protected with encrypted storage, device and withdrawal-address alerts, and optional two-factor authentication. You control which devices and DApps can connect.' },
-    { q: 'Who can trade on Crypto.ssr?', a: 'Any verified user in a supported region can open an account. Simulated Trading lets you practice risk-free before going live.' },
-    { q: 'How are trades settled?', a: 'We use off-chain matching with on-chain settlement, so you get exchange-grade speed while keeping the transparency of on-chain records.' },
+    { qKey: 'faq.q1', aKey: 'faq.a1' },
+    { qKey: 'faq.q2', aKey: 'faq.a2' },
+    { qKey: 'faq.q3', aKey: 'faq.a3' },
+    { qKey: 'faq.q4', aKey: 'faq.a4' },
 ];
