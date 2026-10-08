@@ -570,4 +570,10 @@ export default {
     "notif.withdraw.failedTitle": "提現失敗",
     "notif.withdraw.failedBody": "{amt} USD · 資金已退回",
     "notif.system.default": "通知",
+
+    // ---- sim product chooser --------------------------------------------
+    "sim.chooseProduct": "選擇交易產品",
+    "sim.prodSpotDesc": "以市價買入賣出",
+    "sim.prodPerpDesc": "最高 100× 槓桿",
+    "sim.prodOptionsDesc": "預測看漲或看跌 · 固定賠付",
 };

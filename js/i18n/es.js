@@ -570,4 +570,10 @@ export default {
     "notif.withdraw.failedTitle": "Retiro fallido",
     "notif.withdraw.failedBody": "{amt} USD · fondos devueltos",
     "notif.system.default": "Notificación",
+
+    // ---- sim product chooser --------------------------------------------
+    "sim.chooseProduct": "Elige un producto",
+    "sim.prodSpotDesc": "Compra y vende al precio de mercado",
+    "sim.prodPerpDesc": "Apalancamiento de hasta 100×",
+    "sim.prodOptionsDesc": "Predice si sube o baja · pago fijo",
 };

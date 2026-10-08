@@ -291,6 +291,26 @@
 .langopt__name { flex: 1 1 auto; min-width: 0; }
 .langopt__check { color: var(--brand); flex: 0 0 auto; }
 
+/* Product-type chooser rows (reuses the .langsheet modal chrome) */
+.prodopt {
+    display: flex; align-items: center; gap: var(--sp-3);
+    width: 100%; padding: var(--sp-3);
+    border-radius: var(--r-md); background: transparent;
+    color: var(--text); text-align: left; cursor: pointer;
+    transition: background var(--dur-fast);
+}
+.prodopt:hover { background: var(--surface-2); }
+.prodopt__ic {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: var(--r-sm);
+    display: grid; place-items: center;
+    background: var(--brand-weak); color: var(--brand);
+}
+.prodopt__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.prodopt__main b { font-size: var(--fs-body); font-weight: 600; }
+.prodopt__main .muted { font-size: var(--fs-caption); }
+.prodopt__chev { flex: 0 0 auto; }
+[dir="rtl"] .prodopt__chev { transform: rotate(180deg); }
+
 /* modal pop transition */
 .langpop-enter-active { transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
 .langpop-leave-active { transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease; }
