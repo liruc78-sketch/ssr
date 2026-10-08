@@ -3,7 +3,9 @@
 // Opens a position server-side for the signed-in caller: live price, tier gate,
 // balance check, debit (principal + fee) and insert — so the client can never
 // set its own entry price or balance. Settlement stays in trade-settle.
-//   POST { coinId, type: 'up'|'down', amount, durationSeconds } (Authorization: user JWT)
+//   POST { coinId, type: 'up'|'down', amount, durationSeconds, sim? } (Authorization: user JWT)
+// When sim=true the trade runs against the account's simulated balance
+// (portfolios.sim_balance) and is tagged is_sim; the real-money path is unchanged.
 // ============================================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -38,13 +40,15 @@ Deno.serve(async (req: Request) => {
     const type = body?.type === 'down' ? 'down' : 'up';
     const amount = Number(body?.amount);
     const duration = Number(body?.durationSeconds) || 30;
+    const sim = body?.sim === true;                       // simulated vs real account
+    const balCol = sim ? 'sim_balance' : 'usd_balance';
     if (!coinId) return json({ error: 'Missing coin' }, 400);
     if (!(amount > 0)) return json({ error: 'Enter a valid amount' }, 400);
     const tierMin = TIER_MIN[duration] ?? 0;
 
-    const { data: pf } = await admin.from('portfolios').select('usd_balance').eq('user_id', uid).single();
+    const { data: pf } = await admin.from('portfolios').select('usd_balance, sim_balance').eq('user_id', uid).single();
     if (!pf) return json({ error: 'No account balance' }, 400);
-    const bal = parseFloat(pf.usd_balance);
+    const bal = parseFloat(sim ? pf.sim_balance : pf.usd_balance);
     if (bal < tierMin) return json({ error: `This tier requires a balance of at least $${tierMin.toLocaleString()}` }, 400);
 
     let price = 0;
@@ -58,12 +62,12 @@ Deno.serve(async (req: Request) => {
     const total = amount + tradingFee(amount);
     if (bal < total) return json({ error: 'Insufficient balance (incl. fees)' }, 400);
 
-    await admin.from('portfolios').update({ usd_balance: bal - total }).eq('user_id', uid);
+    await admin.from('portfolios').update({ [balCol]: bal - total }).eq('user_id', uid);
     const { data: pos, error } = await admin.from('positions').insert({
-      user_id: uid, coin_id: coinId, type, amount, entry_price: price, status: 'Active', duration_seconds: duration,
+      user_id: uid, coin_id: coinId, type, amount, entry_price: price, status: 'Active', duration_seconds: duration, is_sim: sim,
     }).select('id').single();
     if (error) {
-      await admin.from('portfolios').update({ usd_balance: bal }).eq('user_id', uid); // rollback
+      await admin.from('portfolios').update({ [balCol]: bal }).eq('user_id', uid); // rollback
       throw error;
     }
     return json({ ok: true, positionId: pos.id, entryPrice: price });

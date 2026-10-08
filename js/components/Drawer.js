@@ -1,7 +1,7 @@
 // Side drawer — full menu, account card, Live/Simulated toggle
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
-import { store, closeDrawer, setMode, toast, toggleTheme } from '../store.js';
+import { store, closeDrawer, toast, toggleTheme } from '../store.js';
 import { disconnect } from '../auth.js';
 
 export default {
@@ -34,11 +34,6 @@ export default {
                 { icon: 'academy',  label: 'Academy',         path: '/academy' },
             ]},
         ];
-        const toggleMode = () => {
-            const next = store.isSim ? 'live' : 'sim';
-            setMode(next);
-            toast(next === 'sim' ? 'Switched to Simulated Trading' : 'Switched to Live Trading', 'info');
-        };
         const identity = () => store.session?.displayName || store.session?.username || store.session?.walletAddress || 'Account';
         const initials = () => identity().replace(/^0x/, '').trim().charAt(0).toUpperCase() || 'U';
         const subId = () => {
@@ -47,7 +42,9 @@ export default {
             return store.session?.email || store.session?.username || '';
         };
         const doLogout = () => { disconnect(); closeDrawer(); toast('Disconnected', 'info'); go('/'); };
-        return { store, nav, closeDrawer, groups, toggleMode, identity, initials, subId, toggleTheme, doLogout };
+        // Simulated-trading entry: open the dedicated sim wallet page.
+        const enterSim = () => nav('/sim');
+        return { store, nav, closeDrawer, groups, identity, initials, subId, toggleTheme, doLogout, enterSim };
     },
     template: /*html*/`
     <div class="drawer" role="dialog" aria-label="Menu">
@@ -85,13 +82,13 @@ export default {
             <Icon name="chevronR" />
         </div>
 
-        <!-- Live / Simulated toggle -->
-        <button class="modepill" @click="toggleMode()">
+        <!-- Simulated trading entry -->
+        <button class="drawer__simbtn" @click="enterSim()">
             <span style="display:flex; align-items:center; gap:10px">
-                <Icon name="info" :size="18" />
-                {{ store.isSim ? 'Simulated Trading' : 'Live Trading' }}
+                <Icon name="trade" :size="18" />
+                <span><b>Simulated Trading</b><span style="display:block; font-size:var(--fs-caption); opacity:.85">Practice with 1,000,000 USDT virtual funds</span></span>
             </span>
-            <span class="chip chip--brand">Switch to {{ store.isSim ? 'Live' : 'Simulated' }}</span>
+            <Icon name="chevronR" :size="18" />
         </button>
 
         <!-- Menu groups -->

@@ -1,5 +1,5 @@
 // Trade — Spot (order book + form) · Perpetual (leverage + TP/SL) · Options (binary)
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { Icon } from '../icons.js';
 import { go, router } from '../router.js';
 import { store } from '../store.js';
@@ -7,17 +7,22 @@ import { toast } from '../store.js';
 import { findSym, fetchTickers, COINS, OPTION_TIERS, LEVERAGES, fmtNum, fmtPrice } from '../data.js';
 import { openOptionPosition } from '../trade.js';
 import OrderBook from '../components/OrderBook.js';
+import { CoinIcon } from '../components/CoinIcon.js';
+import { PositionDetail } from '../components/PositionDetail.js';
 
 export default {
     name: 'Trade',
-    components: { Icon, OrderBook },
+    components: { Icon, OrderBook, CoinIcon, PositionDetail },
     setup() {
         const coin = findSym(router.query.pair) || findSym('BTC');
         const MODES = [{ k: 'spot', label: 'Spot' }, { k: 'perp', label: 'Perpetual contract' }, { k: 'options', label: 'Options' }];
         const mode = ref(['spot', 'perp', 'options'].includes(router.query.mode) ? router.query.mode : 'spot');
+        // Simulated account for this session — set only when reached from the sim wallet (/trade?...&sim=1).
+        const sim = router.query.sim === '1';
 
         const price = ref(coin?.price || 0);
-        const balance = computed(() => store.isAuthed ? store.portfolio.usdBalance : 0);
+        // Simulated mode draws on the separate sim balance (default 100k virtual USDT).
+        const balance = computed(() => store.isAuthed ? (sim ? store.portfolio.simBalance : store.portfolio.usdBalance) : 0);
 
         // shared order form
         const f = reactive({ side: 'buy', type: 'market', price: '', amount: '', lev: 10, tpsl: false, tp: '', sl: '' });
@@ -25,12 +30,18 @@ export default {
         const o = reactive({ tab: 'now', tier: 30, amount: '' });
         const ledgerTab = ref('open');
 
-        let timer = null;
+        let timer = null, alive = true;
         onMounted(async () => {
             try { const [u] = await fetchTickers([coin]); if (u) price.value = u.price; } catch {}
+            if (!alive) return;   // unmounted during the fetch — don't start an orphan interval
             timer = setInterval(() => { price.value = price.value * (1 + (Math.random() - 0.5) * 0.0006); }, 2000);
         });
-        onBeforeUnmount(() => clearInterval(timer));
+        onBeforeUnmount(() => {
+            alive = false; clearInterval(timer);
+            if (waitRaf) cancelAnimationFrame(waitRaf);
+            document.body.style.overflow = '';                       // never leave the page scroll-locked
+            document.removeEventListener('keydown', onSheetKeydown);
+        });
         watch(mode, () => { ledgerTab.value = 'open'; });
 
         const setPct = (p) => { /* demo: scales a nominal size */ f.amount = ((balance.value || 1000) * p / 100 / (price.value || 1)).toFixed(6); };
@@ -49,14 +60,88 @@ export default {
             toast(`${label} order placed (demo)`, 'success');
         };
 
+        // ---- Options wait screen ------------------------------------------
+        // A bottom-sheet that opens the instant a binary position is filled and
+        // counts the tier duration down to settlement: a depleting ring, the
+        // live mark price next to the server-stamped entry, and — once the
+        // position settles — the Won/Lost result and payout.
+        const RING_C = 2 * Math.PI * 54;            // circumference of the r=54 ring
+        const wait = reactive({
+            open: false, posId: null, type: 'up', entry: 0, amount: 0,
+            tierLabel: '', payoutPct: 0, total: 30, left: 30, frac: 1,
+            settled: false, status: '', payout: null, settlePrice: null,
+        });
+        let waitRaf = null, waitStart = 0;
+        const sheetEl = ref(null);      // dialog root — for the focus trap
+        const closeBtnEl = ref(null);   // initial focus target when the sheet opens
+        let lastFocused = null;         // element to restore focus to on close
+
+        // Modal keyboard behaviour: Escape closes; Tab is trapped inside the sheet.
+        const onSheetKeydown = (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); closeWait(); return; }
+            if (e.key !== 'Tab' || !sheetEl.value) return;
+            const f = sheetEl.value.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (!f.length) return;
+            const first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
+
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const waitClock = computed(() => {
+            const s = Math.max(0, Math.ceil(wait.left));
+            return `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}`;
+        });
+        const ringOffset = computed(() => RING_C * (1 - wait.frac));
+
+        const tickWait = () => {
+            const left = Math.max(0, wait.total - (Date.now() - waitStart) / 1000);
+            wait.left = left;
+            wait.frac = wait.total ? left / wait.total : 0;
+            waitRaf = left > 0 ? requestAnimationFrame(tickWait) : null;
+        };
+        const startWait = ({ posId, type, entry, amount, tier }) => {
+            if (waitRaf) cancelAnimationFrame(waitRaf);
+            Object.assign(wait, {
+                open: true, posId, type, entry, amount,
+                tierLabel: tier.label, payoutPct: Math.round((tier.payout - 1) * 100),
+                total: tier.sec, left: tier.sec, frac: 1,
+                settled: false, status: '', payout: null, settlePrice: null,
+            });
+            waitStart = Date.now();
+            waitRaf = requestAnimationFrame(tickWait);
+            // Modal affordances: lock scroll, trap focus, remember where to return it.
+            lastFocused = document.activeElement;
+            document.body.style.overflow = 'hidden';
+            document.addEventListener('keydown', onSheetKeydown);
+            nextTick(() => { try { closeBtnEl.value?.focus(); } catch {} });
+        };
+        const closeWait = () => {
+            if (!wait.open) return;
+            wait.open = false;
+            if (waitRaf) { cancelAnimationFrame(waitRaf); waitRaf = null; }
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', onSheetKeydown);
+            try { lastFocused?.focus?.(); } catch {}
+            lastFocused = null;
+        };
+        // When trade-settle lands the result in the store, surface it in the sheet
+        // (full ring in the result colour) instead of leaving an empty countdown.
+        watch(() => store.portfolio.positionHistory, (hist) => {
+            if (!wait.open || wait.posId == null || wait.settled) return;
+            const p = (hist || []).find(x => x.id === wait.posId);
+            if (p) { wait.settled = true; wait.status = p.status; wait.payout = p.payout; wait.frac = 1; wait.settlePrice = p.settlementPrice; }
+        }, { deep: true });
+
         // Options (binary) — real execution against positions + trade-settle.
         const placing = ref(false);
         const placeOption = async (type) => {
             if (needAuth.value) { go('/login'); return; }
+            const amt = parseFloat(o.amount) || 0;   // capture before the field clears
             placing.value = true;
             try {
-                await openOptionPosition({ coin, type, amount: o.amount, tier: activeTier.value });
-                toast(`${type === 'up' ? 'Up' : 'Down'} · ${activeTier.value.label} opened — settling in ${activeTier.value.sec}s`, 'success', 3200);
+                const res = await openOptionPosition({ coin, type, amount: o.amount, tier: activeTier.value, sim });
+                startWait({ posId: res.positionId, type, entry: res.entryPrice ?? price.value, amount: amt, tier: activeTier.value });
                 o.amount = '';
                 ledgerTab.value = 'open';
             } catch (e) {
@@ -65,8 +150,12 @@ export default {
         };
 
         const symOf = (cgId) => COINS.find(c => c.cg === cgId)?.sym || (cgId || '').toUpperCase();
-        const positions = computed(() => mode.value !== 'options' ? []
-            : (ledgerTab.value === 'hist' ? store.portfolio.positionHistory : store.portfolio.activePositions));
+        const positions = computed(() => {
+            if (mode.value !== 'options') return [];
+            const base = ledgerTab.value === 'hist' ? store.portfolio.positionHistory : store.portfolio.activePositions;
+            // Keep the simulated and real ledgers separate per the active mode.
+            return (base || []).filter(p => (p.isSim === true) === sim);
+        });
 
         const ledgerTabs = computed(() => mode.value === 'spot'
             ? [{ k: 'open', l: 'Current Order' }, { k: 'hist', l: 'Trade History' }, { k: 'assets', l: 'Assets' }]
@@ -74,11 +163,24 @@ export default {
                 ? [{ k: 'open', l: 'My Holding' }, { k: 'pos', l: 'Current Position' }, { k: 'hist', l: 'Transaction Records' }]
                 : [{ k: 'open', l: 'Positions' }, { k: 'hist', l: 'History' }]);
 
+        // Tap a ledger record to see its full breakdown. Resolve by id from the
+        // store so an open active position updates live when it settles.
+        const detailId = ref(null);
+        const detail = computed(() => detailId.value == null ? null
+            : [...(store.portfolio.activePositions || []), ...(store.portfolio.positionHistory || [])].find(p => p.id === detailId.value) || null);
+        const openDetail = (p) => { detailId.value = p.id; };
+        const closeDetail = () => { detailId.value = null; };
+
         return { coin, MODES, mode, price, balance, f, o, ledgerTab, ledgerTabs, OPTION_TIERS, LEVERAGES, positions, symOf,
-                 setPct, pickPrice, activeTier, tierLocked, optProfit, needAuth, act, placing, placeOption, go, fmtNum, fmtPrice, store };
+                 setPct, pickPrice, activeTier, tierLocked, optProfit, needAuth, act, placing, placeOption, go, fmtNum, fmtPrice, store,
+                 wait, waitClock, ringOffset, RING_C, closeWait, sheetEl, closeBtnEl, sim, detail, openDetail, closeDetail };
     },
     template: /*html*/`
     <section class="trade">
+        <div v-if="sim" class="simbanner">
+            <Icon name="shield" :size="16" />
+            <span><b>Simulated Trading</b> — virtual funds only, no real money. Balance resets are managed by support.</span>
+        </div>
         <div class="trade__bar">
             <button class="iconbtn" @click="go('/coin?sym=' + coin?.sym)" aria-label="Chart"><Icon name="chevronR" style="transform:rotate(180deg)" /></button>
             <h1 class="trade__pair">{{ coin?.sym }}<span class="muted">/USDT</span>
@@ -206,7 +308,9 @@ export default {
                 <button v-for="t in ledgerTabs" :key="t.k" class="tab" :class="{ 'is-on': ledgerTab === t.k }" @click="ledgerTab = t.k">{{ t.l }}</button>
             </div>
             <div v-if="mode === 'options' && !needAuth && positions.length" class="pos-list">
-                <div v-for="p in positions" :key="p.id" class="pos-row">
+                <div v-for="p in positions" :key="p.id" class="pos-row pos-row--link" role="button" tabindex="0"
+                     @click="openDetail(p)" @keydown.enter="openDetail(p)" @keydown.space.prevent="openDetail(p)"
+                     :aria-label="(p.type === 'up' ? 'Up' : 'Down') + ' ' + symOf(p.coinId) + ', ' + fmtNum(p.amount) + ' at ' + fmtNum(p.entryPrice) + ', ' + (p.status === 'Active' ? 'settling' : p.status) + (p.payout != null ? (', payout ' + fmtNum(p.payout)) : '') + '. View details'">
                     <span class="chip" :class="p.type === 'up' ? 'chip--up' : 'chip--down'">{{ p.type === 'up' ? 'Up ▲' : 'Down ▼' }}</span>
                     <span class="pos-sym num">{{ symOf(p.coinId) }}</span>
                     <span class="num muted">{{ fmtNum(p.amount) }} @ {{ fmtNum(p.entryPrice) }}</span>
@@ -221,5 +325,60 @@ export default {
                 <p class="muted">{{ needAuth ? 'Log in to view your orders.' : 'No records yet.' }}</p>
             </div>
         </div>
+
+        <!-- Options wait screen: live countdown + order summary, opens on fill -->
+        <transition name="scrim">
+            <div v-if="wait.open" class="drawer-scrim" @click="closeWait()"></div>
+        </transition>
+        <transition name="sheet">
+            <div v-if="wait.open" ref="sheetEl" class="sheet optwait" role="dialog" aria-modal="true" aria-label="Order countdown">
+                <div class="optwait__head">
+                    <span class="optwait__sym">
+                        <CoinIcon :sym="coin?.sym" :color="coin?.color" cls="optwait__ico" />
+                        {{ coin?.sym }}<span class="muted">/USDT</span>
+                        <span v-if="sim" class="chip chip--gold" style="height:20px">SIM</span>
+                    </span>
+                    <button class="iconbtn" @click="closeWait()" aria-label="Close"><Icon name="close" /></button>
+                </div>
+
+                <!-- Visual countdown is hidden from AT (it ticks every second); the
+                     scoped status region below announces only the meaningful changes. -->
+                <div class="optwait__ringwrap" aria-hidden="true">
+                    <svg class="optwait__ring" :class="{ 'is-settled': wait.settled, 'is-won': wait.status === 'Won', 'is-lost': wait.status === 'Lost' }" viewBox="0 0 120 120">
+                        <circle class="optwait__track" cx="60" cy="60" r="54" />
+                        <circle class="optwait__arc" cx="60" cy="60" r="54" :stroke-dasharray="RING_C" :stroke-dashoffset="ringOffset" />
+                    </svg>
+                    <div class="optwait__center">
+                        <b v-if="wait.settled" class="optwait__result" :class="wait.status === 'Won' ? 'up' : 'down'">{{ wait.status }}</b>
+                        <template v-else>
+                            <b class="optwait__clock num">{{ waitClock }}</b>
+                            <span class="optwait__state muted">Time left</span>
+                        </template>
+                    </div>
+                </div>
+                <div class="sr-only" role="status">
+                    <template v-if="wait.settled">{{ wait.status }}<template v-if="wait.payout != null">, {{ wait.status === 'Won' ? '+' : '' }}{{ fmtNum(wait.payout) }} USDT</template></template>
+                    <template v-else>Order placed — {{ wait.type === 'up' ? 'Up' : 'Down' }}, settling in {{ wait.tierLabel }}</template>
+                </div>
+
+                <div class="optwait__rows">
+                    <div class="optwait__row"><span class="muted">Entry price</span><b class="num">{{ fmtNum(wait.entry) }}</b></div>
+                    <div class="optwait__row"><span class="muted">Mark price</span><b class="num">{{ fmtNum(wait.settled && wait.settlePrice != null ? wait.settlePrice : price) }}</b></div>
+                    <div class="optwait__row"><span class="muted">Duration · payout</span><b class="num">{{ wait.tierLabel }} · +{{ wait.payoutPct }}%</b></div>
+                    <div class="optwait__row"><span class="muted">Direction</span><b :class="wait.type === 'up' ? 'up' : 'down'">{{ wait.type === 'up' ? 'Up ▲' : 'Down ▼' }}</b></div>
+                    <div class="optwait__row"><span class="muted">Amount</span><b class="num">{{ fmtNum(wait.amount) }} USDT</b></div>
+                    <div class="optwait__row"><span class="muted">Fee rate</span><b class="num">0%</b></div>
+                    <div v-if="wait.settled && wait.payout != null" class="optwait__row">
+                        <span class="muted">Payout</span>
+                        <b class="num" :class="wait.status === 'Won' ? 'up' : 'down'">{{ wait.status === 'Won' ? '+' : '' }}{{ fmtNum(wait.payout) }} USDT</b>
+                    </div>
+                </div>
+
+                <button ref="closeBtnEl" class="btn btn--dark btn--block btn--lg optwait__close" @click="closeWait()">Close</button>
+            </div>
+        </transition>
+
+        <!-- Tapped-record detail -->
+        <PositionDetail :pos="detail" @close="closeDetail" />
     </section>`,
 };

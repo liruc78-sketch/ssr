@@ -25,9 +25,11 @@ export async function fetchPortfolio(userId) {
         id: p.id, coinId: p.coin_id, type: p.type, amount: parseFloat(p.amount),
         entryPrice: parseFloat(p.entry_price), settlementPrice: p.settlement_price ? parseFloat(p.settlement_price) : null,
         status: p.status, payout: p.payout != null ? parseFloat(p.payout) : null, createdAt: p.created_at, settledAt: p.settled_at,
+        isSim: p.is_sim === true, durationSec: p.duration_seconds,
     });
     return {
         usdBalance: parseFloat(pd?.usd_balance || 0),
+        simBalance: parseFloat(pd?.sim_balance ?? 1000000),   // simulated-trading funds (default 1M)
         totalTrades: pd?.total_trades || 0, totalWon: pd?.total_won || 0,
         totalLost: pd?.total_lost || 0, totalPnl: parseFloat(pd?.total_pnl || 0),
         activePositions: (active || []).map(mapPos), positionHistory: (history || []).map(mapPos),
