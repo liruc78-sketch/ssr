@@ -571,9 +571,4 @@ export default {
     "notif.withdraw.failedBody": "{amt} USD · iade edildi",
     "notif.system.default": "Bildirim",
 
-    // ---- sim product chooser --------------------------------------------
-    "sim.chooseProduct": "Bir ürün seçin",
-    "sim.prodSpotDesc": "Piyasa fiyatından alıp satın",
-    "sim.prodPerpDesc": "100× kaldıraca kadar kaldıraç",
-    "sim.prodOptionsDesc": "Yukarı mı aşağı mı tahmin edin · sabit ödeme",
 };

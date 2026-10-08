@@ -34,17 +34,9 @@ export default {
         // fmtNum keys its precision on positive thresholds, so format the magnitude and add the sign.
         const signed = (n) => (n >= 0 ? '+' : '-') + fmtNum(Math.abs(n));
 
-        // Starting a sim trade first lets the user pick the product type
-        // (spot / perpetual / options) instead of jumping straight into one.
-        const pickerOpen = ref(false);
-        const PRODUCTS = [
-            { k: 'spot',    tkey: 'trade.modeSpot',    descKey: 'sim.prodSpotDesc',    icon: 'market' },
-            { k: 'perp',    tkey: 'trade.modePerp',    descKey: 'sim.prodPerpDesc',    icon: 'trade' },
-            { k: 'options', tkey: 'trade.modeOptions', descKey: 'sim.prodOptionsDesc', icon: 'options' },
-        ];
-        const startTrading = () => { pickerOpen.value = true; };
-        const enterProduct = (k) => { pickerOpen.value = false; go('/trade?mode=' + k + '&sim=1'); };
-        const closePicker = () => { pickerOpen.value = false; };
+        // Start a sim trade by first choosing WHICH instrument to trade — any
+        // crypto / US stock / FX — in the market list, carried through in sim mode.
+        const startTrading = () => go('/market?sim=1');
 
         // Resolve by id from the store so an open active position updates live when it settles.
         const detailId = ref(null);
@@ -53,8 +45,7 @@ export default {
         const openDetail = (p) => { detailId.value = p.id; };
         const closeDetail = () => { detailId.value = null; };
 
-        return { loading, tab, simBalance, simActive, simHistory, won, lost, winRate, pnl, rows, symOf, signed, startTrading, go, fmtNum, store, detail, openDetail, closeDetail,
-                 pickerOpen, PRODUCTS, enterProduct, closePicker };
+        return { loading, tab, simBalance, simActive, simHistory, won, lost, winRate, pnl, rows, symOf, signed, startTrading, go, fmtNum, store, detail, openDetail, closeDetail };
     },
     template: /*html*/`
     <section class="sim">
@@ -123,25 +114,5 @@ export default {
         </div>
 
         <PositionDetail :pos="detail" @close="closeDetail" />
-
-        <!-- Product-type chooser (opened by "Start simulated trading") -->
-        <transition name="scrim">
-            <div v-if="pickerOpen" class="lang-scrim" @click="closePicker()"></div>
-        </transition>
-        <transition name="langpop">
-            <div v-if="pickerOpen" class="langsheet" role="dialog" aria-modal="true" :aria-label="$t('sim.chooseProduct')">
-                <div class="langsheet__head">
-                    <h3>{{ $t('sim.chooseProduct') }}</h3>
-                    <button class="iconbtn" @click="closePicker()" :aria-label="$t('common.close')"><Icon name="close" /></button>
-                </div>
-                <div class="langsheet__list">
-                    <button v-for="p in PRODUCTS" :key="p.k" class="prodopt" @click="enterProduct(p.k)">
-                        <span class="prodopt__ic"><Icon :name="p.icon" :size="20" /></span>
-                        <span class="prodopt__main"><b>{{ $t(p.tkey) }}</b><span class="muted">{{ $t(p.descKey) }}</span></span>
-                        <Icon name="chevronR" :size="18" class="muted prodopt__chev" />
-                    </button>
-                </div>
-            </div>
-        </transition>
     </section>`,
 };

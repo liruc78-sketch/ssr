@@ -571,9 +571,4 @@ export default {
     "notif.withdraw.failedBody": "{amt} USD · 返金されました",
     "notif.system.default": "通知",
 
-    // ---- sim product chooser --------------------------------------------
-    "sim.chooseProduct": "取引商品を選択",
-    "sim.prodSpotDesc": "市場価格で売買",
-    "sim.prodPerpDesc": "最大100×のレバレッジ",
-    "sim.prodOptionsDesc": "上昇・下落を予測 · 固定ペイアウト",
 };

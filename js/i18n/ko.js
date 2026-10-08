@@ -571,9 +571,4 @@ export default {
     "notif.withdraw.failedBody": "{amt} USD · 금액 반환됨",
     "notif.system.default": "알림",
 
-    // ---- sim product chooser --------------------------------------------
-    "sim.chooseProduct": "상품 선택",
-    "sim.prodSpotDesc": "시장가로 매수·매도",
-    "sim.prodPerpDesc": "최대 100× 레버리지",
-    "sim.prodOptionsDesc": "상승·하락 예측 · 고정 수익",
 };

@@ -571,9 +571,4 @@ export default {
     "notif.withdraw.failedBody": "{amt} USD · وجوه بازگردانده شد",
     "notif.system.default": "اعلان",
 
-    // ---- sim product chooser --------------------------------------------
-    "sim.chooseProduct": "یک محصول را انتخاب کنید",
-    "sim.prodSpotDesc": "خرید و فروش به قیمت بازار",
-    "sim.prodPerpDesc": "اهرم تا 100×",
-    "sim.prodOptionsDesc": "پیش‌بینی بالا یا پایین · بازدهی ثابت",
 };

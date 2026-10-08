@@ -18,6 +18,9 @@ export default {
     setup() {
         const cat = ref(['us', 'fx', 'crypto', 'watch'].includes(router.query.cat) ? router.query.cat : 'crypto');
         const query = ref(router.query.q || '');
+        // Reached from the sim wallet ("Start simulated trading") — picking an
+        // instrument here opens the trade screen for it in simulated mode.
+        const sim = router.query.sim === '1';
         const coins = ref(COINS.map(c => ({ ...c })));   // live-updatable
         const watch = ref(loadWatch());
 
@@ -44,12 +47,16 @@ export default {
             watch.value = s;
             try { localStorage.setItem(WATCH_KEY, JSON.stringify([...s])); } catch {}
         };
-        const open = (c) => go('/coin?sym=' + c.sym);
+        const open = (c) => go(sim ? ('/trade?pair=' + c.sym + '&mode=options&sim=1') : ('/coin?sym=' + c.sym));
 
-        return { cat, query, CATEGORIES, list, isWatched, toggleWatch, open, go, fmtPrice, fmtChg, CRYPTO_SYMS };
+        return { cat, query, sim, CATEGORIES, list, isWatched, toggleWatch, open, go, fmtPrice, fmtChg, CRYPTO_SYMS };
     },
     template: /*html*/`
     <section class="market">
+        <div v-if="sim" class="simbanner">
+            <Icon name="shield" :size="16" />
+            <span><b>{{ $t('sim.bannerTitle') }}</b> — {{ $t('sim.bannerBody') }}</span>
+        </div>
         <div class="market__head">
             <div class="tabs">
                 <button v-for="c in CATEGORIES" :key="c.key" class="tab" :class="{ 'is-on': cat === c.key }" @click="cat = c.key">{{ $t(c.tkey) }}</button>

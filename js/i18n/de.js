@@ -571,9 +571,4 @@ export default {
     "notif.withdraw.failedBody": "{amt} USD · Guthaben zurückerstattet",
     "notif.system.default": "Benachrichtigung",
 
-    // ---- sim product chooser --------------------------------------------
-    "sim.chooseProduct": "Produkt wählen",
-    "sim.prodSpotDesc": "Zum Marktpreis kaufen und verkaufen",
-    "sim.prodPerpDesc": "Bis zu 100× Hebel",
-    "sim.prodOptionsDesc": "Aufwärts oder Abwärts vorhersagen · feste Auszahlung",
 };
