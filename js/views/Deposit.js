@@ -3,14 +3,19 @@
 import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue';
 import QRCode from 'qrcode';
 import { Icon } from '../icons.js';
+import { CoinIcon } from '../components/CoinIcon.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { t } from '../i18n.js';
+import { COINS } from '../data.js';
 import { DEPOSIT_COINS, depositRate, createRechargeOrder, checkRechargeStatus } from '../wallet.js';
+
+// Brand colour per symbol (CoinIcon's backdrop / fallback disc), from the market list.
+const coinColor = (sym) => COINS.find(c => c.sym === sym)?.color || '#8891a0';
 
 export default {
     name: 'Deposit',
-    components: { Icon },
+    components: { Icon, CoinIcon },
     setup() {
         const step = ref(1);
         const coinId = ref('usdt');
@@ -72,7 +77,7 @@ export default {
         const copy = async () => { try { await navigator.clipboard.writeText(order.address); toast(t('deposit.addressCopied'), 'success'); } catch { toast(t('deposit.copyFailed'), 'error'); } };
 
         return { step, coinId, networkId, amount, rate, creating, order, qr, countdown, paid,
-                 coin, networks, network, usdValue, DEPOSIT_COINS, create, back, copy, go, store };
+                 coin, networks, network, usdValue, DEPOSIT_COINS, coinColor, create, back, copy, go, store };
     },
     template: /*html*/`
     <section class="pay">
@@ -86,6 +91,7 @@ export default {
             <div class="paystep"><span class="eyebrow">{{ $t('deposit.coin') }}</span>
                 <div class="dep-coins">
                     <button v-for="c in DEPOSIT_COINS" :key="c.id" class="dep-coin" :class="{ 'is-on': coinId === c.id }" @click="coinId = c.id">
+                        <CoinIcon :sym="c.symbol" :color="coinColor(c.symbol)" cls="dep-coin__ico" />
                         <b>{{ c.symbol }}</b><span class="muted">{{ c.name }}</span>
                     </button>
                 </div>
@@ -93,7 +99,7 @@ export default {
             <div class="paystep"><span class="eyebrow">{{ $t('deposit.network') }}</span>
                 <div class="dep-nets">
                     <button v-for="n in networks" :key="n.id" class="dep-net" :class="{ 'is-on': networkId === n.id }" @click="networkId = n.id">
-                        <span><b>{{ n.label }}</b><span class="muted" style="display:block; font-size:var(--fs-caption)">{{ n.desc }}</span></span>
+                        <span><b>{{ n.label }}</b><span class="muted" style="display:block; font-size:var(--fs-caption)">{{ $t(n.desc) }}</span></span>
                         <Icon v-if="networkId === n.id" name="shield" :size="16" />
                     </button>
                 </div>
@@ -123,7 +129,9 @@ export default {
                 <div class="paystep"><span class="eyebrow">{{ $t('deposit.receivingAddress') }}</span>
                     <div class="addr"><span class="addr__val num">{{ order.address }}</span><button class="btn btn--dark btn--sm" @click="copy"><Icon name="copy" :size="16" /> {{ $t('deposit.copy') }}</button></div>
                 </div>
-                <p class="note"><Icon name="info" :size="15" /> {{ $t('deposit.noteBefore', { sym: coin.symbol, net: network.label }) }} <b>{{ $t('deposit.noteExact') }}</b> {{ $t('deposit.noteAfter', { id: order.orderIdShort }) }}</p>
+                <!-- .note is a flex row: keep the text in one span so the bold word doesn't become its own column -->
+                <p class="note"><Icon name="info" :size="15" /><span>{{ $t('deposit.noteBefore', { sym: coin.symbol, net: network.label }) }} <b>{{ $t('deposit.noteExact') }}</b> {{ $t('deposit.noteAfter', { id: order.orderIdShort }) }}</span></p>
+                <p v-if="coin.id === 'xrp'" class="note"><Icon name="info" :size="15" /><span>{{ $t('deposit.xrpNoTag') }}</span></p>
             </template>
         </div>
     </section>`,

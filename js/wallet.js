@@ -7,19 +7,22 @@ import { store } from './store.js';
 import { refreshPortfolio } from './auth.js';
 import { cgPrice } from './data.js';
 
+// `id`/network `id` must match the admin panel's COIN_NETWORKS and the
+// payment_addresses rows (create_recharge_order looks the address up by them).
+// Network `desc` is an i18n key.
 export const DEPOSIT_COINS = [
     { id: 'usdt', name: 'Tether',   symbol: 'USDT', cgId: 'tether',      rate: 1,      minAmt: 10,
-      networks: [ { id: 'trc20', label: 'TRC20 (Tron)', desc: 'Low fees, fast' }, { id: 'erc20', label: 'ERC20 (Ethereum)', desc: 'Secure & stable' }, { id: 'bep20', label: 'BEP20 (BSC)', desc: 'Very low fees' } ] },
+      networks: [ { id: 'trc20', label: 'TRC20 (Tron)', desc: 'deposit.netLowFeesFast' }, { id: 'erc20', label: 'ERC20 (Ethereum)', desc: 'deposit.netSecureStable' }, { id: 'bep20', label: 'BEP20 (BSC)', desc: 'deposit.netVeryLowFees' } ] },
     { id: 'usdc', name: 'USD Coin', symbol: 'USDC', cgId: 'usd-coin',    rate: 1,      minAmt: 10,
-      networks: [ { id: 'erc20', label: 'ERC20 (Ethereum)', desc: 'Mainstream' }, { id: 'sol', label: 'Solana', desc: 'Very fast' }, { id: 'bep20', label: 'BEP20 (BSC)', desc: 'Low fees' } ] },
+      networks: [ { id: 'erc20', label: 'ERC20 (Ethereum)', desc: 'deposit.netMainstream' }, { id: 'sol', label: 'Solana', desc: 'deposit.netVeryFast' }, { id: 'bep20', label: 'BEP20 (BSC)', desc: 'deposit.netLowFees' } ] },
     { id: 'btc', name: 'Bitcoin',  symbol: 'BTC', cgId: 'bitcoin',      rate: 103000, minAmt: 0.0001,
-      networks: [ { id: 'btc', label: 'Bitcoin Mainnet', desc: 'Native network' }, { id: 'lbtc', label: 'Lightning', desc: 'Instant credit' } ] },
+      networks: [ { id: 'btc', label: 'Bitcoin Mainnet', desc: 'deposit.netNative' }, { id: 'lbtc', label: 'Lightning', desc: 'deposit.netInstant' } ] },
     { id: 'eth', name: 'Ethereum', symbol: 'ETH', cgId: 'ethereum',     rate: 2500,   minAmt: 0.005,
-      networks: [ { id: 'erc20', label: 'ERC20 (Ethereum)', desc: 'Native network' }, { id: 'arb', label: 'Arbitrum', desc: 'Layer2, low fees' }, { id: 'op', label: 'Optimism', desc: 'Layer2' } ] },
-    { id: 'bnb', name: 'BNB',      symbol: 'BNB', cgId: 'binancecoin',  rate: 600,    minAmt: 0.01,
-      networks: [ { id: 'bep20', label: 'BEP20 (BSC)', desc: 'Native network' } ] },
+      networks: [ { id: 'erc20', label: 'ERC20 (Ethereum)', desc: 'deposit.netNative' }, { id: 'arb', label: 'Arbitrum', desc: 'deposit.netL2LowFees' }, { id: 'op', label: 'Optimism', desc: 'deposit.netL2' } ] },
+    { id: 'xrp', name: 'XRP',      symbol: 'XRP', cgId: 'ripple',       rate: 1.4,    minAmt: 10,
+      networks: [ { id: 'xrp', label: 'XRP Ledger', desc: 'deposit.netNative' } ] },
     { id: 'trx', name: 'TRON',     symbol: 'TRX', cgId: 'tron',         rate: 0.25,   minAmt: 100,
-      networks: [ { id: 'trc20', label: 'TRC20 (Tron)', desc: 'Native network' } ] },
+      networks: [ { id: 'trc20', label: 'TRC20 (Tron)', desc: 'deposit.netNative' } ] },
 ];
 
 export const WITHDRAW_MIN = 10;
