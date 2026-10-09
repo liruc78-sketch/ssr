@@ -44,20 +44,12 @@ const MESSAGES = { en, es, de, 'zh-Hant': zhHant, fr, ru, it, tr, ja, fa, ko };
 const KEY = 'locale';
 const CODES = LOCALES.map(l => l.code);
 
-// First visit: honour the browser's preferred language where we support it,
-// otherwise English. A stored choice always wins.
+// A language the visitor picked (stored) always wins; otherwise the site
+// opens in English — the browser's language is deliberately not used.
 function detect() {
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch {}
-    if (saved && CODES.includes(saved)) return saved;
-    const navs = (navigator.languages || [navigator.language || 'en']).map(s => s.toLowerCase());
-    for (const n of navs) {
-        if (n.startsWith('zh')) return 'zh-Hant';      // only Traditional shipped
-        const base = n.split('-')[0];
-        const hit = CODES.find(c => c === base);
-        if (hit) return hit;
-    }
-    return 'en';
+    return saved && CODES.includes(saved) ? saved : 'en';
 }
 
 export const locale = ref(detect());
