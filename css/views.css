@@ -340,6 +340,9 @@ select.field { appearance: none; cursor: pointer; background-image: url("data:im
 .dep-coin { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--sp-3) 2px; border-radius: var(--r-sm); background: var(--surface-2); border: 1.5px solid transparent; }
 .dep-coin b { font-size: var(--fs-body); } .dep-coin .muted { font-size: 10px; }
 .dep-coin.is-on { border-color: var(--brand); background: var(--brand-weak); }
+.dep-coin__ico { width: 32px; height: 32px; margin-bottom: var(--sp-1); border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: var(--font-display); }
+/* Dark artwork (XRP's black disc) would melt into a dark tile — give every icon a faint ring. */
+[data-theme="dark"] .dep-coin__ico { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
 .dep-nets { display: flex; flex-direction: column; gap: var(--sp-2); }
 .dep-net { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-sm); background: var(--surface-2); border: 1.5px solid transparent; text-align: left; color: var(--brand); }
 .dep-net b { color: var(--text); } .dep-net.is-on { border-color: var(--brand); background: var(--brand-weak); }

@@ -72,11 +72,29 @@ initLocale();
 app.mount('#app');
 startRouter();
 
-// Restore a shared session (if any) and keep balances fresh.
+// Restore a shared session (if any) and keep balances fresh. Every poll is a billed
+// Supabase request + log line, so only poll a visible tab, and slowly unless a
+// trade is running; coming back to the tab refreshes at once.
 restoreSession();
-setInterval(refreshPortfolio, 8000);
+const POLL_IDLE_MS = 30000, POLL_TRADING_MS = 10000, POLL_RETURN_MS = 5000;
+let lastPoll = Date.now();
+// `returning`: the tab just became visible — refresh soon, but not on every
+// visibility flap (some in-app browsers toggle it every couple of seconds).
+function pollPortfolio(returning = false) {
+    if (document.hidden) return;
+    const every = returning ? POLL_RETURN_MS : store.portfolio?.activePositions?.length ? POLL_TRADING_MS : POLL_IDLE_MS;
+    if (Date.now() - lastPoll < every) return;
+    lastPoll = Date.now();
+    refreshPortfolio();
+}
+setInterval(pollPortfolio, 5000);
 
 // Settle expired positions (missed timers): periodic + on load + on tab focus.
-setInterval(sweepPositions, 15000);
+// sweepPositions only calls the server once one of our positions has expired.
+setInterval(() => { if (!document.hidden) sweepPositions(); }, 15000);
 sweepPositions();
-document.addEventListener('visibilitychange', () => { if (!document.hidden) sweepPositions(); });
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    pollPortfolio(true);
+    sweepPositions();
+});
