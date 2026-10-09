@@ -23,6 +23,12 @@ export async function settlePosition(positionId) {
 let sweepInFlight = false;
 export async function sweepPositions() {
     if (sweepInFlight || !store.session?.userId) return;
+    // Only call the server once one of our open positions has actually expired
+    // (the pg_cron sweep settles anything left over, even with no tab open).
+    const now = Date.now();
+    const due = (store.portfolio?.activePositions || [])
+        .some(p => p.durationSec > 0 && Date.parse(p.createdAt) + p.durationSec * 1000 <= now);
+    if (!due) return;
     sweepInFlight = true;
     try {
         const res = await fetch(`${EDGE_BASE}/trade-settle`, {

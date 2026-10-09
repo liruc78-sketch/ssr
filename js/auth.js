@@ -239,7 +239,7 @@ export async function restoreSession() {
     } catch (e) { console.warn('Session restore failed:', e); }
 }
 
-// 8s refresh loop (mirrors legacy setInterval(fetchPortfolio, 8000)).
+// Reload balances + positions (polled from main.js only while the tab is visible).
 export async function refreshPortfolio() {
     if (!store.session?.userId) return;
     try { setPortfolio(await fetchPortfolio(store.session.userId)); }
