@@ -6,9 +6,11 @@ import { sb } from './supabase.js';
 import { store } from './store.js';
 import { refreshPortfolio } from './auth.js';
 import { cgPrice } from './data.js';
+import { t } from './i18n.js';
 
-// `id`/network `id` must match the admin panel's COIN_NETWORKS and the
-// payment_addresses rows (create_recharge_order looks the address up by them).
+// `id`/network `id` must match the server's public.deposit_assets (the listed
+// coins: minimum, price source), the admin panel's COIN_NETWORKS and the
+// payment_addresses rows. Listing a coin here alone does not enable it.
 // Network `desc` is an i18n key.
 export const DEPOSIT_COINS = [
     { id: 'usdt', name: 'Tether',   symbol: 'USDT', cgId: 'tether',      rate: 1,      minAmt: 10,
@@ -35,27 +37,42 @@ export async function depositRate(coin) {
     try { return await cgPrice(coin.cgId); } catch { return Number(coin.rate) || 1; }
 }
 
-// Create a pending recharge order server-side (create_recharge_order RPC):
-// the receiving address lookup + order insert happen server-side for the caller.
-// Returns { orderId, orderIdShort, address, uniqueAmt, usdAmt, expireAt }.
+// create_recharge_order failure code -> message.
+function orderError(code, data, coin) {
+    const msg = {
+        not_listed: t('deposit.errNotListed'),
+        no_address: t('deposit.errNoAddress'),
+        price_unavailable: t('deposit.errPrice'),
+        bad_amount: t('deposit.errEnterAmount'),
+        below_min: t('deposit.errBelowMin', { min: data?.min ?? coin.minAmt, sym: data?.symbol || coin.symbol }),
+        auth: t('deposit.loginToDeposit'),
+    }[code] || t('deposit.couldNotCreateOrder');
+    return Object.assign(new Error(msg), { code: code || 'ORDER' });
+}
+
+// Create a pending recharge order server-side (create_recharge_order RPC). The
+// server checks the coin/network is listed, enforces the minimum, prices the
+// order itself and decides the USD credit — `rate` here is only the on-screen
+// estimate. Returns { orderId, orderIdShort, address, uniqueAmt, usdAmt, rate, expireAt }.
 export async function createRechargeOrder({ coin, network, cryptoAmount, rate }) {
-    if (!store.session?.userId) { const e = new Error('Please sign in first'); e.code = 'AUTH'; throw e; }
+    if (!store.session?.userId) throw orderError('auth', null, coin);
     const base = parseFloat(cryptoAmount);
-    if (!(base > 0)) throw new Error('Enter an amount');
-    if (base < coin.minAmt) throw new Error(`Minimum deposit is ${coin.minAmt} ${coin.symbol}`);
-    const usdAmt = base * (rate || 1);
+    if (!(base > 0)) throw orderError('bad_amount', null, coin);
+    if (base < coin.minAmt) throw orderError('below_min', null, coin);
 
     const { data, error } = await sb.rpc('create_recharge_order', {
         p_coin_id: coin.id, p_coin_symbol: coin.symbol, p_network: network.id, p_network_label: network.label,
-        p_crypto_amount: base, p_usd_amount: usdAmt,
+        p_crypto_amount: base, p_usd_amount: base * (rate || 1),   // ignored by the server
     });
-    if (error) throw new Error(error.message || 'Could not create order');
-    if (data && data.ok === false) { const e = new Error(data.error || 'Could not create order'); e.code = 'NOADDR'; throw e; }
+    if (error) throw orderError(null, null, coin);
+    if (data && data.ok === false) throw orderError(data.code, data, coin);
 
     return {
         orderId: data.orderId,
         orderIdShort: String(data.orderId).replace(/-/g, '').toUpperCase().slice(0, 16),
-        address: data.address, uniqueAmt: Number(data.uniqueAmt), usdAmt,
+        address: data.address, uniqueAmt: Number(data.uniqueAmt),
+        usdAmt: Number(data.usdAmount ?? base * (rate || 1)),   // server-priced credit
+        rate: Number(data.rate ?? rate),
         decimals: coin.minAmt < 0.01 ? 6 : coin.minAmt < 1 ? 4 : 3,
         expireAt: Date.now() + 60 * 60 * 1000,
     };
