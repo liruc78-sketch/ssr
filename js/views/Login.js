@@ -18,12 +18,32 @@ export default {
         const register = ref(false);
         const connecting = ref(false);
         const busy = ref(false);
+        const walletStep = ref('');        // connect | sign | verify — what the wallet is waiting for
+
+        // WalletLoginError.code -> message. Unmapped codes get a short tag instead
+        // (code/step/detail), so a failure inside a wallet's in-app browser — which
+        // has no console — can still be diagnosed from a screenshot.
+        const WALLET_ERR = {
+            no_provider: 'login.walletErrNoProvider', rejected: 'login.walletErrRejected',
+            pending: 'login.walletErrPending', timeout: 'login.walletErrTimeout',
+            chain: 'login.walletErrChain', expired: 'login.walletErrExpired',
+            network: 'login.walletErrNetwork', verifier_down: 'login.walletErrVerifierDown',
+        };
+        const WALLET_STEP = { connect: 'login.walletStepConnect', sign: 'login.walletStepSign', verify: 'login.walletStepVerify' };
 
         const walletLogin = async () => {
+            if (connecting.value) return;
             connecting.value = true;
-            try { await connectWallet(); toast(t('login.walletConnected'), 'success'); go('/'); }
-            catch (e) { console.error(e); toast(t('login.walletFailed'), 'error'); }
-            finally { connecting.value = false; }
+            try {
+                await connectWallet((step) => { walletStep.value = step; });
+                toast(t('login.walletConnected'), 'success');
+                go('/');
+            } catch (e) {
+                console.error('[wallet-login]', e?.code, e?.step, e?.detail, e?.cause || e);
+                const key = WALLET_ERR[e?.code];
+                const tag = [e?.code || 'error', e?.step, e?.detail].filter((v) => v != null && v !== '').join('/');
+                toast(key ? t(key) : t('login.walletFailedCode', { code: tag }), e?.code === 'rejected' ? 'info' : 'error', key ? 4200 : 5200);
+            } finally { connecting.value = false; walletStep.value = ''; }
         };
 
         const submit = async () => {
@@ -45,7 +65,7 @@ export default {
         };
         const forgot = () => toast(t('login.resetSoon'), 'info');
 
-        return { method, handle, password, showPw, register, connecting, busy, walletLogin, submit, forgot, go };
+        return { method, handle, password, showPw, register, connecting, busy, walletStep, WALLET_STEP, walletLogin, submit, forgot, go };
     },
     template: /*html*/`
     <section class="auth">
@@ -55,7 +75,7 @@ export default {
             <span v-if="connecting" class="spinner" style="border-top-color:#fff"></span>
             <template v-else><Icon name="assets" :size="20" /> {{ $t('login.connectWallet') }}</template>
         </button>
-        <p class="muted" style="text-align:center; font-size:var(--fs-caption)">{{ $t('login.walletHint') }}</p>
+        <p class="muted" style="text-align:center; font-size:var(--fs-caption)" role="status" aria-live="polite">{{ connecting && WALLET_STEP[walletStep] ? $t(WALLET_STEP[walletStep]) : $t('login.walletHint') }}</p>
 
         <div class="auth__or"><span>{{ $t('login.orUseEmail') }}</span></div>
 
