@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "Пополнение зачислено",
     "deposit.errBelowMin": "Минимальная сумма пополнения — {min} {sym}",
     "deposit.errEnterAmount": "Введите сумму",
-    "deposit.errNoAddress": "Пополнение этой монетой сейчас недоступно — обратитесь в поддержку",
+    "deposit.errNoAddress": "Пополнение через эту сеть сейчас недоступно — выберите другую сеть или обратитесь в поддержку",
     "deposit.errNotListed": "Эта монета или сеть недоступна для пополнения",
     "deposit.errPrice": "Не удалось получить текущий курс — попробуйте через минуту",
     "deposit.getAddress": "Получить адрес пополнения",

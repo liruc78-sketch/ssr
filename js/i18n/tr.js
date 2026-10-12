@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "Yatırım hesaba geçti",
     "deposit.errBelowMin": "Minimum yatırma tutarı {min} {sym}",
     "deposit.errEnterAmount": "Bir tutar girin",
-    "deposit.errNoAddress": "Bu coin şu anda yatırma kabul etmiyor — lütfen destekle iletişime geçin",
+    "deposit.errNoAddress": "Bu ağ üzerinden yatırma şu anda kullanılamıyor — başka bir ağ seçin veya destekle iletişime geçin",
     "deposit.errNotListed": "Bu coin veya ağ yatırma için kullanılamıyor",
     "deposit.errPrice": "Güncel fiyat alınamadı — lütfen bir dakika sonra tekrar deneyin",
     "deposit.getAddress": "Yatırma adresi al",

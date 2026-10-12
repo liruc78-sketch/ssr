@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "Dépôt crédité",
     "deposit.errBelowMin": "Le dépôt minimum est de {min} {sym}",
     "deposit.errEnterAmount": "Saisissez un montant",
-    "deposit.errNoAddress": "Cette crypto n’accepte pas de dépôts pour le moment — veuillez contacter le support",
+    "deposit.errNoAddress": "Les dépôts sur ce réseau ne sont pas disponibles pour le moment — choisissez un autre réseau ou contactez le support",
     "deposit.errNotListed": "Cette crypto ou ce réseau n’est pas disponible pour les dépôts",
     "deposit.errPrice": "Impossible d’obtenir le cours actuel — réessayez dans une minute",
     "deposit.getAddress": "Obtenir l’adresse de dépôt",

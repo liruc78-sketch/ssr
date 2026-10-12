@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "入金が反映されました",
     "deposit.errBelowMin": "最低入金額は {min} {sym} です",
     "deposit.errEnterAmount": "金額を入力してください",
-    "deposit.errNoAddress": "この通貨は現在入金を受け付けていません。サポートにお問い合わせください",
+    "deposit.errNoAddress": "このネットワークでは現在入金できません。別のネットワークを選ぶか、サポートにお問い合わせください",
     "deposit.errNotListed": "この通貨またはネットワークは入金に対応していません",
     "deposit.errPrice": "現在の価格を取得できませんでした。1 分ほどしてから再度お試しください",
     "deposit.getAddress": "入金アドレスを取得",

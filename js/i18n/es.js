@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "Depósito acreditado",
     "deposit.errBelowMin": "El depósito mínimo es {min} {sym}",
     "deposit.errEnterAmount": "Introduce un importe",
-    "deposit.errNoAddress": "Esta moneda no acepta depósitos en este momento; contacta con soporte",
+    "deposit.errNoAddress": "Los depósitos en esta red no están disponibles ahora: elige otra red o contacta con soporte",
     "deposit.errNotListed": "Esta moneda o red no está disponible para depósitos",
     "deposit.errPrice": "No se pudo obtener el precio actual; inténtalo de nuevo en un minuto",
     "deposit.getAddress": "Obtener dirección de depósito",
