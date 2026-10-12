@@ -64,7 +64,10 @@ export async function createRechargeOrder({ coin, network, cryptoAmount, rate })
         p_coin_id: coin.id, p_coin_symbol: coin.symbol, p_network: network.id, p_network_label: network.label,
         p_crypto_amount: base, p_usd_amount: base * (rate || 1),   // ignored by the server
     });
-    if (error) throw orderError(null, null, coin);
+    if (error) {
+        console.error('[deposit] create_recharge_order', error?.code, error?.message, error);
+        throw orderError(null, null, coin);
+    }
     if (data && data.ok === false) throw orderError(data.code, data, coin);
 
     return {

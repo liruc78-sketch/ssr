@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "واریز به حساب اضافه شد",
     "deposit.errBelowMin": "حداقل واریز {min} {sym} است",
     "deposit.errEnterAmount": "مبلغ را وارد کنید",
-    "deposit.errNoAddress": "این رمزارز فعلاً واریز نمی‌پذیرد — لطفاً با پشتیبانی تماس بگیرید",
+    "deposit.errNoAddress": "واریز از طریق این شبکه فعلاً امکان‌پذیر نیست — شبکه دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید",
     "deposit.errNotListed": "این رمزارز یا شبکه برای واریز در دسترس نیست",
     "deposit.errPrice": "دریافت قیمت فعلی ممکن نشد — لطفاً یک دقیقه دیگر دوباره تلاش کنید",
     "deposit.getAddress": "دریافت آدرس واریز",

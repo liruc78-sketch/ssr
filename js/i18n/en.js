@@ -228,7 +228,7 @@ export default {
     "deposit.depositCredited": "Deposit credited",
     "deposit.errBelowMin": "Minimum deposit is {min} {sym}",
     "deposit.errEnterAmount": "Enter an amount",
-    "deposit.errNoAddress": "This coin isn’t accepting deposits right now — please contact support",
+    "deposit.errNoAddress": "Deposits on this network aren’t available right now — choose another network or contact support",
     "deposit.errNotListed": "This coin or network isn’t available for deposits",
     "deposit.errPrice": "Couldn’t get the current price — please try again in a minute",
     "deposit.getAddress": "Get deposit address",

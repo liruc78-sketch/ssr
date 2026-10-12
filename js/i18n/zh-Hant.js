@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "充值已到帳",
     "deposit.errBelowMin": "最低充值金額為 {min} {sym}",
     "deposit.errEnterAmount": "請輸入金額",
-    "deposit.errNoAddress": "此幣種暫不開放充值，請聯繫客服",
+    "deposit.errNoAddress": "此網路暫不開放充值，請選擇其他網路或聯繫客服",
     "deposit.errNotListed": "此幣種或網路不支援充值",
     "deposit.errPrice": "暫時無法取得最新價格，請一分鐘後再試",
     "deposit.getAddress": "取得充值地址",

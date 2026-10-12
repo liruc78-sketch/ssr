@@ -226,7 +226,7 @@ export default {
     "deposit.depositCredited": "입금이 반영되었습니다",
     "deposit.errBelowMin": "최소 입금액은 {min} {sym}입니다",
     "deposit.errEnterAmount": "금액을 입력하세요",
-    "deposit.errNoAddress": "이 코인은 현재 입금을 받지 않습니다. 고객지원에 문의해 주세요",
+    "deposit.errNoAddress": "이 네트워크로는 현재 입금할 수 없습니다. 다른 네트워크를 선택하거나 고객지원에 문의해 주세요",
     "deposit.errNotListed": "이 코인 또는 네트워크는 입금을 지원하지 않습니다",
     "deposit.errPrice": "현재 시세를 가져오지 못했습니다. 1분 후 다시 시도해 주세요",
     "deposit.getAddress": "입금 주소 받기",
