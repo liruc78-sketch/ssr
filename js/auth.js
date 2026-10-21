@@ -5,8 +5,9 @@
 // Ethereum) verified server-side by the `wallet-auth` edge function.
 // Tables: users (linked by auth_id), portfolios, positions.
 // ============================================================================
-import { sb, edge } from './supabase.js';
+import { sb, edge, STORAGE_KEY } from './supabase.js';
 import { setSessionMem, clearSession, setPortfolio, store } from './store.js';
+import { go } from './router.js';
 
 // Build the in-memory session object from a users row.
 function sessionFromUser(user) {
@@ -231,13 +232,37 @@ export async function signInEmail(email, password) {
     return { user };
 }
 
-// Restore an active Supabase Auth session on startup (email or wallet).
+// Remove the legacy site's saved login and return it ({ userId, walletAddress }),
+// or null if there was none.
+function takeLegacySession() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); localStorage.removeItem(STORAGE_KEY); } catch {}
+    if (raw == null) return null;
+    try { return JSON.parse(raw) || {}; } catch { return {}; }
+}
+
+// Restore an active Supabase Auth session on startup (email or wallet). Only a
+// Supabase session counts: the legacy site's `tw_user_session` holds a user id
+// but no JWT, and treating it as a login showed a signed-in page whose every
+// read RLS rejects as anon (balance 0). Drop it and send the user to sign in
+// with that same wallet — wallet-auth then links the existing account by address.
 export async function restoreSession() {
+    const legacy = takeLegacySession();
     try {
         const { data } = await sb.auth.getSession();
         if (data?.session?.user) await loadLinkedUser();
+        else if (legacy) {
+            const w = /^0x[0-9a-f]{40}$/i.test(legacy.walletAddress || '') ? legacy.walletAddress : '';
+            store.relogin = { wallet: w && w.slice(0, 6) + '…' + w.slice(-4) };
+            go('/login');
+        }
     } catch (e) { console.warn('Session restore failed:', e); }
 }
+
+// A session that ends outside this page (sign-out in another tab, revoked
+// refresh token) logs the UI out too, instead of leaving it showing an account
+// it can no longer read.
+sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT' && store.session) clearSession(); });
 
 // Reload balances + positions (polled from main.js only while the tab is visible).
 export async function refreshPortfolio() {

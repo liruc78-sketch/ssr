@@ -1,8 +1,8 @@
 // ============================================================================
 // Crypto.ssr — Shared reactive store (single source of truth for the shell)
-// Session is wallet-based and shares the legacy site's `tw_user_session` key,
-// so both front-ends (/, /app/) share one login + balance. auth.js owns the
-// Supabase flows; this module owns state + plain setters (no import cycle).
+// The session comes only from Supabase Auth (auth.restoreSession / the login
+// flows). auth.js owns the Supabase flows; this module owns state + plain
+// setters (no import cycle).
 // ============================================================================
 import { reactive, watch } from 'vue';
 import { STORAGE_KEY } from './supabase.js';
@@ -12,9 +12,6 @@ const THEME_KEY = 'theme';
 function read(key, fallback) {
     try { const v = localStorage.getItem(key); return v == null ? fallback : v; } catch { return fallback; }
 }
-function readJSON(key) {
-    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
-}
 export function emptyPortfolio() {
     return { usdBalance: 0, simBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
 }
@@ -23,12 +20,13 @@ export const store = reactive({
     // ---- theme -----------------------------------------------------------
     theme: read(THEME_KEY, 'light'),
 
-    // ---- session (shared with legacy site via STORAGE_KEY) --------------
-    // Shape: { userId, walletAddress, username?, displayName? }. The raw saved
-    // value may be just { userId, walletAddress } (legacy) — auth.restoreSession
-    // enriches it and loads the portfolio on startup.
-    session: readJSON(STORAGE_KEY),
+    // ---- session ---------------------------------------------------------
+    // Shape: { userId, walletAddress, email, username, displayName }, set once a
+    // Supabase Auth session is confirmed. Never seeded from the legacy site's
+    // `tw_user_session`: that has no JWT, so every read would run as anon.
+    session: null,
     get isAuthed() { return !!this.session; },
+    relogin: null,            // { wallet } — a legacy-site login to redo (Login.js says so)
 
     // ---- portfolio (real balances from Supabase) ------------------------
     portfolio: emptyPortfolio(),
@@ -45,21 +43,17 @@ export const store = reactive({
 });
 
 // ---- plain setters (auth.js calls these) --------------------------------
-export function setSession(session) {
-    store.session = session;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId: session.userId, walletAddress: session.walletAddress })); } catch {}
-}
 export function clearSession() {
     store.session = null;
+    store.relogin = null;
     store.portfolio = emptyPortfolio();
     store.balanceLoaded = false;
     store.connectionLost = false;
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
 }
 export function setPortfolio(p) { store.portfolio = p; store.balanceLoaded = true; store.connectionLost = false; }
-// Email sessions are persisted by Supabase Auth itself, so set state only
-// (don't write tw_user_session, which the wallet-only legacy site would reject).
-export function setSessionMem(session) { store.session = session; }
+// Supabase Auth persists the session itself, so this only sets state.
+export function setSessionMem(session) { store.session = session; store.relogin = null; }
 
 // ---- UI actions ---------------------------------------------------------
 export function applyTheme(t) {

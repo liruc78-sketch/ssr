@@ -49,11 +49,16 @@ export const router = reactive({
 });
 
 const cache = new Map();
+// Bumped on every navigation, so a view import that finishes after a newer
+// navigation can't replace the newer view (e.g. a redirect during startup).
+let navSeq = 0;
 
 export async function resolve() {
+    const seq = ++navSeq;
     const { path, query } = parseHash();
     router.path = path; router.query = query;
     router.key = path + '|' + new URLSearchParams(query).toString();
+    router.loading = false;
 
     const def = routes[path];
     if (!def) { router.notFound = true; router.stub = false; router.component = null; router.nav = ''; router.label = 'Not found'; return; }
@@ -65,19 +70,18 @@ export async function resolve() {
     if (cache.has(path)) { router.component = cache.get(path); router.stub = cache.get(path) == null; return; }
 
     router.loading = true; router.component = null; router.stub = false;
+    let component = null;
     try {
-        const mod = await def.load();
-        cache.set(path, mod.default);
-        router.component = mod.default;
+        component = (await def.load()).default;
     } catch (e) {
         // Module not built yet (or failed) -> render a titled placeholder.
         console.info('[router] stub for', path, '(view not built yet)');
-        cache.set(path, null);
-        router.component = null;
-        router.stub = true;
-    } finally {
-        router.loading = false;
     }
+    cache.set(path, component);
+    if (seq !== navSeq) return;
+    router.component = component;
+    router.stub = component == null;
+    router.loading = false;
     window.scrollTo(0, 0);
 }
 

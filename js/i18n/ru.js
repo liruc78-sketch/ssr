@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "Задайте пароль (мин. {n} символов)",
     "login.show": "Показать",
     "login.signIn": "Войти",
+    "login.signInAgain": "Сеанс истёк — войдите снова, чтобы увидеть свой аккаунт и баланс",
+    "login.signInAgainWallet": "Сеанс истёк — снова подключите кошелёк {wallet}, чтобы увидеть свой аккаунт и баланс",
     "login.signInFailed": "Не удалось войти",
     "login.signedIn": "Вход выполнен",
     "login.termsOfService": "Условия использования",

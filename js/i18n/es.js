@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "Establece una contraseña (mín. {n} caracteres)",
     "login.show": "Mostrar",
     "login.signIn": "Iniciar sesión",
+    "login.signInAgain": "Tu sesión ha caducado: vuelve a iniciar sesión para ver tu cuenta y tu saldo",
+    "login.signInAgainWallet": "Tu sesión ha caducado: vuelve a conectar la wallet {wallet} para ver tu cuenta y tu saldo",
     "login.signInFailed": "Error al iniciar sesión",
     "login.signedIn": "Sesión iniciada",
     "login.termsOfService": "Términos del servicio",

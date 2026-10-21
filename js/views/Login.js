@@ -3,7 +3,7 @@
 import { ref } from 'vue';
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
-import { toast } from '../store.js';
+import { store, toast } from '../store.js';
 import { connectWallet, signInEmail, signUpEmail } from '../auth.js';
 import { t } from '../i18n.js';
 
@@ -64,12 +64,19 @@ export default {
             } finally { busy.value = false; }
         };
         const forgot = () => toast(t('login.resetSoon'), 'info');
+        // Left over from the legacy site: name the wallet to reconnect, since another
+        // wallet would sign in to a new, empty account. FSI/PDI keep it intact in RTL;
+        // the word joiner stops a line break after the ellipsis.
+        const reloginMsg = () => store.relogin?.wallet
+            ? t('login.signInAgainWallet', { wallet: '\u2068' + store.relogin.wallet.replace('…', '…\u2060') + '\u2069' })
+            : t('login.signInAgain');
 
-        return { method, handle, password, showPw, register, connecting, busy, walletStep, WALLET_STEP, walletLogin, submit, forgot, go };
+        return { store, method, handle, password, showPw, register, connecting, busy, walletStep, WALLET_STEP, walletLogin, submit, forgot, reloginMsg, go };
     },
     template: /*html*/`
     <section class="auth">
         <h1 class="auth__title">{{ register ? $t('login.createAccount') : $t('login.signIn') }}</h1>
+        <p v-if="store.relogin" class="auth__notice" role="status">{{ reloginMsg() }}</p>
 
         <button class="btn btn--brand btn--block btn--lg" :disabled="connecting" @click="walletLogin">
             <span v-if="connecting" class="spinner" style="border-top-color:#fff"></span>

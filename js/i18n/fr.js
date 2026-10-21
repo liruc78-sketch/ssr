@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "Définissez un mot de passe (min. {n} caractères)",
     "login.show": "Afficher",
     "login.signIn": "Se connecter",
+    "login.signInAgain": "Votre connexion a expiré — reconnectez-vous pour voir votre compte et votre solde",
+    "login.signInAgainWallet": "Votre connexion a expiré — reconnectez le portefeuille {wallet} pour voir votre compte et votre solde",
     "login.signInFailed": "Échec de la connexion",
     "login.signedIn": "Connecté",
     "login.termsOfService": "Conditions d’utilisation",

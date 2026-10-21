@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "Bir şifre belirleyin (en az {n} karakter)",
     "login.show": "Göster",
     "login.signIn": "Giriş yap",
+    "login.signInAgain": "Oturumunuzun süresi doldu — hesabınızı ve bakiyenizi görmek için lütfen tekrar giriş yapın",
+    "login.signInAgainWallet": "Oturumunuzun süresi doldu — hesabınızı ve bakiyenizi görmek için {wallet} cüzdanını tekrar bağlayın",
     "login.signInFailed": "Giriş başarısız",
     "login.signedIn": "Giriş yapıldı",
     "login.termsOfService": "Hizmet Şartları",

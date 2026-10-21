@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "Imposta una password (min {n} caratteri)",
     "login.show": "Mostra",
     "login.signIn": "Accedi",
+    "login.signInAgain": "Il tuo accesso è scaduto: accedi di nuovo per vedere il tuo account e il saldo",
+    "login.signInAgainWallet": "Il tuo accesso è scaduto: ricollega il wallet {wallet} per vedere il tuo account e il saldo",
     "login.signInFailed": "Accesso non riuscito",
     "login.signedIn": "Accesso effettuato",
     "login.termsOfService": "Termini di servizio",

@@ -422,6 +422,7 @@ select.field { appearance: none; cursor: pointer; background-image: url("data:im
 /* ============================ AUTH / LOGIN ============================= */
 .auth { max-width: 420px; margin: var(--sp-4) auto; display: flex; flex-direction: column; gap: var(--sp-4); }
 .auth__title { font-size: var(--fs-h1); }
+.auth__notice { padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md); background: var(--brand-weak); border-inline-start: 3px solid var(--brand); color: var(--text); font-size: var(--fs-small); line-height: 1.55; }
 .auth__methods { display: flex; gap: var(--sp-5); border-bottom: 1px solid var(--border); }
 .auth__m { padding: var(--sp-3) 0; font-weight: 600; color: var(--text-3); position: relative; }
 .auth__m.is-on { color: var(--text); }

@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "یک رمز عبور تعیین کنید (حداقل {n} کاراکتر)",
     "login.show": "نمایش",
     "login.signIn": "ورود",
+    "login.signInAgain": "ورود شما منقضی شده است؛ برای دیدن حساب و موجودی خود، لطفاً دوباره وارد شوید",
+    "login.signInAgainWallet": "ورود شما منقضی شده است؛ برای دیدن حساب و موجودی خود، کیف‌پول {wallet} را دوباره متصل کنید",
     "login.signInFailed": "ورود ناموفق بود",
     "login.signedIn": "وارد شدید",
     "login.termsOfService": "شرایط خدمات",

@@ -371,6 +371,8 @@ export default {
     "login.setPassword": "Set a password (min {n} chars)",
     "login.show": "Show",
     "login.signIn": "Sign in",
+    "login.signInAgain": "Your sign-in has expired — please sign in again to see your account and balance",
+    "login.signInAgainWallet": "Your sign-in has expired — connect wallet {wallet} again to see your account and balance",
     "login.signInFailed": "Sign-in failed",
     "login.signedIn": "Signed in",
     "login.termsOfService": "Terms of Service",

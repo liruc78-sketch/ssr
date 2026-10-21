@@ -369,6 +369,8 @@ export default {
     "login.setPassword": "Lege ein Passwort fest (min. {n} Zeichen)",
     "login.show": "Anzeigen",
     "login.signIn": "Anmelden",
+    "login.signInAgain": "Deine Anmeldung ist abgelaufen – bitte melde dich erneut an, um dein Konto und Guthaben zu sehen",
+    "login.signInAgainWallet": "Deine Anmeldung ist abgelaufen – verbinde die Wallet {wallet} erneut, um dein Konto und Guthaben zu sehen",
     "login.signInFailed": "Anmeldung fehlgeschlagen",
     "login.signedIn": "Angemeldet",
     "login.termsOfService": "Nutzungsbedingungen",
