@@ -4,6 +4,7 @@ import { Icon } from '../icons.js';
 import { store } from '../store.js';
 import { go } from '../router.js';
 import { support, openSupport, closeSupport, sendMessage } from '../support.js';
+import { refreshPortfolio } from '../auth.js';
 
 export const ChatButton = {
     name: 'ChatButton',
@@ -62,6 +63,30 @@ export const SupportSheet = {
             </div>
         </transition>
     </div>`,
+};
+
+// Why a signed-in balance reads "—": still loading, or the last fetch failed (with
+// a retry). Renders nothing once the balance is known.
+export const BalanceStatus = {
+    name: 'BalanceStatus',
+    components: { Icon },
+    setup() {
+        const retrying = ref(false);
+        const retry = async () => {
+            retrying.value = true;
+            try { await refreshPortfolio(); } finally { retrying.value = false; }
+        };
+        return { store, retrying, retry };
+    },
+    template: /*html*/`
+    <p v-if="store.balanceUnknown" class="balstate" role="status">
+        <template v-if="retrying || !store.connectionLost"><span class="spinner balstate__spin"></span>{{ $t('common.balanceLoading') }}</template>
+        <template v-else>
+            <Icon name="info" :size="15" class="balstate__ico" />
+            <span>{{ $t('common.balanceFailed') }}</span>
+            <button type="button" class="balstate__retry" @click="retry">{{ $t('common.retry') }}</button>
+        </template>
+    </p>`,
 };
 
 export const Toast = {

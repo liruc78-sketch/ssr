@@ -4,10 +4,11 @@ import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store } from '../store.js';
 import { fmtAmt } from '../data.js';
+import { BalanceStatus } from '../components/common.js';
 
 export default {
     name: 'Assets',
-    components: { Icon },
+    components: { Icon, BalanceStatus },
     setup() {
         const tab = ref('overview');
         const tabs = [
@@ -18,12 +19,13 @@ export default {
         ];
         // Backend tracks a single usd_balance -> shown as the Spot account.
         // Trading/Finance sub-accounts aren't tracked server-side yet (show 0).
+        // null = not loaded / fetch failed: shown as "—", never as 0.00.
         const accounts = computed(() => ({
-            spot: store.isAuthed ? store.portfolio.usdBalance : 0,
+            spot: !store.isAuthed ? 0 : store.balanceUnknown ? null : store.portfolio.usdBalance,
             trading: 0,
             finance: 0,
         }));
-        const total = computed(() => accounts.value.spot + accounts.value.trading + accounts.value.finance);
+        const total = computed(() => accounts.value.spot == null ? null : accounts.value.spot + accounts.value.trading + accounts.value.finance);
         const segs = computed(() => {
             const t = total.value || 1;
             const parts = [
@@ -59,6 +61,7 @@ export default {
                     <div>
                         <div class="muted" style="font-size:var(--fs-small)">{{ $t('assets.accountBalance') }}</div>
                         <div class="wallet__total num">{{ fmtAmt(total) }} <span class="muted" style="font-size:var(--fs-h4)">USDT</span></div>
+                        <BalanceStatus />
                     </div>
                     <div class="donut">
                         <svg viewBox="0 0 100 100" width="92" height="92">
@@ -69,7 +72,7 @@ export default {
                     </div>
                 </div>
                 <div class="wallet__legend">
-                    <div v-for="s in segs" :key="s.k"><span class="dotc" :style="{ background: s.c }"></span>{{ $t(s.tkey) }} <b class="num">{{ s.pct }}%</b></div>
+                    <div v-for="s in segs" :key="s.k"><span class="dotc" :style="{ background: s.c }"></span>{{ $t(s.tkey) }} <b class="num">{{ total == null ? '—' : s.pct + '%' }}</b></div>
                 </div>
             </div>
 
@@ -93,7 +96,8 @@ export default {
         <div v-else class="card">
             <div class="subacct">
                 <div class="muted" style="font-size:var(--fs-small)">{{ $t('assets.subBalance', { name: $t(tabs.find(t=>t.k===tab).tkey) }) }}</div>
-                <div class="wallet__total num">{{ fmtAmt(accounts[tab] || 0) }} <span class="muted" style="font-size:var(--fs-h4)">USDT</span></div>
+                <div class="wallet__total num">{{ fmtAmt(accounts[tab]) }} <span class="muted" style="font-size:var(--fs-h4)">USDT</span></div>
+                <BalanceStatus v-if="tab === 'spot'" />
             </div>
             <div class="placeholder" style="border:0; padding:var(--sp-10)">
                 <Icon name="assets" class="placeholder__icon" :size="44" />

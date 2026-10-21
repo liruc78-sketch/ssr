@@ -189,7 +189,7 @@ export function fmtNum(p) {
     return Number(p).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 export function fmtChg(c) { return (c > 0 ? '+' : '') + Number(c).toFixed(2) + '%'; }
-export function fmtAmt(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+export function fmtAmt(n) { if (n == null || isNaN(n)) return '—'; return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 export function fmtVol(v) {
     if (v == null || isNaN(v)) return '—';
     if (v >= 1e9) return (v / 1e9).toFixed(2) + 'B';

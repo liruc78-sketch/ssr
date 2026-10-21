@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "Bağlantı kesildi",
     "common.retry": "Yeniden dene",
     "common.loading": "Yükleniyor…",
+    "common.balanceLoading": "Bakiye yükleniyor…",
+    "common.balanceFailed": "Bakiyeniz yüklenemedi",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "Müşteri desteği",
@@ -369,6 +371,9 @@ export default {
     "login.setPassword": "Bir şifre belirleyin (en az {n} karakter)",
     "login.show": "Göster",
     "login.signIn": "Giriş yap",
+    "login.signInAgain": "Oturumunuzun süresi doldu — hesabınızı ve bakiyenizi görmek için lütfen tekrar giriş yapın",
+    "login.signInAgainWallet": "Oturumunuzun süresi doldu — hesabınızı ve bakiyenizi görmek için {wallet} cüzdanını tekrar bağlayın",
+    "login.accountSwitched": "Başka bir sekmede farklı bir hesapla giriş yaptınız — artık o hesap gösteriliyor",
     "login.signInFailed": "Giriş başarısız",
     "login.signedIn": "Giriş yapıldı",
     "login.termsOfService": "Hizmet Şartları",

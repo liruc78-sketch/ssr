@@ -7,29 +7,32 @@ import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { t } from '../i18n.js';
 import { fmtNum } from '../data.js';
+import { BalanceStatus } from '../components/common.js';
 import { submitWithdrawal, withdrawFee, withdrawTotal, WITHDRAW_MIN } from '../wallet.js';
 
 const NETWORKS = { USDT: ['TRC20', 'ERC20', 'BEP20'], USDC: ['ERC20', 'BEP20'] };
 
 export default {
     name: 'Withdraw',
-    components: { Icon },
+    components: { Icon, BalanceStatus },
     setup() {
         const currency = ref('USDT');
         const network = ref('TRC20');
         const amount = ref('');
         const address = ref('');
         const submitting = ref(false);
-        const balance = computed(() => store.isAuthed ? store.portfolio.usdBalance : 0);
+        // null = not loaded / fetch failed: shown as "—", and the request is held back.
+        const balance = computed(() => !store.isAuthed ? 0 : store.balanceUnknown ? null : store.portfolio.usdBalance);
         const nets = computed(() => NETWORKS[currency.value] || ['TRC20']);
         const amt = computed(() => parseFloat(amount.value) || 0);
         const fee = computed(() => amt.value > 0 ? withdrawFee(amt.value) : 0);
         const total = computed(() => amt.value > 0 ? withdrawTotal(amt.value) : 0);
         const arrival = computed(() => amt.value);
 
-        const setAll = () => { amount.value = String(Math.max(0, balance.value)); };
+        const setAll = () => { if (balance.value != null) amount.value = String(Math.max(0, balance.value)); };
         const submit = async () => {
             if (!store.isAuthed) { go('/login'); return; }
+            if (balance.value == null) return;
             submitting.value = true;
             try {
                 await submitWithdrawal({ amount: amount.value, address: address.value });
@@ -58,6 +61,7 @@ export default {
                 </div>
                 <span class="muted" style="font-size:var(--fs-caption); margin-top:4px">{{ $t('withdraw.balance', { bal: fmtNum(balance) }) }}</span>
             </label>
+            <BalanceStatus />
             <label class="paystep"><span class="eyebrow">{{ $t('withdraw.address') }}</span>
                 <input class="field num" v-model="address" :placeholder="$t('withdraw.addressPlaceholder')" />
             </label>
@@ -68,7 +72,7 @@ export default {
 
             <p class="note"><Icon name="info" :size="15" /> {{ $t('withdraw.note', { cur: currency, net: network }) }}</p>
 
-            <button class="btn btn--block btn--lg" :class="store.isAuthed ? 'btn--brand' : 'btn--dark'" :disabled="submitting" @click="submit">
+            <button class="btn btn--block btn--lg" :class="store.isAuthed ? 'btn--brand' : 'btn--dark'" :disabled="submitting || balance == null" @click="submit">
                 <span v-if="submitting" class="spinner" style="border-top-color:#fff"></span>
                 <template v-else>{{ store.isAuthed ? $t('withdraw.submit') : $t('withdraw.loginToWithdraw') }}</template>
             </button>

@@ -10,10 +10,11 @@ import { t } from '../i18n.js';
 import OrderBook from '../components/OrderBook.js';
 import { CoinIcon } from '../components/CoinIcon.js';
 import { PositionDetail } from '../components/PositionDetail.js';
+import { BalanceStatus } from '../components/common.js';
 
 export default {
     name: 'Trade',
-    components: { Icon, OrderBook, CoinIcon, PositionDetail },
+    components: { Icon, OrderBook, CoinIcon, PositionDetail, BalanceStatus },
     setup() {
         const coin = findSym(router.query.pair) || findSym('BTC');
         const MODES = [{ k: 'spot', tkey: 'trade.modeSpot' }, { k: 'perp', tkey: 'trade.modePerp' }, { k: 'options', tkey: 'trade.modeOptions' }];
@@ -23,7 +24,8 @@ export default {
 
         const price = ref(coin?.price || 0);
         // Simulated mode draws on the separate sim balance (default 100k virtual USDT).
-        const balance = computed(() => store.isAuthed ? (sim ? store.portfolio.simBalance : store.portfolio.usdBalance) : 0);
+        // null = not loaded / fetch failed: shown as "—" and orders are held back.
+        const balance = computed(() => !store.isAuthed ? 0 : store.balanceUnknown ? null : (sim ? store.portfolio.simBalance : store.portfolio.usdBalance));
 
         // shared order form
         const f = reactive({ side: 'buy', type: 'market', price: '', amount: '', lev: 10, tpsl: false, tp: '', sl: '' });
@@ -45,10 +47,10 @@ export default {
         });
         watch(mode, () => { ledgerTab.value = 'open'; });
 
-        const setPct = (p) => { /* demo: scales a nominal size */ f.amount = ((balance.value || 1000) * p / 100 / (price.value || 1)).toFixed(6); };
+        const setPct = (p) => { /* demo: scales a nominal size */ if (balance.value == null) return; f.amount = ((balance.value || 1000) * p / 100 / (price.value || 1)).toFixed(6); };
         const pickPrice = (px) => { f.type = 'limit'; f.price = fmtNum(px); };
         const activeTier = computed(() => OPTION_TIERS.find(t => t.sec === o.tier) || OPTION_TIERS[0]);
-        const tierLocked = (t) => t.min > balance.value;
+        const tierLocked = (t) => balance.value != null && t.min > balance.value;
         const optProfit = computed(() => {
             const amt = parseFloat(o.amount) || 0;
             return (amt * (activeTier.value.payout - 1)).toFixed(2);
@@ -58,6 +60,7 @@ export default {
         // Spot/Perp execution is wired in a later step — demo for now.
         const act = (label) => {
             if (needAuth.value) { go('/login'); return; }
+            if (balance.value == null) return;
             toast(t('trade.orderPlaced', { side: label }), 'success');
         };
 
@@ -138,6 +141,7 @@ export default {
         const placing = ref(false);
         const placeOption = async (type) => {
             if (needAuth.value) { go('/login'); return; }
+            if (balance.value == null) return;
             const amt = parseFloat(o.amount) || 0;   // capture before the field clears
             placing.value = true;
             try {
@@ -254,12 +258,13 @@ export default {
                 </div>
 
                 <div class="balrow"><span class="muted">{{ $t('trade.available') }}</span><b class="num">{{ fmtNum(balance) }} USDT</b></div>
+                <BalanceStatus />
 
                 <template v-if="needAuth">
                     <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">{{ $t('trade.loginRegister') }}</button>
                 </template>
                 <template v-else>
-                    <button class="btn btn--block btn--lg" :class="f.side === 'buy' ? 'btn--up' : 'btn--down'" @click="act(f.side === 'buy' ? (mode==='perp'? $t('trade.long') : $t('trade.buy')) : (mode==='perp'? $t('trade.short') : $t('trade.sell')))">
+                    <button class="btn btn--block btn--lg" :class="f.side === 'buy' ? 'btn--up' : 'btn--down'" :disabled="balance == null" @click="act(f.side === 'buy' ? (mode==='perp'? $t('trade.long') : $t('trade.buy')) : (mode==='perp'? $t('trade.short') : $t('trade.sell')))">
                         {{ f.side === 'buy' ? (mode === 'perp' ? $t('trade.long') : $t('trade.buyCoin', { sym: coin?.sym })) : (mode === 'perp' ? $t('trade.short') : $t('trade.sellCoin', { sym: coin?.sym })) }}
                     </button>
                 </template>
@@ -298,16 +303,17 @@ export default {
                 <b class="num up">+{{ optProfit }} USDT</b>
             </div>
             <div class="balrow"><span class="muted">{{ $t('trade.available') }}</span><b class="num">{{ fmtNum(balance) }} USDT</b></div>
+            <BalanceStatus />
 
             <template v-if="needAuth">
                 <button class="btn btn--dark btn--block btn--lg" @click="go('/login')">{{ $t('trade.loginRegister') }}</button>
             </template>
             <div v-else class="opt__cta">
-                <button class="btn btn--up btn--lg" :disabled="placing" @click="placeOption('up')">
+                <button class="btn btn--up btn--lg" :disabled="placing || balance == null" @click="placeOption('up')">
                     <span v-if="placing" class="spinner" style="border-top-color:#fff"></span>
                     <template v-else><Icon name="withdraw" :size="20" /> {{ $t('trade.up') }}</template>
                 </button>
-                <button class="btn btn--down btn--lg" :disabled="placing" @click="placeOption('down')">
+                <button class="btn btn--down btn--lg" :disabled="placing || balance == null" @click="placeOption('down')">
                     <span v-if="placing" class="spinner" style="border-top-color:#fff"></span>
                     <template v-else><Icon name="deposit" :size="20" /> {{ $t('trade.down') }}</template>
                 </button>

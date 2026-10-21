@@ -5,22 +5,28 @@
 // Ethereum) verified server-side by the `wallet-auth` edge function.
 // Tables: users (linked by auth_id), portfolios, positions.
 // ============================================================================
-import { sb, edge } from './supabase.js';
-import { setSessionMem, clearSession, setPortfolio, store } from './store.js';
+import { sb, edge, STORAGE_KEY } from './supabase.js';
+import { setSessionMem, clearSession, setPortfolio, store, toast } from './store.js';
+import { go } from './router.js';
+import { t } from './i18n.js';
 
-// Build the in-memory session object from a users row.
+// Build the in-memory session object from a users row. `authId` is the Supabase
+// Auth user the row is linked to — what the stored JWT must belong to.
 function sessionFromUser(user) {
-    return { userId: user.id, walletAddress: user.wallet_address || null, email: user.email || null, username: user.username, displayName: user.display_name };
+    return { userId: user.id, authId: user.auth_id, walletAddress: user.wallet_address || null, email: user.email || null, username: user.username, displayName: user.display_name };
 }
 
-// Mirror of legacy getUserPortfolio(userId).
+// Mirror of legacy getUserPortfolio(userId). Any error throws, so callers keep the
+// last-known-good state and the views show the balance as unknown. That includes
+// PGRST116 (no row): wallet-auth and provision_me always create the portfolio, so
+// a missing row means RLS hid it (the JWT is another account's), not a new user at 0.
 export async function fetchPortfolio(userId) {
     const { data: pd, error: pErr } = await sb.from('portfolios').select('*').eq('user_id', userId).single();
-    // PGRST116 ("no row") is the only legit empty case (new user). Anything else
-    // is a transport failure — throw so callers keep the last-known-good balance.
-    if (pErr && pErr.code !== 'PGRST116') throw pErr;
-    const { data: active } = await sb.from('positions').select('*').eq('user_id', userId).eq('status', 'Active').order('created_at', { ascending: false });
-    const { data: history } = await sb.from('positions').select('*').eq('user_id', userId).in('status', ['Won', 'Lost']).order('settled_at', { ascending: false }).limit(50);
+    if (pErr) throw pErr;
+    const { data: active, error: aErr } = await sb.from('positions').select('*').eq('user_id', userId).eq('status', 'Active').order('created_at', { ascending: false });
+    if (aErr) throw aErr;
+    const { data: history, error: hErr } = await sb.from('positions').select('*').eq('user_id', userId).in('status', ['Won', 'Lost']).order('settled_at', { ascending: false }).limit(50);
+    if (hErr) throw hErr;
     const mapPos = p => ({
         id: p.id, coinId: p.coin_id, type: p.type, amount: parseFloat(p.amount),
         entryPrice: parseFloat(p.entry_price), settlementPrice: p.settlement_price ? parseFloat(p.settlement_price) : null,
@@ -36,14 +42,32 @@ export async function fetchPortfolio(userId) {
     };
 }
 
+// Fetch `userId`'s portfolio into the store. A failure only flags connectionLost.
+// The result is dropped if a newer fetch started or the account on screen changed
+// meanwhile, so a slow request can't overwrite fresher state.
+let portfolioSeq = 0;
+async function loadPortfolio(userId) {
+    const seq = ++portfolioSeq;
+    const current = () => seq === portfolioSeq && store.session?.userId === userId;
+    try { const p = await fetchPortfolio(userId); if (current()) setPortfolio(p); }
+    catch { if (current()) store.connectionLost = true; }
+}
+
 // Load the users row linked to the current Supabase Auth session into the store.
 async function loadLinkedUser() {
     const { data: { user: authUser } } = await sb.auth.getUser();
     if (!authUser) throw new Error('No active session');
     const user = await linkedUser(authUser);        // find-or-create by auth_id
     setSessionMem(sessionFromUser(user));
-    try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+    await loadPortfolio(user.id);
     return user;
+}
+
+// This tab's own sign-in is running (its SIGNED_IN isn't another tab's switch).
+let signingIn = 0;
+async function ownSignIn(run) {
+    signingIn++;
+    try { return await run(); } finally { signingIn--; }
 }
 
 // ---- Wallet login (SIWE) ---------------------------------------------------
@@ -156,7 +180,7 @@ export function connectWallet(onStep = () => {}) {
     stepCb = onStep;
     if (lastStep) onStep(lastStep);
     if (!inflight) {
-        inflight = runWalletLogin((s) => { lastStep = s; stepCb(s); })
+        inflight = ownSignIn(() => runWalletLogin((s) => { lastStep = s; stepCb(s); }))
             .finally(() => { inflight = null; lastStep = ''; stepCb = () => {}; });
     }
     return inflight;
@@ -211,39 +235,91 @@ async function linkedUser(authUser, { email } = {}) {
     return user;
 }
 
-export async function signUpEmail(email, password) {
+export const signUpEmail = (email, password) => ownSignIn(async () => {
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
     // Email-confirmation ON -> no session yet; don't log in, prompt to confirm.
     if (!data.session) throw new Error('Account created — check your email to confirm, then sign in.');
     const user = await linkedUser(data.user, { email });
     setSessionMem(sessionFromUser(user));
-    try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+    await loadPortfolio(user.id);
     return { user };
-}
+});
 
-export async function signInEmail(email, password) {
+export const signInEmail = (email, password) => ownSignIn(async () => {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
     const user = await linkedUser(data.user, { email });
     setSessionMem(sessionFromUser(user));
-    try { setPortfolio(await fetchPortfolio(user.id)); } catch { store.connectionLost = true; }
+    await loadPortfolio(user.id);
     return { user };
+});
+
+// Remove the legacy site's saved login and return it ({ userId, walletAddress }),
+// or null if there was none.
+function takeLegacySession() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); localStorage.removeItem(STORAGE_KEY); } catch {}
+    if (raw == null) return null;
+    try { return JSON.parse(raw) || {}; } catch { return {}; }
 }
 
-// Restore an active Supabase Auth session on startup (email or wallet).
+// Restore an active Supabase Auth session on startup (email or wallet). Only a
+// Supabase session counts: the legacy site's `tw_user_session` holds a user id
+// but no JWT, and treating it as a login showed a signed-in page whose every
+// read RLS rejects as anon (balance 0). Drop it and send the user to sign in
+// with that same wallet — wallet-auth then links the existing account by address.
 export async function restoreSession() {
+    const legacy = takeLegacySession();
     try {
         const { data } = await sb.auth.getSession();
         if (data?.session?.user) await loadLinkedUser();
+        else if (legacy) {
+            const w = /^0x[0-9a-f]{40}$/i.test(legacy.walletAddress || '') ? legacy.walletAddress : '';
+            store.relogin = { wallet: w && w.slice(0, 6) + '…' + w.slice(-4) };
+            go('/login');
+        }
     } catch (e) { console.warn('Session restore failed:', e); }
+}
+
+// Supabase keeps one stored session per browser, so signing in as another account
+// in another tab swaps the JWT under this tab too: it would keep showing account A
+// while every request runs as B (A's rows then read as missing, trades land on B).
+// Follow the switch — reload the linked user, or sign out if that fails.
+let following = null;
+function followAuthUser() {
+    following ??= loadLinkedUser()
+        .then(() => toast(t('login.accountSwitched'), 'info', 4200))
+        .catch((e) => { console.warn('Account switch failed:', e); clearSession(); })
+        .finally(() => { following = null; });
+    return following;
+}
+
+// A session that ends outside this page (sign-out in another tab, revoked
+// refresh token) logs the UI out too, instead of leaving it showing an account
+// it can no longer read; one that changes hands switches this tab with it. The
+// reload is deferred: supabase-js holds its auth lock while this callback runs,
+// and loadLinkedUser's own auth calls would wait on it forever.
+sb.auth.onAuthStateChange((event, session) => {
+    if (!store.session) return;
+    if (event === 'SIGNED_OUT') clearSession();
+    else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && !signingIn
+        && session?.user?.id && session.user.id !== store.session.authId) setTimeout(followAuthUser, 0);
+});
+
+// Call right before a request that moves money: the stored session must still be
+// the account on screen. Throws (and switches or signs out) if it isn't.
+export async function assertSessionUser() {
+    const { data } = await sb.auth.getSession();
+    const id = data?.session?.user?.id;
+    if (id && id === store.session?.authId) return;
+    if (id) followAuthUser(); else clearSession();
+    throw new Error(t(id ? 'login.accountSwitched' : 'login.signInAgain'));
 }
 
 // Reload balances + positions (polled from main.js only while the tab is visible).
 export async function refreshPortfolio() {
-    if (!store.session?.userId) return;
-    try { setPortfolio(await fetchPortfolio(store.session.userId)); }
-    catch { store.connectionLost = true; }
+    if (store.session?.userId) await loadPortfolio(store.session.userId);
 }
 
 export async function disconnect() {

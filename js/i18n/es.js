@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "Desconectado",
     "common.retry": "Reintentar",
     "common.loading": "Cargando…",
+    "common.balanceLoading": "Cargando saldo…",
+    "common.balanceFailed": "No se pudo cargar tu saldo",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "Atención al cliente",
@@ -369,6 +371,9 @@ export default {
     "login.setPassword": "Establece una contraseña (mín. {n} caracteres)",
     "login.show": "Mostrar",
     "login.signIn": "Iniciar sesión",
+    "login.signInAgain": "Tu sesión ha caducado: vuelve a iniciar sesión para ver tu cuenta y tu saldo",
+    "login.signInAgainWallet": "Tu sesión ha caducado: vuelve a conectar la wallet {wallet} para ver tu cuenta y tu saldo",
+    "login.accountSwitched": "Iniciaste sesión con otra cuenta en otra pestaña; ahora se muestra esa cuenta",
     "login.signInFailed": "Error al iniciar sesión",
     "login.signedIn": "Sesión iniciada",
     "login.termsOfService": "Términos del servicio",

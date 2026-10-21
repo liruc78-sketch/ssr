@@ -5,7 +5,7 @@
 // ============================================================================
 import { sb } from './supabase.js';
 import { store } from './store.js';
-import { refreshPortfolio } from './auth.js';
+import { refreshPortfolio, assertSessionUser } from './auth.js';
 
 export const FINANCE_MIN_USD = 100;
 
@@ -13,6 +13,7 @@ export const FINANCE_MIN_USD = 100;
 // record atomically for the signed-in caller. No client-side balance write.
 export async function subscribeFinance({ product, amountUsd }) {
     if (!store.session?.userId) { const e = new Error('Please sign in first'); e.code = 'AUTH'; throw e; }
+    await assertSessionUser();
     const { data, error } = await sb.rpc('finance_subscribe', {
         p_product_id: product.id, p_product_name: product.name, p_asset: product.asset,
         p_amount: parseFloat(amountUsd), p_daily_rate: product.dmax, p_term_days: product.term || 0,

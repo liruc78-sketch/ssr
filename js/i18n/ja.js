@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "切断されました",
     "common.retry": "再試行",
     "common.loading": "読み込み中…",
+    "common.balanceLoading": "残高を読み込み中…",
+    "common.balanceFailed": "残高を読み込めませんでした",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "カスタマーサポート",
@@ -369,6 +371,9 @@ export default {
     "login.setPassword": "パスワードを設定({n} 文字以上)",
     "login.show": "表示",
     "login.signIn": "ログイン",
+    "login.signInAgain": "ログインの有効期限が切れました。アカウントと残高を表示するには、もう一度ログインしてください",
+    "login.signInAgainWallet": "ログインの有効期限が切れました。アカウントと残高を表示するには、ウォレット {wallet} をもう一度接続してください",
+    "login.accountSwitched": "別のタブで別のアカウントにログインしたため、そのアカウントを表示しています",
     "login.signInFailed": "ログインに失敗しました",
     "login.signedIn": "ログインしました",
     "login.termsOfService": "利用規約",

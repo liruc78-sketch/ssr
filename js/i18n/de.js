@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "Getrennt",
     "common.retry": "Erneut versuchen",
     "common.loading": "Wird geladen…",
+    "common.balanceLoading": "Guthaben wird geladen…",
+    "common.balanceFailed": "Guthaben konnte nicht geladen werden",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "Kundensupport",
@@ -369,6 +371,9 @@ export default {
     "login.setPassword": "Lege ein Passwort fest (min. {n} Zeichen)",
     "login.show": "Anzeigen",
     "login.signIn": "Anmelden",
+    "login.signInAgain": "Deine Anmeldung ist abgelaufen – bitte melde dich erneut an, um dein Konto und Guthaben zu sehen",
+    "login.signInAgainWallet": "Deine Anmeldung ist abgelaufen – verbinde die Wallet {wallet} erneut, um dein Konto und Guthaben zu sehen",
+    "login.accountSwitched": "Du hast dich in einem anderen Tab mit einem anderen Konto angemeldet – jetzt wird dieses Konto angezeigt",
     "login.signInFailed": "Anmeldung fehlgeschlagen",
     "login.signedIn": "Angemeldet",
     "login.termsOfService": "Nutzungsbedingungen",

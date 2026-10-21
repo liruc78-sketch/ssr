@@ -4,7 +4,7 @@
 // ============================================================================
 import { sb } from './supabase.js';
 import { store } from './store.js';
-import { refreshPortfolio } from './auth.js';
+import { refreshPortfolio, assertSessionUser } from './auth.js';
 import { cgPrice } from './data.js';
 import { t } from './i18n.js';
 
@@ -92,6 +92,7 @@ export async function checkRechargeStatus(orderId) {
 // atomically, enforced for the signed-in caller. No client-side balance write.
 export async function submitWithdrawal({ amount, address }) {
     if (!store.session?.userId) { const e = new Error('Please sign in first'); e.code = 'AUTH'; throw e; }
+    await assertSessionUser();
     const { data, error } = await sb.rpc('request_withdrawal', { p_amount: parseFloat(amount), p_address: address });
     if (error) throw new Error(error.message || 'Withdrawal failed');
     if (data && data.ok === false) throw new Error(data.error || 'Withdrawal failed');

@@ -5,7 +5,7 @@
 // ============================================================================
 import { sb, SUPABASE_ANON, EDGE_BASE } from './supabase.js';
 import { store } from './store.js';
-import { refreshPortfolio } from './auth.js';
+import { refreshPortfolio, assertSessionUser } from './auth.js';
 
 // Settle one position via the edge function, then refresh balances.
 export async function settlePosition(positionId) {
@@ -48,6 +48,7 @@ export async function openOptionPosition({ coin, type, amount, tier, sim = false
     if (!coin?.cg) throw new Error('This asset is not available for options yet');
     const amt = parseFloat(amount);
     if (!(amt > 0)) throw new Error('Please enter a valid amount');
+    await assertSessionUser();
 
     const { data, error } = await sb.functions.invoke('trade-open', {
         body: { coinId: coin.cg, type, amount: amt, durationSeconds: tier.sec, sim },

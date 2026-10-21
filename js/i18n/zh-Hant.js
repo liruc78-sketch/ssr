@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "已斷線",
     "common.retry": "重試",
     "common.loading": "載入中…",
+    "common.balanceLoading": "正在載入餘額…",
+    "common.balanceFailed": "無法載入餘額",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "線上客服",
@@ -369,6 +371,9 @@ export default {
     "login.setPassword": "設定密碼（至少 {n} 個字元）",
     "login.show": "顯示",
     "login.signIn": "登入",
+    "login.signInAgain": "登入已過期，請重新登入以查看帳戶與餘額",
+    "login.signInAgainWallet": "登入已過期，請重新連接錢包 {wallet} 以查看帳戶與餘額",
+    "login.accountSwitched": "您已在其他分頁登入另一個帳戶，現在顯示該帳戶",
     "login.signInFailed": "登入失敗",
     "login.signedIn": "已登入",
     "login.termsOfService": "服務條款",
