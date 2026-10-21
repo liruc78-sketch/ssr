@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "연결 끊김",
     "common.retry": "다시 시도",
     "common.loading": "불러오는 중…",
+    "common.balanceLoading": "잔액 불러오는 중…",
+    "common.balanceFailed": "잔액을 불러오지 못했습니다",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "고객 지원",
@@ -371,6 +373,7 @@ export default {
     "login.signIn": "로그인",
     "login.signInAgain": "로그인이 만료되었습니다. 계정과 잔액을 보려면 다시 로그인하세요",
     "login.signInAgainWallet": "로그인이 만료되었습니다. 계정과 잔액을 보려면 {wallet} 지갑을 다시 연결하세요",
+    "login.accountSwitched": "다른 탭에서 다른 계정으로 로그인하여 해당 계정을 표시합니다",
     "login.signInFailed": "로그인에 실패했습니다",
     "login.signedIn": "로그인되었습니다",
     "login.termsOfService": "서비스 이용약관",

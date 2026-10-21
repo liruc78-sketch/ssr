@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "Déconnecté",
     "common.retry": "Réessayer",
     "common.loading": "Chargement…",
+    "common.balanceLoading": "Chargement du solde…",
+    "common.balanceFailed": "Impossible de charger votre solde",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "Service client",
@@ -371,6 +373,7 @@ export default {
     "login.signIn": "Se connecter",
     "login.signInAgain": "Votre connexion a expiré — reconnectez-vous pour voir votre compte et votre solde",
     "login.signInAgainWallet": "Votre connexion a expiré — reconnectez le portefeuille {wallet} pour voir votre compte et votre solde",
+    "login.accountSwitched": "Vous vous êtes connecté à un autre compte dans un autre onglet — ce compte est maintenant affiché",
     "login.signInFailed": "Échec de la connexion",
     "login.signedIn": "Connecté",
     "login.termsOfService": "Conditions d’utilisation",

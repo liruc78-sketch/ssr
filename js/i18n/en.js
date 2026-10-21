@@ -34,6 +34,8 @@ export default {
     'common.disconnected': 'Disconnected',
     'common.retry': 'Retry',
     'common.loading': 'Loading…',
+    'common.balanceLoading': 'Loading balance…',
+    'common.balanceFailed': 'Couldn’t load your balance',
 
     // ---- support chat ---------------------------------------------------
     'support.cta': 'Customer support',
@@ -373,6 +375,7 @@ export default {
     "login.signIn": "Sign in",
     "login.signInAgain": "Your sign-in has expired — please sign in again to see your account and balance",
     "login.signInAgainWallet": "Your sign-in has expired — connect wallet {wallet} again to see your account and balance",
+    "login.accountSwitched": "You signed in to another account in a different tab — now showing that account",
     "login.signInFailed": "Sign-in failed",
     "login.signedIn": "Signed in",
     "login.termsOfService": "Terms of Service",

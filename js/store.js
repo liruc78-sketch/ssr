@@ -21,7 +21,7 @@ export const store = reactive({
     theme: read(THEME_KEY, 'light'),
 
     // ---- session ---------------------------------------------------------
-    // Shape: { userId, walletAddress, email, username, displayName }, set once a
+    // Shape: { userId, authId, walletAddress, email, username, displayName }, set once a
     // Supabase Auth session is confirmed. Never seeded from the legacy site's
     // `tw_user_session`: that has no JWT, so every read would run as anon.
     session: null,
@@ -32,6 +32,9 @@ export const store = reactive({
     portfolio: emptyPortfolio(),
     balanceLoaded: false,     // distinguishes a real 0 from "not loaded yet"
     connectionLost: false,    // last portfolio fetch failed (keep last-known-good)
+    // Signed in but the balance isn't known: views show "—" (BalanceStatus says
+    // why) and block money actions, instead of a confident 0.00.
+    get balanceUnknown() { return !!this.session && (!this.balanceLoaded || this.connectionLost); },
 
     // ---- shell UI --------------------------------------------------------
     drawerOpen: false,
@@ -52,8 +55,17 @@ export function clearSession() {
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
 }
 export function setPortfolio(p) { store.portfolio = p; store.balanceLoaded = true; store.connectionLost = false; }
-// Supabase Auth persists the session itself, so this only sets state.
-export function setSessionMem(session) { store.session = session; store.relogin = null; }
+// Supabase Auth persists the session itself, so this only sets state. A different
+// account (signed in from another tab) starts from "not loaded", not the old balance.
+export function setSessionMem(session) {
+    if (store.session && store.session.userId !== session.userId) {
+        store.portfolio = emptyPortfolio();
+        store.balanceLoaded = false;
+        store.connectionLost = false;
+    }
+    store.session = session;
+    store.relogin = null;
+}
 
 // ---- UI actions ---------------------------------------------------------
 export function applyTheme(t) {

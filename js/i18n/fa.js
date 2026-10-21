@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "اتصال قطع شد",
     "common.retry": "تلاش مجدد",
     "common.loading": "در حال بارگذاری…",
+    "common.balanceLoading": "در حال بارگذاری موجودی…",
+    "common.balanceFailed": "بارگذاری موجودی شما ممکن نشد",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "پشتیبانی مشتریان",
@@ -371,6 +373,7 @@ export default {
     "login.signIn": "ورود",
     "login.signInAgain": "ورود شما منقضی شده است؛ برای دیدن حساب و موجودی خود، لطفاً دوباره وارد شوید",
     "login.signInAgainWallet": "ورود شما منقضی شده است؛ برای دیدن حساب و موجودی خود، کیف‌پول {wallet} را دوباره متصل کنید",
+    "login.accountSwitched": "در زبانه‌ای دیگر با حساب دیگری وارد شدید؛ اکنون همان حساب نمایش داده می‌شود",
     "login.signInFailed": "ورود ناموفق بود",
     "login.signedIn": "وارد شدید",
     "login.termsOfService": "شرایط خدمات",

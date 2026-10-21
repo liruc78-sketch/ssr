@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "Нет соединения",
     "common.retry": "Повторить",
     "common.loading": "Загрузка…",
+    "common.balanceLoading": "Загрузка баланса…",
+    "common.balanceFailed": "Не удалось загрузить баланс",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "Поддержка",
@@ -371,6 +373,7 @@ export default {
     "login.signIn": "Войти",
     "login.signInAgain": "Сеанс истёк — войдите снова, чтобы увидеть свой аккаунт и баланс",
     "login.signInAgainWallet": "Сеанс истёк — снова подключите кошелёк {wallet}, чтобы увидеть свой аккаунт и баланс",
+    "login.accountSwitched": "В другой вкладке выполнен вход в другой аккаунт — теперь показан он",
     "login.signInFailed": "Не удалось войти",
     "login.signedIn": "Вход выполнен",
     "login.termsOfService": "Условия использования",

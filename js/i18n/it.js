@@ -32,6 +32,8 @@ export default {
     "common.disconnected": "Disconnesso",
     "common.retry": "Riprova",
     "common.loading": "Caricamento…",
+    "common.balanceLoading": "Caricamento del saldo…",
+    "common.balanceFailed": "Impossibile caricare il saldo",
 
     // ---- support chat ---------------------------------------------------
     "support.cta": "Assistenza clienti",
@@ -371,6 +373,7 @@ export default {
     "login.signIn": "Accedi",
     "login.signInAgain": "Il tuo accesso è scaduto: accedi di nuovo per vedere il tuo account e il saldo",
     "login.signInAgainWallet": "Il tuo accesso è scaduto: ricollega il wallet {wallet} per vedere il tuo account e il saldo",
+    "login.accountSwitched": "Hai effettuato l'accesso con un altro account in un'altra scheda: ora viene mostrato quell'account",
     "login.signInFailed": "Accesso non riuscito",
     "login.signedIn": "Accesso effettuato",
     "login.termsOfService": "Termini di servizio",

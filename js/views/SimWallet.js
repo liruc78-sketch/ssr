@@ -8,10 +8,11 @@ import { store } from '../store.js';
 import { refreshPortfolio } from '../auth.js';
 import { COINS, fmtNum } from '../data.js';
 import { PositionDetail } from '../components/PositionDetail.js';
+import { BalanceStatus } from '../components/common.js';
 
 export default {
     name: 'SimWallet',
-    components: { Icon, PositionDetail },
+    components: { Icon, PositionDetail, BalanceStatus },
     setup() {
         const loading = ref(false);
         const tab = ref('open');   // open | hist
@@ -20,7 +21,8 @@ export default {
             if (store.isAuthed) { loading.value = true; try { await refreshPortfolio(); } catch {} finally { loading.value = false; } }
         });
 
-        const simBalance = computed(() => store.isAuthed ? (store.portfolio.simBalance || 0) : 0);
+        // null = not loaded / fetch failed: the balance and the stats show "—".
+        const simBalance = computed(() => !store.isAuthed ? 0 : store.balanceUnknown ? null : (store.portfolio.simBalance || 0));
         const simActive = computed(() => (store.portfolio.activePositions || []).filter(p => p.isSim));
         const simHistory = computed(() => (store.portfolio.positionHistory || []).filter(p => p.isSim));
         const won = computed(() => simHistory.value.filter(p => p.status === 'Won').length);
@@ -64,11 +66,12 @@ export default {
             <div class="card sim__wallet">
                 <div class="muted" style="font-size:var(--fs-small)">{{ $t('sim.balance') }}</div>
                 <div class="sim__total num">{{ fmtNum(simBalance) }} <span style="font-size:var(--fs-h4); opacity:.7">USDT</span></div>
+                <BalanceStatus />
                 <div class="sim__stats">
-                    <div><span class="muted">{{ $t('sim.netPnl') }}</span><b class="num" :class="pnl >= 0 ? 'up' : 'down'">{{ signed(pnl) }}</b></div>
-                    <div><span class="muted">{{ $t('sim.winRate') }}</span><b class="num">{{ winRate }}%</b></div>
-                    <div><span class="muted">{{ $t('sim.won') }}</span><b class="num up">{{ won }}</b></div>
-                    <div><span class="muted">{{ $t('sim.lost') }}</span><b class="num down">{{ lost }}</b></div>
+                    <div><span class="muted">{{ $t('sim.netPnl') }}</span><b class="num" :class="simBalance == null ? '' : pnl >= 0 ? 'up' : 'down'">{{ simBalance == null ? '—' : signed(pnl) }}</b></div>
+                    <div><span class="muted">{{ $t('sim.winRate') }}</span><b class="num">{{ simBalance == null ? '—' : winRate + '%' }}</b></div>
+                    <div><span class="muted">{{ $t('sim.won') }}</span><b class="num" :class="{ up: simBalance != null }">{{ simBalance == null ? '—' : won }}</b></div>
+                    <div><span class="muted">{{ $t('sim.lost') }}</span><b class="num" :class="{ down: simBalance != null }">{{ simBalance == null ? '—' : lost }}</b></div>
                 </div>
             </div>
 

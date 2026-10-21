@@ -5,10 +5,11 @@ import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { t } from '../i18n.js';
 import { COINS, findSym, fmtNum } from '../data.js';
+import { BalanceStatus } from '../components/common.js';
 
 export default {
     name: 'Convert',
-    components: { Icon },
+    components: { Icon, BalanceStatus },
     setup() {
         const assets = ['USDT', ...COINS.map(c => c.sym)];
         const from = ref('BTC');
@@ -17,11 +18,13 @@ export default {
         const priceOf = (s) => s === 'USDT' ? 1 : (findSym(s)?.price || 0);
         const rate = computed(() => { const p = priceOf(to.value); return p ? priceOf(from.value) / p : 0; });
         const outAmount = computed(() => { const a = parseFloat(amount.value) || 0; return a * rate.value; });
-        const available = computed(() => (store.isAuthed && from.value === 'USDT') ? store.portfolio.usdBalance : 0);
+        // null = balance not loaded / fetch failed: shown as "—", and nothing converts.
+        const available = computed(() => store.balanceUnknown ? null : (store.isAuthed && from.value === 'USDT') ? store.portfolio.usdBalance : 0);
 
         const swap = () => { const t = from.value; from.value = to.value; to.value = t; };
         const exchange = () => {
             if (!store.isAuthed) { go('/login'); return; }
+            if (store.balanceUnknown) return;
             if (from.value === to.value) { toast(t('convert.pickDifferent'), 'error'); return; }
             if (!(parseFloat(amount.value) > 0)) { toast(t('convert.enterAmount'), 'error'); return; }
             toast(t('convert.done'), 'success');
@@ -49,8 +52,9 @@ export default {
 
             <div class="payline"><span class="muted">{{ $t('convert.rate') }}</span><span class="num">1 {{ from }} ≈ {{ fmtNum(rate) }} {{ to }}</span></div>
             <div class="payline"><span class="muted">{{ $t('convert.available') }}</span><span class="num">{{ fmtNum(available) }} {{ from }}</span></div>
+            <BalanceStatus />
 
-            <button class="btn btn--block btn--lg" :class="store.isAuthed ? 'btn--brand' : 'btn--dark'" @click="exchange">{{ store.isAuthed ? $t('convert.exchange') : $t('convert.loginToConvert') }}</button>
+            <button class="btn btn--block btn--lg" :class="store.isAuthed ? 'btn--brand' : 'btn--dark'" :disabled="store.balanceUnknown" @click="exchange">{{ store.isAuthed ? $t('convert.exchange') : $t('convert.loginToConvert') }}</button>
         </div>
     </section>`,
 };
