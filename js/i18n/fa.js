@@ -295,6 +295,7 @@ export default {
     "finance.term": "دوره",
     "finance.upTo": "تا",
 
+    "history.balanceCredit": "افزایش موجودی",
     "history.depositRecords": "سوابق واریز",
     "history.feeAmt": "کارمزد ${amt}",
     "history.fundingRecords": "سوابق مالی",

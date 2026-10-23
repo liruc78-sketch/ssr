@@ -295,6 +295,7 @@ export default {
     "finance.term": "Vade",
     "finance.upTo": "en fazla",
 
+    "history.balanceCredit": "Bakiye yüklemesi",
     "history.depositRecords": "Yatırma kayıtları",
     "history.feeAmt": "Ücret ${amt}",
     "history.fundingRecords": "Fon Kayıtları",

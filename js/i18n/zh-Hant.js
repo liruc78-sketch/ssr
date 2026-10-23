@@ -295,6 +295,7 @@ export default {
     "finance.term": "期限",
     "finance.upTo": "最高",
 
+    "history.balanceCredit": "餘額增加",
     "history.depositRecords": "充值記錄",
     "history.feeAmt": "手續費 ${amt}",
     "history.fundingRecords": "資金記錄",

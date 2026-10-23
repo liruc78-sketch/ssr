@@ -100,10 +100,20 @@ export async function submitWithdrawal({ amount, address }) {
     return { ok: true };
 }
 
-// Records for the History screen.
+// Records for the History screen. Deposits also list the admin's balance
+// credits (balance_adjustments, amount > 0), shaped like a credited order.
 export async function loadRecords(kind) {
     if (!store.session?.userId) return [];
-    const table = kind === 'withdraw' ? 'withdrawals' : 'recharge_orders';
-    const { data } = await sb.from(table).select('*').eq('user_id', store.session.userId).order('created_at', { ascending: false }).limit(50);
-    return data || [];
+    const uid = store.session.userId;
+    const newest = (q) => q.eq('user_id', uid).order('created_at', { ascending: false }).limit(50);
+    if (kind === 'withdraw') return (await newest(sb.from('withdrawals').select('*'))).data || [];
+
+    const [orders, credits] = await Promise.all([
+        newest(sb.from('recharge_orders').select('*')),
+        newest(sb.from('balance_adjustments').select('id, amount, created_at').gt('amount', 0)),
+    ]);
+    const adjusted = (credits.data || []).map(a => ({ id: a.id, adjustment: true, usd_amount: a.amount, status: 'paid', created_at: a.created_at }));
+    return (orders.data || []).concat(adjusted)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 50);
 }
