@@ -297,6 +297,7 @@ export default {
     "finance.term": "Term",
     "finance.upTo": "up to",
 
+    "history.balanceCredit": "Balance credit",
     "history.depositRecords": "Deposit records",
     "history.feeAmt": "Fee ${amt}",
     "history.fundingRecords": "Funding Records",

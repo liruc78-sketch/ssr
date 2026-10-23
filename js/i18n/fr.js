@@ -295,6 +295,7 @@ export default {
     "finance.term": "Terme",
     "finance.upTo": "jusqu’à",
 
+    "history.balanceCredit": "Crédit de solde",
     "history.depositRecords": "Relevés de dépôt",
     "history.feeAmt": "Frais ${amt}",
     "history.fundingRecords": "Relevés de fonds",

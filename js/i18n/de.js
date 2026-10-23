@@ -295,6 +295,7 @@ export default {
     "finance.term": "Laufzeit",
     "finance.upTo": "bis zu",
 
+    "history.balanceCredit": "Guthabengutschrift",
     "history.depositRecords": "Einzahlungsverlauf",
     "history.feeAmt": "Gebühr ${amt}",
     "history.fundingRecords": "Kapitalverlauf",

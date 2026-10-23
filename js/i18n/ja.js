@@ -295,6 +295,7 @@ export default {
     "finance.term": "期間",
     "finance.upTo": "最大",
 
+    "history.balanceCredit": "残高付与",
     "history.depositRecords": "入金履歴",
     "history.feeAmt": "手数料 ${amt}",
     "history.fundingRecords": "入出金履歴",

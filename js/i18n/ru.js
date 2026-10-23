@@ -295,6 +295,7 @@ export default {
     "finance.term": "Срок",
     "finance.upTo": "до",
 
+    "history.balanceCredit": "Зачисление на баланс",
     "history.depositRecords": "История пополнений",
     "history.feeAmt": "Комиссия ${amt}",
     "history.fundingRecords": "История операций",

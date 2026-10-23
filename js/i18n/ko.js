@@ -295,6 +295,7 @@ export default {
     "finance.term": "기간",
     "finance.upTo": "최대",
 
+    "history.balanceCredit": "잔액 지급",
     "history.depositRecords": "입금 내역",
     "history.feeAmt": "수수료 ${amt}",
     "history.fundingRecords": "자금 내역",

@@ -49,7 +49,7 @@ export default {
                 <div class="rec-main">
                     <b class="num">{{ tab === 'deposit' ? ('+' + fmtNum(r.usd_amount) + ' USD') : ('-' + fmtNum(r.amount) + ' USD') }}</b>
                     <span class="muted" style="font-size:var(--fs-caption)">
-                        {{ tab === 'deposit' ? (r.coin_symbol + ' · ' + (r.network_label || r.network)) : $t('history.feeAmt', { amt: fmtNum(r.fee) }) }} · {{ fmtDate(r.created_at) }}
+                        {{ tab !== 'deposit' ? $t('history.feeAmt', { amt: fmtNum(r.fee) }) : r.adjustment ? $t('history.balanceCredit') : (r.coin_symbol + ' · ' + (r.network_label || r.network)) }} · {{ fmtDate(r.created_at) }}
                     </span>
                 </div>
                 <span class="chip" :class="statusClass(r.status)">{{ r.status }}</span>

@@ -295,6 +295,7 @@ export default {
     "finance.term": "Durata",
     "finance.upTo": "fino a",
 
+    "history.balanceCredit": "Accredito sul saldo",
     "history.depositRecords": "Registro depositi",
     "history.feeAmt": "Commissione ${amt}",
     "history.fundingRecords": "Registro movimenti",

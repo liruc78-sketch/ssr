@@ -295,6 +295,7 @@ export default {
     "finance.term": "Plazo",
     "finance.upTo": "hasta",
 
+    "history.balanceCredit": "Abono de saldo",
     "history.depositRecords": "Registros de depósitos",
     "history.feeAmt": "Comisión ${amt}",
     "history.fundingRecords": "Registros de fondos",
