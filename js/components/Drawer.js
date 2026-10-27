@@ -67,7 +67,7 @@ export default {
             <div style="flex:1; min-width:0">
                 <div style="display:flex; align-items:center; gap:8px">
                     <strong style="font-size:var(--fs-h4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap" :dir="store.session?.via === 'phone' ? 'ltr' : null">{{ identity() }}</strong>
-                    <span class="chip" :class="store.session?.verified ? 'chip--up' : ''">{{ store.session?.verified ? $t('drawer.verified') : $t('drawer.notVerified') }}</span>
+                    <span class="chip" :class="store.session?.kycStatus === 'approved' ? 'chip--up' : ''">{{ store.session?.kycStatus === 'approved' ? $t('drawer.verified') : $t('drawer.notVerified') }}</span>
                 </div>
                 <div class="drawer__uid">
                     <span class="num muted" style="font-size:var(--fs-small)">{{ subId() }}</span>

@@ -13,9 +13,10 @@ import { t } from './i18n.js';
 // Build the in-memory session object from a users row. `authId` is the Supabase
 // Auth user the row is linked to — what the stored JWT must belong to. `via` is
 // how the account signs in (Security.js shows the matching method as bound).
+// `kycStatus` is none | pending | approved | rejected; approved = verified.
 function sessionFromUser(user) {
     const via = user.phone ? 'phone' : user.wallet_address ? 'wallet' : 'email';
-    return { userId: user.id, authId: user.auth_id, walletAddress: user.wallet_address || null, email: user.email || null, phone: user.phone || null, via, username: user.username, displayName: user.display_name };
+    return { userId: user.id, authId: user.auth_id, walletAddress: user.wallet_address || null, email: user.email || null, phone: user.phone || null, via, username: user.username, displayName: user.display_name, kycStatus: user.kyc_status || 'none' };
 }
 
 // Mirror of legacy getUserPortfolio(userId). Any error throws, so callers keep the

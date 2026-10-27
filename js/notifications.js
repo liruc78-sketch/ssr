@@ -1,7 +1,7 @@
 // ============================================================================
 // Crypto.ssr — Notification center (the bell).
 // Notifications are stored structurally in Supabase (kind + event + meta) by DB
-// triggers on the money tables, so one row works in every language: describe()
+// triggers on the money tables and KYC reviews, so one row works in every language: describe()
 // renders the title/body in the ACTIVE UI language at read time. Realtime keeps
 // the bell live; opening the panel marks everything read.
 // ============================================================================
@@ -10,6 +10,7 @@ import { sb } from './supabase.js';
 import { store } from './store.js';
 import { t } from './i18n.js';
 import { COINS, fmtNum } from './data.js';
+import { KYC_REASONS } from './kyc.js';
 
 export const notif = reactive({ open: false, items: [], unread: 0, loading: false, loaded: false });
 
@@ -60,6 +61,10 @@ function subscribe() {
             if (!n || notif.items.some((x) => x.id === n.id)) return;
             notif.items.unshift(n);
             if (!n.is_read) notif.unread++;
+            // A KYC decision: the Verified chips (and an open KYC page) follow it live.
+            if (n.kind === 'kyc' && (n.event === 'approved' || n.event === 'rejected') && store.session?.userId === id) {
+                store.session.kycStatus = n.event;
+            }
         })
         .subscribe();
 }
@@ -103,6 +108,12 @@ export function describe(n) {
         if (n.event === 'completed') return { icon: 'withdraw', tone: 'up', title: t('notif.withdraw.completedTitle'), body: t('notif.withdraw.completedBody', { amt }) };
         if (n.event === 'failed') return { icon: 'withdraw', tone: 'down', title: t('notif.withdraw.failedTitle'), body: t('notif.withdraw.failedBody', { amt }) };
         return { icon: 'withdraw', tone: 'gold', title: t('notif.withdraw.submittedTitle'), body: t('notif.withdraw.submittedBody', { amt }) };
+    }
+    if (n.kind === 'kyc') {
+        // `to`: the row opens the KYC page (status, reviewer's note, resubmit).
+        if (n.event === 'approved') return { icon: 'shield', tone: 'up', title: t('notif.kyc.approvedTitle'), body: t('notif.kyc.approvedBody'), to: '/kyc' };
+        const reason = KYC_REASONS.includes(m.reason) ? t('kyc.reason.' + m.reason) : '';
+        return { icon: 'user', tone: 'down', title: t('notif.kyc.rejectedTitle'), body: t('notif.kyc.rejectedBody', { reason }).trim(), to: '/kyc' };
     }
     return { icon: 'bell', tone: 'brand', title: m.title || t('notif.system.default'), body: m.body || '' };
 }

@@ -15,7 +15,9 @@ export default {
             id: n.id, is_read: n.is_read, time: relTime(n.created_at), ...describe(n),
         })));
         const toLogin = () => { closeNotifications(); go('/login'); };
-        return { notif, rows, store, closeNotifications, markAllRead, toLogin };
+        // Rows with a page of their own (KYC decisions) open it.
+        const open = (r) => { if (!r.to) return; closeNotifications(); go(r.to); };
+        return { notif, rows, store, closeNotifications, markAllRead, toLogin, open };
     },
     template: /*html*/`
     <div class="notifpanel" role="dialog" aria-modal="true" :aria-label="$t('notif.title')">
@@ -39,7 +41,8 @@ export default {
                 <p class="muted">{{ $t('notif.empty') }}</p>
             </div>
             <ul v-else class="notif-list">
-                <li v-for="r in rows" :key="r.id" class="notif-row" :class="{ 'is-unread': !r.is_read }">
+                <li v-for="r in rows" :key="r.id" class="notif-row" :class="{ 'is-unread': !r.is_read, 'is-link': r.to }"
+                    :role="r.to ? 'link' : null" :tabindex="r.to ? 0 : null" @click="open(r)" @keydown.enter="open(r)">
                     <span class="notif-ic" :class="'notif-ic--' + r.tone"><Icon :name="r.icon" :size="18" /></span>
                     <div class="notif-row__main">
                         <div class="notif-row__top">
