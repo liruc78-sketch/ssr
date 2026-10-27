@@ -1,7 +1,7 @@
 // ============================================================================
 // Crypto.ssr — Auth + portfolio
-// Every user (email OR wallet) gets a real Supabase Auth session (JWT), so
-// auth.uid() identifies them for RLS. Wallet login uses SIWE (sign-in with
+// Every user (email, phone OR wallet) gets a real Supabase Auth session (JWT),
+// so auth.uid() identifies them for RLS. Wallet login uses SIWE (sign-in with
 // Ethereum) verified server-side by the `wallet-auth` edge function.
 // Tables: users (linked by auth_id), portfolios, positions.
 // ============================================================================
@@ -11,9 +11,11 @@ import { go } from './router.js';
 import { t } from './i18n.js';
 
 // Build the in-memory session object from a users row. `authId` is the Supabase
-// Auth user the row is linked to — what the stored JWT must belong to.
+// Auth user the row is linked to — what the stored JWT must belong to. `via` is
+// how the account signs in (Security.js shows the matching method as bound).
 function sessionFromUser(user) {
-    return { userId: user.id, authId: user.auth_id, walletAddress: user.wallet_address || null, email: user.email || null, username: user.username, displayName: user.display_name };
+    const via = user.phone ? 'phone' : user.wallet_address ? 'wallet' : 'email';
+    return { userId: user.id, authId: user.auth_id, walletAddress: user.wallet_address || null, email: user.email || null, phone: user.phone || null, via, username: user.username, displayName: user.display_name };
 }
 
 // Mirror of legacy getUserPortfolio(userId). Any error throws, so callers keep the
@@ -222,12 +224,12 @@ async function runWalletLogin(onStep) {
 // ---- Email / password (Supabase Auth; credentials never touch our tables) ----
 // Requires the one-time backend setup in db/2026-email-auth.sql + enabling the
 // Email provider in the Supabase dashboard.
-async function linkedUser(authUser, { email } = {}) {
+async function linkedUser(authUser) {
     let { data: user, error } = await sb.from('users').select('*').eq('auth_id', authUser.id).single();
     if (error && error.code === 'PGRST116') {
-        // Provision server-side (users row + zero-balance portfolio); client can't set a balance.
-        const handle = (email || authUser.email || 'user').split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 12) || 'user';
-        const { error: pe } = await sb.rpc('provision_me', { p_email: email || authUser.email || null, p_display: handle });
+        // Provision server-side (users row + zero-balance portfolio); client can't set a
+        // balance. The server takes the email, phone and display name from the auth user.
+        const { error: pe } = await sb.rpc('provision_me', { p_email: null, p_display: null });
         if (pe) throw pe;
         ({ data: user, error } = await sb.from('users').select('*').eq('auth_id', authUser.id).single());
         if (error) throw error;
@@ -235,25 +237,127 @@ async function linkedUser(authUser, { email } = {}) {
     return user;
 }
 
-export const signUpEmail = (email, password) => ownSignIn(async () => {
+// Sign up and log straight in. Null when Auth "Confirm email" is on: the account
+// then exists but gets no session until it is confirmed.
+async function signUpAndLoad(email, password) {
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
+    if (!data.session) return null;
+    // The account exists from here on. If setting it up fails, say so: signing in
+    // retries the setup, while registering again would only hit "already registered".
+    try {
+        const user = await linkedUser(data.user);
+        setSessionMem(sessionFromUser(user));
+        await loadPortfolio(user.id);
+        return { user };
+    } catch (e) {
+        throw Object.assign(new Error('Account created, but setting it up failed'), { code: 'provision_failed', cause: e });
+    }
+}
+
+export const signUpEmail = (email, password) => ownSignIn(async () => {
+    const res = await signUpAndLoad(email, password);
     // Email-confirmation ON -> no session yet; don't log in, prompt to confirm.
-    if (!data.session) throw new Error('Account created — check your email to confirm, then sign in.');
-    const user = await linkedUser(data.user, { email });
-    setSessionMem(sessionFromUser(user));
-    await loadPortfolio(user.id);
-    return { user };
+    if (!res) throw Object.assign(new Error('Account created — confirm your email, then sign in'), { code: 'email_unconfirmed' });
+    return res;
 });
 
 export const signInEmail = (email, password) => ownSignIn(async () => {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    const user = await linkedUser(data.user, { email });
+    const user = await linkedUser(data.user);
     setSessionMem(sessionFromUser(user));
     await loadPortfolio(user.id);
     return { user };
 });
+
+// ---- Phone / password ------------------------------------------------------
+// Supabase's Phone provider needs an SMS gateway, so a phone account is an email
+// account underneath: its login email is the E.164 number at a reserved domain
+// (+12067458075 -> 12067458075@phone.cryptossr.local), like wallet logins. The
+// database fills users.phone from that email and refuses anything there that isn't
+// E.164-shaped (supabase/migrations/20261027175932_phone_auth.sql); the canonical
+// form itself comes from normalizePhone. Numbers aren't verified by SMS — the same
+// trust as email sign-up, which isn't confirmed either.
+const PHONE_DOMAIN = 'phone.cryptossr.local';
+
+// libphonenumber-js (min metadata, ~43 KB gzipped) loads only when the phone form
+// is used. Its version is pinned in index.html because its metadata decides which
+// account a typed number lands in: before changing it, check that each group still
+// gives one number — +82 010-1234-5678 / +82 10-1234-5678, +44 (0)7911 123456 /
+// +44 07911 123456 / +44 7911 123456, +7 8 912 345-67-89 / +7 912 345-67-89 —
+// and that +39 06 1234 5678 and +7 800 555-35-35 keep their 0 and 8.
+let phoneLibLoad = null, phoneLib = null;
+export function loadPhoneLib() {
+    phoneLibLoad ??= import('libphonenumber-js/min')
+        .then((m) => (phoneLib = m))
+        .catch((e) => { phoneLibLoad = null; throw e; });
+    return phoneLibLoad;
+}
+
+// Marks that copy-paste and IMEs put into numbers: format characters (bidi, zero
+// width, soft hyphen) are dropped, and spaces, dashes, dots, slashes, brackets and
+// the Japanese long-vowel mark / middle dot (typed as hyphens) only separate groups.
+const FORMAT_CHARS = /\p{Cf}/gu;
+const SEPARATORS = /[\s\p{Pd}\u2212\u30fc\u30fb.()/]/gu;
+// Arabic-Indic and Persian digits; a digit's value is the low nibble of its code.
+const EASTERN_DIGIT = /[\u0660-\u0669\u06f0-\u06f9]/g;
+
+// Any digit as 0-9: full-width ones from CJK keyboards (via NFKC, which also turns a
+// full-width plus into +) and Arabic-Indic / Persian ones.
+export const foldDigits = (s) => String(s ?? '').normalize('NFKC').replace(EASTERN_DIGIT, (d) => String(d.charCodeAt(0) & 0xf));
+
+// What the user typed, reduced to '+' and digits ('00' in front reads as +).
+function phoneChars(input) {
+    const s = foldDigits(input).replace(FORMAT_CHARS, '').replace(SEPARATORS, '');
+    return s.startsWith('00') ? '+' + s.slice(2) : s;     // international dialling prefix
+}
+// Reads as a phone number, however it was typed (Login.js moves it to the phone form).
+export const looksLikePhone = (input) => /^\+?\d+$/.test(phoneChars(input));
+
+// What the user typed -> { digits: '+<7–15 digits>' } or an error the library isn't
+// needed for: 'empty', 'country_code' (no + or 00 in front — never guessed, since
+// the same phone would then land in two accounts) or 'invalid'.
+function phoneShape(input) {
+    const s = phoneChars(input);
+    if (!s) return { error: 'empty' };
+    if (!s.startsWith('+')) return { error: 'country_code' };
+    return /^\+[1-9]\d{6,14}$/.test(s) ? { digits: s } : { error: 'invalid' };
+}
+
+// The library drops a trunk prefix typed after the country code (+44 0…, +81 0…,
+// +7 8…) and keeps a significant one (Italy's 0). Sign-up requires a valid number;
+// sign-in only a possible one, so a metadata update can't lock an account out.
+function canonicalPhone(lib, digits, strict) {
+    const pn = lib.parsePhoneNumberFromString(digits);
+    if (!pn || !(strict ? pn.isValid() : pn.isPossible())) return { error: 'invalid' };
+    return { number: pn.number, country: pn.country, formatted: pn.formatInternational() };
+}
+
+// '+82 010-1234-5678' -> { number: '+821012345678', country: 'KR', formatted: '+82 10 1234 5678' },
+// or { error }. Rejects only if the library can't be loaded.
+export async function normalizePhone(input, { strict = false } = {}) {
+    const shape = phoneShape(input);
+    return shape.error ? shape : canonicalPhone(await loadPhoneLib(), shape.digits, strict);
+}
+// The same check for feedback while typing, without waiting: null until the
+// library is loaded or while the number is incomplete.
+export function previewPhone(input) {
+    const shape = phoneShape(input);
+    const res = shape.error || !phoneLib ? null : canonicalPhone(phoneLib, shape.digits, true);
+    return res?.error ? null : res;
+}
+const phoneEmail = (e164) => `${e164.slice(1)}@${PHONE_DOMAIN}`;
+
+// Both take the canonical number from normalizePhone.
+export const signUpPhone = (e164, password) => ownSignIn(async () => {
+    const res = await signUpAndLoad(phoneEmail(e164), password);
+    // Only if someone turns Auth "Confirm email" on: a phone login has no mailbox to
+    // confirm, so phone sign-up needs it off.
+    if (!res) throw Object.assign(new Error('Phone sign-up needs Auth email confirmation off'), { code: 'phone_unconfirmed' });
+    return res;
+});
+export const signInPhone = (e164, password) => signInEmail(phoneEmail(e164), password);
 
 // Remove the legacy site's saved login and return it ({ userId, walletAddress }),
 // or null if there was none.

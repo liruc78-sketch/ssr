@@ -2,15 +2,15 @@
 import { ref } from 'vue';
 import { Icon } from '../icons.js';
 import { store } from '../store.js';
-import { go } from '../router.js';
-import { support, openSupport, closeSupport, sendMessage } from '../support.js';
+import { support, openSupport, closeSupport, sendMessage, MAX_MESSAGE } from '../support.js';
 import { refreshPortfolio } from '../auth.js';
 
 export const ChatButton = {
     name: 'ChatButton',
     components: { Icon },
     setup() {
-        const onClick = () => { if (openSupport() === 'auth') go('/login'); };
+        // Open to visitors who aren't signed in too (they chat as guests).
+        const onClick = () => openSupport();
         return { onClick, support };
     },
     template: /*html*/`
@@ -28,7 +28,7 @@ export const SupportSheet = {
         const setBody = (el) => { support.bodyEl = el; };
         const time = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         const onEnter = (e) => { if (!e.shiftKey) { e.preventDefault(); sendMessage(); } };
-        return { support, closeSupport, sendMessage, time, setBody };
+        return { store, support, closeSupport, sendMessage, time, setBody, MAX_MESSAGE };
     },
     template: /*html*/`
     <div>
@@ -42,6 +42,7 @@ export const SupportSheet = {
                     </span>
                     <button class="iconbtn" @click="closeSupport()" :aria-label="$t('common.close')"><Icon name="close" /></button>
                 </div>
+                <p v-if="!store.isAuthed" class="chat__guest">{{ $t('support.guestNote') }}</p>
                 <div class="chat__body" :ref="setBody">
                     <div v-if="support.loading" style="display:grid; place-items:center; padding:var(--sp-6)"><span class="spinner"></span></div>
                     <div v-else-if="!support.messages.length" class="chat__empty">
@@ -54,7 +55,7 @@ export const SupportSheet = {
                     </div>
                 </div>
                 <div class="chat__input">
-                    <input v-model="support.input" :placeholder="$t('support.inputPlaceholder')" @keyup.enter="sendMessage()" />
+                    <input v-model="support.input" :maxlength="MAX_MESSAGE" :placeholder="$t('support.inputPlaceholder')" @keyup.enter="sendMessage()" />
                     <button class="btn btn--brand btn--sm" :disabled="support.sending || !support.input.trim()" @click="sendMessage()">
                         <span v-if="support.sending" class="spinner" style="border-top-color:#fff"></span>
                         <template v-else>{{ $t('common.send') }}</template>
