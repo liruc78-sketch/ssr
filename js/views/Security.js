@@ -1,4 +1,5 @@
 // Security Center — account security settings hub
+import { computed } from 'vue';
 import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
@@ -9,7 +10,8 @@ export default {
     components: { Icon },
     setup() {
         const soon = (what) => toast(t('security.soonMsg', { what }), 'info');
-        const items = [
+        // Computed: on a reload the session is restored after this view is set up.
+        const items = computed(() => [
             { icon: 'user', tkey: 'security.identityKyc', statusKey: store.session?.verified ? 'security.verified' : 'security.notVerified', ok: !!store.session?.verified, action: () => go('/kyc') },
             { icon: 'shield', tkey: 'security.loginPassword', statusKey: 'security.set', ok: true, action: () => soon(t('security.changePassword')) },
             { icon: 'shield', tkey: 'security.fundPassword', statusKey: 'security.notSet', ok: false, action: () => soon(t('security.fundPassword')) },
@@ -18,7 +20,7 @@ export default {
             { icon: 'doc', tkey: 'security.email', statusKey: store.session?.via === 'email' ? 'security.bound' : 'security.notBound', ok: store.session?.via === 'email', action: () => soon(t('security.bindEmail')) },
             { icon: 'shield', tkey: 'security.antiPhishing', statusKey: 'security.notSet', ok: false, action: () => soon(t('security.antiPhishing')) },
             { icon: 'assets', tkey: 'security.deviceManagement', statusKey: 'security.oneDevice', ok: true, action: () => soon(t('security.deviceManagement')) },
-        ];
+        ]);
         return { items, store, go };
     },
     template: /*html*/`

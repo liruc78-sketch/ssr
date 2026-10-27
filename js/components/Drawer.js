@@ -36,11 +36,13 @@ export default {
             ]},
         ];
         const identity = () => store.session?.displayName || store.session?.username || store.session?.walletAddress || t('common.account');
-        const initials = () => identity().replace(/^0x/, '').trim().charAt(0).toUpperCase() || 'U';
+        const initials = () => identity().replace(/^0x/, '').match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() || 'U';
         const subId = () => {
             const w = store.session?.walletAddress || '';
             if (w) return w.length > 10 ? w.slice(0, 6) + '…' + w.slice(-4) : w;
-            return store.session?.email || store.session?.username || '';
+            // A phone account's name is its number, cut short by the chip on narrow
+            // screens; the line below has room for all of it.
+            return store.session?.phone || store.session?.email || store.session?.username || '';
         };
         const doLogout = () => { disconnect(); closeDrawer(); toast(t('common.disconnected'), 'info'); go('/'); };
         // Simulated-trading entry: open the dedicated sim wallet page.
@@ -64,7 +66,7 @@ export default {
             <div class="drawer__avatar">{{ initials() }}</div>
             <div style="flex:1; min-width:0">
                 <div style="display:flex; align-items:center; gap:8px">
-                    <strong style="font-size:var(--fs-h4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ identity() }}</strong>
+                    <strong style="font-size:var(--fs-h4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap" :dir="store.session?.via === 'phone' ? 'ltr' : null">{{ identity() }}</strong>
                     <span class="chip" :class="store.session?.verified ? 'chip--up' : ''">{{ store.session?.verified ? $t('drawer.verified') : $t('drawer.notVerified') }}</span>
                 </div>
                 <div class="drawer__uid">
