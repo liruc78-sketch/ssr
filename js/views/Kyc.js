@@ -34,6 +34,8 @@ export default {
         let alive = true;
 
         const sides = computed(() => docType.value === 'passport' ? ['front'] : ['front', 'back']);
+        // Uploading, or a picked photo still being prepared (submitting then would send the old one).
+        const busy = computed(() => !!phase.value || preparing.front || preparing.back);
         const sideLabel = (s) => t(s === 'back' ? 'kyc.backSide' : docType.value === 'passport' ? 'kyc.photoPage' : 'kyc.frontSide');
 
         // Every country, named and sorted in the UI language.
@@ -112,7 +114,7 @@ export default {
         }
 
         async function submit() {
-            if (phase.value) return;
+            if (busy.value) return;
             if (!store.isAuthed) { go('/login'); return; }
             if (!country.value) { toast(t('kyc.errCountry'), 'error'); return; }
             const missing = sides.value.find((s) => !photos[s]);
@@ -151,6 +153,7 @@ export default {
         watch(() => [store.session?.userId, store.session?.kycStatus], ([id, s], prev) => {
             if (!prev || id !== prev[0]) {                    // signed in, out, or as someone else
                 state.latest = null; state.failed = false; clearPhotos();
+                country.value = ''; docType.value = 'passport';
                 if (id) refresh();
             } else if (id && s !== (state.latest?.status || 'none')) {
                 refresh();                                    // decided meanwhile (bell / another device)
@@ -160,7 +163,7 @@ export default {
 
         return {
             store, state, status, showForm, refresh, go,
-            country, countries, docType, docs, sides, sideLabel, photos, preparing, phase, inputs,
+            country, countries, docType, docs, sides, sideLabel, photos, preparing, phase, busy, inputs,
             pick, onFile, setPhoto, submit, maxMb: KYC_MAX_INPUT_MB,
         };
     },
@@ -236,7 +239,7 @@ export default {
                 </div>
 
                 <p class="note"><Icon name="info" :size="15" /> {{ $t('kyc.note') }}</p>
-                <button class="btn btn--brand btn--block btn--lg" :disabled="!!phase" @click="submit">
+                <button class="btn btn--brand btn--block btn--lg" :disabled="busy" @click="submit">
                     <span v-if="phase" class="spinner kyc__btnspin"></span>
                     {{ phase === 'uploading' ? $t('kyc.uploading') : phase === 'submitting' ? $t('kyc.submitting') : $t('kyc.submit') }}
                 </button>

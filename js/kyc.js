@@ -28,7 +28,7 @@ export const KYC_COUNTRIES = (
 const BUCKET = 'kyc';
 export const KYC_MAX_INPUT_MB = 20;                 // what the member may pick
 const MAX_EDGE = 2000;                              // px, longest side once re-encoded
-const MAX_UPLOAD = 2.5 * 1024 * 1024;               // the bucket takes up to 3 MB
+const MAX_UPLOAD = 1.5 * 1024 * 1024;               // the bucket takes up to 2 MB
 const INPUT_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 const INPUT_EXT = /\.(jpe?g|png|webp|heic|heif)$/i;
 
@@ -83,6 +83,20 @@ export async function preparePhoto(file) {
     } finally { URL.revokeObjectURL(url); }
 }
 
+// Re-read the account's KYC status into the session (the Verified chips and an open
+// KYC page follow it). The bell's realtime feed misses a decision made while its
+// socket was down (background tab, locked phone), so this runs when the bell loads
+// KYC rows and, while a review is pending, whenever the tab comes back.
+export async function syncKycStatus() {
+    const uid = store.session?.userId;
+    if (!uid) return;
+    const { data, error } = await sb.from('users').select('kyc_status').eq('id', uid).maybeSingle();
+    if (!error && data && store.session?.userId === uid) store.session.kycStatus = data.kyc_status || 'none';
+}
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && store.session?.kycStatus === 'pending') syncKycStatus().catch(() => {});
+});
+
 // The signed-in member's latest submission, or null.
 export async function loadLatestKyc() {
     const uid = store.session?.userId;
@@ -119,7 +133,9 @@ export async function submitKyc({ country, docType, photos, attempt, onPhase = (
     const results = await Promise.allSettled(sides.map(async (side) => {
         if (attempt[side]) return;
         const path = `${uid}/${attempt.dir}/${side}.jpg`;
-        const { error } = await sb.storage.from(BUCKET).upload(path, photos[side].blob, { contentType: 'image/jpeg', upsert: false });
+        // cacheControl 0: no CDN or browser cache keeps serving an ID photo after its
+        // short-lived signed URL (admin panel) has expired.
+        const { error } = await sb.storage.from(BUCKET).upload(path, photos[side].blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '0' });
         if (error && !alreadyUploaded(error)) throw kycError(uploadErrorCode(error), error);
         attempt[side] = path;
     }));

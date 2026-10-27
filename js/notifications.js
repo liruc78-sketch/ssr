@@ -10,7 +10,7 @@ import { sb } from './supabase.js';
 import { store } from './store.js';
 import { t } from './i18n.js';
 import { COINS, fmtNum } from './data.js';
-import { KYC_REASONS } from './kyc.js';
+import { KYC_REASONS, syncKycStatus } from './kyc.js';
 
 export const notif = reactive({ open: false, items: [], unread: 0, loading: false, loaded: false });
 
@@ -27,6 +27,8 @@ export async function loadNotifications() {
         notif.items = data || [];
         notif.unread = notif.items.filter((n) => !n.is_read).length;
         notif.loaded = true;
+        // A KYC decision the realtime feed may have missed: refresh the status too.
+        if (notif.items.some((n) => n.kind === 'kyc')) syncKycStatus().catch(() => {});
     } catch (_) { /* keep last-known-good */ }
     finally { notif.loading = false; }
 }
@@ -58,13 +60,14 @@ function subscribe() {
     channel = sb.channel('notif:' + id)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + id }, (p) => {
             const n = p.new;
-            if (!n || notif.items.some((x) => x.id === n.id)) return;
-            notif.items.unshift(n);
-            if (!n.is_read) notif.unread++;
+            if (!n) return;
             // A KYC decision: the Verified chips (and an open KYC page) follow it live.
             if (n.kind === 'kyc' && (n.event === 'approved' || n.event === 'rejected') && store.session?.userId === id) {
                 store.session.kycStatus = n.event;
             }
+            if (notif.items.some((x) => x.id === n.id)) return;
+            notif.items.unshift(n);
+            if (!n.is_read) notif.unread++;
         })
         .subscribe();
 }
