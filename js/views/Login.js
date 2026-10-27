@@ -6,6 +6,7 @@ import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { connectWallet, signInEmail, signUpEmail, signInPhone, signUpPhone, normalizePhone, previewPhone, loadPhoneLib, looksLikePhone, foldDigits } from '../auth.js';
+import { support, openSupport, offerGuestChat } from '../support.js';
 import { t, locale } from '../i18n.js';
 
 const METHOD_KEY = 'loginMethod';     // the tab this browser last signed in with
@@ -58,6 +59,7 @@ export default {
                 await connectWallet((step) => { walletStep.value = step; });
                 toast(t('login.walletConnected'), 'success');
                 go('/');
+                offerGuestChat();      // a support chat from before signing in, if any
             } catch (e) {
                 console.error('[wallet-login]', e?.code, e?.step, e?.detail, e?.cause || e);
                 const key = WALLET_ERR[e?.code];
@@ -148,6 +150,7 @@ export default {
                 try { localStorage.setItem(METHOD_KEY, byPhone ? 'phone' : 'email'); } catch {}
                 toast(register.value ? t('login.accountCreated') : t('login.signedIn'), 'success');
                 go('/');
+                offerGuestChat();      // a support chat from before signing in, if any
             } catch (e) {
                 console.warn('[auth]', e?.code, e?.status, e?.cause || e);
                 const key = authErrorKey(e, byPhone);
@@ -158,10 +161,14 @@ export default {
                 toast(key ? t(key) : t('login.authFailedCode', { code: '\u2066' + tag + '\u2069' }), info ? 'info' : 'error', key ? 4600 : 5200);
             } finally { busy.value = false; }
         };
-        // Phone accounts have no mailbox and there's no SMS, so only support can reset one.
-        const forgot = () => method.value === 'phone'
-            ? toast(t('login.phoneForgot'), 'info', 5200)
-            : toast(t('login.resetSoon'), 'info');
+        // Phone accounts have no mailbox and there's no SMS, so only support can reset
+        // one: open the chat (it works signed out) with the request ready to send.
+        const forgot = () => {
+            if (method.value !== 'phone') { toast(t('login.resetSoon'), 'info'); return; }
+            const p = previewPhone(phone.value);
+            if (!support.input.trim()) support.input = p ? t('support.phoneResetDraftWith', { phone: p.formatted }) : t('support.phoneResetDraft');
+            openSupport();
+        };
         // Left over from the legacy site: name the wallet to reconnect, since another
         // wallet would sign in to a new, empty account. FSI/PDI keep it intact in RTL;
         // the word joiner stops a line break after the ellipsis.

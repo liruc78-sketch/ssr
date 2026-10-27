@@ -44,6 +44,13 @@ export default {
     'support.empty': "Send us a message — we're here to help.",
     'support.inputPlaceholder': 'Type a message…',
     'support.failed': 'Message failed to send',
+    'support.busy': 'Can’t start a new chat right now — please sign in or try again later',
+    'support.claimPrompt': 'You chatted with support on this device before signing in. Add that conversation to this account?',
+    'support.guestNote': 'You’re not signed in — this chat is kept on this device and moves to your account when you sign in.',
+    'support.phoneResetDraft': 'Hello, I registered with my phone number and forgot my password.',
+    'support.phoneResetDraftWith': 'Hello, I registered with the phone number {phone} and forgot my password.',
+    'support.slowDown': 'You’re sending messages too quickly — please wait a few minutes',
+    'support.tooLong': 'Message is too long (max {n} characters)',
 
     // ---- stub placeholder -----------------------------------------------
     'placeholder.roadmap': '“{title}” is on the build roadmap',
@@ -373,7 +380,6 @@ export default {
     "login.orUseEmailPhone": "or use email or phone",
     "login.phone": "Phone number",
     "login.phoneCheckNumber": "That number doesn’t look right — check the country code and digits",
-    "login.phoneForgot": "Phone accounts can’t reset a password by text message yet — please contact customer support",
     "login.phoneHint": "Include your country code, starting with +",
     "login.phoneInvalid": "Enter your number with + and the country code, e.g. {example}",
     "login.phoneNumber": "Phone Number",

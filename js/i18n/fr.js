@@ -42,6 +42,13 @@ export default {
     "support.empty": "Envoyez-nous un message — nous sommes là pour vous aider.",
     "support.inputPlaceholder": "Saisissez un message…",
     "support.failed": "Échec de l’envoi du message",
+    "support.busy": "Impossible de démarrer une nouvelle conversation pour le moment — connectez-vous ou réessayez plus tard",
+    "support.claimPrompt": "Vous avez échangé avec le support sur cet appareil avant de vous connecter. Ajouter cette conversation à ce compte ?",
+    "support.guestNote": "Vous n’êtes pas connecté — cette conversation reste sur cet appareil et rejoint votre compte dès que vous vous connectez.",
+    "support.phoneResetDraft": "Bonjour, mon compte est enregistré avec mon numéro de téléphone et j’ai oublié mon mot de passe.",
+    "support.phoneResetDraftWith": "Bonjour, mon compte est enregistré avec le numéro de téléphone {phone} et j’ai oublié mon mot de passe.",
+    "support.slowDown": "Vous envoyez des messages trop rapidement — patientez quelques minutes",
+    "support.tooLong": "Message trop long ({n} caractères maximum)",
 
     // ---- stub placeholder -----------------------------------------------
     "placeholder.roadmap": "« {title} » est prévu dans notre feuille de route",
@@ -371,7 +378,6 @@ export default {
     "login.orUseEmailPhone": "ou utilisez l’e-mail ou le téléphone",
     "login.phone": "Numéro de téléphone",
     "login.phoneCheckNumber": "Ce numéro semble incorrect — vérifiez l’indicatif du pays et les chiffres",
-    "login.phoneForgot": "Les comptes par téléphone ne peuvent pas encore réinitialiser le mot de passe par SMS — contactez le service client",
     "login.phoneHint": "Indicatif du pays inclus, en commençant par +",
     "login.phoneInvalid": "Saisissez votre numéro avec + et l’indicatif du pays, par ex. {example}",
     "login.phoneNumber": "Numéro de téléphone",

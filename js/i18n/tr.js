@@ -42,6 +42,13 @@ export default {
     "support.empty": "Bize bir mesaj gönderin — yardımcı olmak için buradayız.",
     "support.inputPlaceholder": "Bir mesaj yazın…",
     "support.failed": "Mesaj gönderilemedi",
+    "support.busy": "Şu anda yeni bir sohbet başlatılamıyor — lütfen giriş yapın veya daha sonra tekrar deneyin",
+    "support.claimPrompt": "Giriş yapmadan önce bu cihazda destekle yazıştınız. Bu sohbet bu hesaba eklensin mi?",
+    "support.guestNote": "Giriş yapmadınız — bu sohbet bu cihazda saklanır ve giriş yaptığınızda hesabınıza taşınır.",
+    "support.phoneResetDraft": "Merhaba, telefon numaramla kayıt oldum ve şifremi unuttum.",
+    "support.phoneResetDraftWith": "Merhaba, {phone} numarasıyla kayıt oldum ve şifremi unuttum.",
+    "support.slowDown": "Çok hızlı mesaj gönderiyorsunuz — lütfen birkaç dakika bekleyin",
+    "support.tooLong": "Mesaj çok uzun (en fazla {n} karakter)",
 
     // ---- stub placeholder -----------------------------------------------
     "placeholder.roadmap": "“{title}” geliştirme yol haritasında",
@@ -371,7 +378,6 @@ export default {
     "login.orUseEmailPhone": "veya e-posta ya da telefon kullanın",
     "login.phone": "Telefon numarası",
     "login.phoneCheckNumber": "Bu numara doğru görünmüyor — ülke kodunu ve rakamları kontrol edin",
-    "login.phoneForgot": "Telefon hesapları şifreyi henüz SMS ile sıfırlayamıyor — lütfen müşteri desteğiyle iletişime geçin",
     "login.phoneHint": "Ülke kodunu + ile başlayarak ekleyin",
     "login.phoneInvalid": "Numaranızı + ve ülke koduyla girin, örn. {example}",
     "login.phoneNumber": "Telefon Numarası",

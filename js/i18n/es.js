@@ -42,6 +42,13 @@ export default {
     "support.empty": "Envíanos un mensaje: estamos aquí para ayudarte.",
     "support.inputPlaceholder": "Escribe un mensaje…",
     "support.failed": "No se pudo enviar el mensaje",
+    "support.busy": "No se puede iniciar un chat nuevo en este momento: inicia sesión o inténtalo más tarde",
+    "support.claimPrompt": "Hablaste con soporte en este dispositivo antes de iniciar sesión. ¿Quieres añadir esa conversación a esta cuenta?",
+    "support.guestNote": "No has iniciado sesión: este chat se guarda en este dispositivo y pasa a tu cuenta cuando inicies sesión.",
+    "support.phoneResetDraft": "Hola, me registré con mi número de teléfono y olvidé mi contraseña.",
+    "support.phoneResetDraftWith": "Hola, me registré con el número de teléfono {phone} y olvidé mi contraseña.",
+    "support.slowDown": "Estás enviando mensajes demasiado rápido: espera unos minutos",
+    "support.tooLong": "El mensaje es demasiado largo (máx. {n} caracteres)",
 
     // ---- stub placeholder -----------------------------------------------
     "placeholder.roadmap": "«{title}» está en la hoja de ruta",
@@ -371,7 +378,6 @@ export default {
     "login.orUseEmailPhone": "o usa tu correo o teléfono",
     "login.phone": "Número de teléfono",
     "login.phoneCheckNumber": "Ese número no parece correcto: revisa el prefijo del país y los dígitos",
-    "login.phoneForgot": "Las cuentas de teléfono aún no pueden restablecer la contraseña por SMS: contacta con atención al cliente",
     "login.phoneHint": "Incluye el prefijo de tu país, empezando por +",
     "login.phoneInvalid": "Introduce tu número con + y el prefijo del país, p. ej. {example}",
     "login.phoneNumber": "Número de teléfono",

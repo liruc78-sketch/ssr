@@ -203,6 +203,7 @@
 @media (min-width: 1024px) { .chat { right: var(--sp-6); left: auto; bottom: var(--sp-6); margin: 0; border-radius: var(--r-lg); height: 560px; } }
 .chat__head { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4); border-bottom: 1px solid var(--border); }
 .chat__avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--up), #0ea5a5); }
+.chat__guest { padding: var(--sp-2) var(--sp-4); font-size: var(--fs-caption); line-height: 1.5; color: var(--text-2); background: var(--surface-2); border-bottom: 1px solid var(--border); }
 .chat__body { flex: 1; overflow-y: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
 .chat__empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); text-align: center; }
 .chat__msg { display: flex; flex-direction: column; max-width: 78%; }

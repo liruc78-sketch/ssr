@@ -10,7 +10,10 @@ export const EDGE_BASE     = `${SUPABASE_URL}/functions/v1`;
 export const CG_KEY        = 'CG-rqTDnjCErgK6hEq9x6s8RKzD';   // CoinGecko demo key
 export const STORAGE_KEY   = 'tw_user_session';               // shared with legacy site
 
-export const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+// detectSessionInUrl off: no sign-in here comes back through a redirect (wallet login
+// exchanges its token_hash in code), and adopting tokens from ?access_token=… would let
+// any link sign a visitor in as someone else.
+export const sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { detectSessionInUrl: false } });
 
 // Thin edge-function helper (mirrors the legacy app's call style).
 export async function edge(path, { method = 'POST', body, headers } = {}) {

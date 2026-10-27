@@ -42,6 +42,13 @@ export default {
     "support.empty": "メッセージをお送りください。喜んでお手伝いします。",
     "support.inputPlaceholder": "メッセージを入力…",
     "support.failed": "メッセージの送信に失敗しました",
+    "support.busy": "現在、新しいチャットを開始できません ― ログインするか、しばらくしてからもう一度お試しください",
+    "support.claimPrompt": "ログイン前にこの端末でサポートとチャットしていました。その会話をこのアカウントに追加しますか？",
+    "support.guestNote": "ログインしていません ― このチャットはこの端末に保存され、ログインするとアカウントに引き継がれます。",
+    "support.phoneResetDraft": "こんにちは。電話番号で登録しましたが、パスワードを忘れてしまいました。",
+    "support.phoneResetDraftWith": "こんにちは。電話番号 {phone} で登録しましたが、パスワードを忘れてしまいました。",
+    "support.slowDown": "メッセージの送信が速すぎます ― 数分お待ちください",
+    "support.tooLong": "メッセージが長すぎます（最大 {n} 文字）",
 
     // ---- stub placeholder -----------------------------------------------
     "placeholder.roadmap": "「{title}」は開発ロードマップに含まれています",
@@ -371,7 +378,6 @@ export default {
     "login.orUseEmailPhone": "またはメール・電話番号で",
     "login.phone": "電話番号",
     "login.phoneCheckNumber": "番号が正しくないようです ― 国番号と数字を確認してください",
-    "login.phoneForgot": "電話番号のアカウントは、まだ SMS でパスワードを再設定できません ― カスタマーサポートにお問い合わせください",
     "login.phoneHint": "+ から始めて国番号を入力してください",
     "login.phoneInvalid": "+ と国番号を付けて番号を入力してください（例：{example}）",
     "login.phoneNumber": "電話番号",

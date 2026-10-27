@@ -42,6 +42,13 @@ export default {
     "support.empty": "메시지를 보내주세요. 언제든 도와드리겠습니다.",
     "support.inputPlaceholder": "메시지를 입력하세요…",
     "support.failed": "메시지 전송에 실패했습니다",
+    "support.busy": "지금은 새 대화를 시작할 수 없습니다 — 로그인하거나 잠시 후 다시 시도하세요",
+    "support.claimPrompt": "로그인하기 전에 이 기기에서 고객 지원과 대화했습니다. 그 대화를 이 계정에 추가할까요?",
+    "support.guestNote": "로그인하지 않았습니다 — 이 대화는 이 기기에 보관되며, 로그인하면 계정으로 옮겨집니다.",
+    "support.phoneResetDraft": "안녕하세요. 전화번호로 가입했는데 비밀번호를 잊어버렸습니다.",
+    "support.phoneResetDraftWith": "안녕하세요. {phone} 번호로 가입했는데 비밀번호를 잊어버렸습니다.",
+    "support.slowDown": "메시지를 너무 빠르게 보내고 있습니다 — 몇 분 후에 다시 시도하세요",
+    "support.tooLong": "메시지가 너무 깁니다(최대 {n}자)",
 
     // ---- stub placeholder -----------------------------------------------
     "placeholder.roadmap": "“{title}” 기능은 개발 로드맵에 포함되어 있습니다",
@@ -371,7 +378,6 @@ export default {
     "login.orUseEmailPhone": "또는 이메일·전화번호 사용",
     "login.phone": "전화번호",
     "login.phoneCheckNumber": "번호가 올바르지 않은 것 같습니다 — 국가 번호와 숫자를 확인하세요",
-    "login.phoneForgot": "전화번호 계정은 아직 문자로 비밀번호를 재설정할 수 없습니다 — 고객 지원에 문의하세요",
     "login.phoneHint": "+로 시작하는 국가 번호를 포함하세요",
     "login.phoneInvalid": "+와 국가 번호를 포함해 번호를 입력하세요(예: {example})",
     "login.phoneNumber": "전화번호",

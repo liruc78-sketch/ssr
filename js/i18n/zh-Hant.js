@@ -42,6 +42,13 @@ export default {
     "support.empty": "傳訊息給我們——我們隨時為您服務。",
     "support.inputPlaceholder": "輸入訊息…",
     "support.failed": "訊息發送失敗",
+    "support.busy": "目前無法開始新對話——請登入或稍後再試",
+    "support.claimPrompt": "您在登入前曾於此裝置與客服對話。要將該對話加入此帳戶嗎？",
+    "support.guestNote": "您尚未登入——此對話會保留在本裝置上，登入後將併入您的帳戶。",
+    "support.phoneResetDraft": "您好，我用手機號碼註冊，忘記了密碼。",
+    "support.phoneResetDraftWith": "您好，我用手機號碼 {phone} 註冊，忘記了密碼。",
+    "support.slowDown": "訊息傳送過於頻繁——請稍候幾分鐘",
+    "support.tooLong": "訊息過長（最多 {n} 個字元）",
 
     // ---- stub placeholder -----------------------------------------------
     "placeholder.roadmap": "「{title}」已列入開發計畫",
@@ -371,7 +378,6 @@ export default {
     "login.orUseEmailPhone": "或使用電子郵件／手機號碼",
     "login.phone": "手機號碼",
     "login.phoneCheckNumber": "號碼似乎有誤——請檢查國碼與號碼",
-    "login.phoneForgot": "手機帳戶暫時無法透過簡訊重設密碼——請聯絡客服",
     "login.phoneHint": "請輸入國碼，以 + 開頭",
     "login.phoneInvalid": "請輸入含 + 及國碼的號碼，例如 {example}",
     "login.phoneNumber": "手機號碼",
