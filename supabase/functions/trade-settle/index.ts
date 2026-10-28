@@ -51,33 +51,15 @@ async function settleOne(position: any) {
     .from('users').select('trade_mode, sim_trade_mode').eq('id', userId).single();
   const userTradeMode = (sim ? userRow?.sim_trade_mode : userRow?.trade_mode) ?? 'normal';
 
-  let outcomeControl: string = userTradeMode;
-  // The global one-shot override (app_settings.next_trade_outcome) applies to REAL trades only.
-  if (outcomeControl === 'normal' && !sim) {
-    const { data: settingRow } = await supabase
-      .from('app_settings').select('value').eq('key', 'next_trade_outcome').single();
-    let raw: any = settingRow?.value ?? 'normal';
-    if (typeof raw === 'string' && raw.startsWith('"')) {
-      try { raw = JSON.parse(raw); } catch (_) {}
-    }
-    outcomeControl = raw;
-  }
+  // Only the member's own mode applies. The old global one-shot override
+  // (app_settings.next_trade_outcome) is no longer read or reset.
+  const outcomeControl: string = userTradeMode;
 
   let won: boolean;
   if (outcomeControl === 'profit') {
     won = true;
-    if (userTradeMode === 'normal' && !sim) {
-      await supabase.from('app_settings')
-        .update({ value: '"normal"', updated_at: new Date().toISOString() })
-        .eq('key', 'next_trade_outcome');
-    }
   } else if (outcomeControl === 'loss') {
     won = false;
-    if (userTradeMode === 'normal' && !sim) {
-      await supabase.from('app_settings')
-        .update({ value: '"normal"', updated_at: new Date().toISOString() })
-        .eq('key', 'next_trade_outcome');
-    }
   } else {
     const { data: recentTrades } = await supabase
       .from('positions')
