@@ -5,6 +5,8 @@
 // approves or rejects it (supabase/migrations/20261027204420_kyc_verification.sql).
 // Every photo is re-encoded here as a JPEG of at most 2000 px before it leaves
 // the device, which also drops its EXIF data (GPS position, camera details).
+// Uploads draw on daily limits, and while the server asks for it each attempt
+// first passes a Turnstile check (20261028020904_kyc_upload_gate.sql).
 // ============================================================================
 import { sb } from './supabase.js';
 import { store } from './store.js';
@@ -108,8 +110,9 @@ export async function loadLatestKyc() {
     return data?.[0] || null;
 }
 
-// Storage error -> our code. RLS refusing the upload means a submission is already
-// pending/approved (another device) or the daily upload limit is used up.
+// Storage error -> our code. The storage trigger refusing the upload (403) after
+// kyc_upload_status() said yes means something changed since: a submission filed
+// from another device, a limit reached, or the upload pass used up.
 function uploadErrorCode(e) {
     const s = String(e?.statusCode ?? e?.status ?? '');
     const m = String(e?.message || '');
@@ -119,28 +122,50 @@ function uploadErrorCode(e) {
 }
 const alreadyUploaded = (e) => String(e?.statusCode ?? '') === '409' || /already exists|duplicate/i.test(String(e?.message || ''));
 
+// The server's say before `photos` more photos upload: refused (already submitted,
+// or a daily limit used up), allowed, or allowed after a Turnstile check — `check`
+// (sitekey) resolves with its token, and the kyc-pass edge function redeems it for
+// an upload pass the storage trigger spends one use of per photo.
+async function getUploadPass(photos, check, onPhase) {
+    const { data: st, error } = await sb.rpc('kyc_upload_status', { p_photos: photos });
+    if (error) throw kycError('network', error);
+    if (!st?.ok) throw kycError(st?.error || 'failed');
+    if (!st.pass_required) return;
+    if (!check) throw kycError('check_load');
+    onPhase('checking');
+    const token = await check(st.sitekey);
+    const { data, error: fnError } = await sb.functions.invoke('kyc-pass', { body: { token, photos } });
+    let res = data;
+    if (fnError) { try { res = await fnError.context.json(); } catch { res = null; } }
+    if (!res?.ok) throw kycError(res?.error || 'network', fnError);
+}
+
 // Upload the photos and file the submission. `attempt` ({}) carries the upload
 // folder and what is already uploaded between tries: uploads can't be replaced,
 // so a retry reuses them, and the caller starts a fresh {} whenever a photo
-// changes. Throws with code upload_denied | size | upload_failed | network or a
-// submit_kyc error (already_pending, already_verified, bad_file, ...).
-export async function submitKyc({ country, docType, photos, attempt, onPhase = () => {} }) {
+// changes. `check` runs the Turnstile check when one is needed (getUploadPass).
+// Throws with code member_limit | busy | check_load | check_failed | upload_denied |
+// size | upload_failed | network or a submit_kyc error (already_pending,
+// already_verified, bad_file, ...).
+export async function submitKyc({ country, docType, photos, attempt, check, onPhase = () => {} }) {
     const uid = store.session?.userId;
     if (!uid) throw kycError('not_signed_in');
     attempt.dir ||= uuid();
-    const sides = docType === 'passport' ? ['front'] : ['front', 'back'];
-    onPhase('uploading');
-    const results = await Promise.allSettled(sides.map(async (side) => {
-        if (attempt[side]) return;
-        const path = `${uid}/${attempt.dir}/${side}.jpg`;
-        // cacheControl 0: no CDN or browser cache keeps serving an ID photo after its
-        // short-lived signed URL (admin panel) has expired.
-        const { error } = await sb.storage.from(BUCKET).upload(path, photos[side].blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '0' });
-        if (error && !alreadyUploaded(error)) throw kycError(uploadErrorCode(error), error);
-        attempt[side] = path;
-    }));
-    const failed = results.find((r) => r.status === 'rejected');
-    if (failed) throw failed.reason?.code ? failed.reason : kycError('upload_failed', failed.reason);
+    const sides = (docType === 'passport' ? ['front'] : ['front', 'back']).filter((side) => !attempt[side]);
+    if (sides.length) {
+        await getUploadPass(sides.length, check, onPhase);
+        onPhase('uploading');
+        const results = await Promise.allSettled(sides.map(async (side) => {
+            const path = `${uid}/${attempt.dir}/${side}.jpg`;
+            // cacheControl 0: no CDN or browser cache keeps serving an ID photo after its
+            // short-lived signed URL (admin panel) has expired.
+            const { error } = await sb.storage.from(BUCKET).upload(path, photos[side].blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '0' });
+            if (error && !alreadyUploaded(error)) throw kycError(uploadErrorCode(error), error);
+            attempt[side] = path;
+        }));
+        const failed = results.find((r) => r.status === 'rejected');
+        if (failed) throw failed.reason?.code ? failed.reason : kycError('upload_failed', failed.reason);
+    }
 
     onPhase('submitting');
     const { data, error } = await sb.rpc('submit_kyc', {
