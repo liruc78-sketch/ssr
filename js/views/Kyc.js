@@ -7,9 +7,14 @@ import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { t, locale } from '../i18n.js';
 import { KYC_COUNTRIES, KYC_DOC_KEYS, KYC_REASONS, KYC_MAX_INPUT_MB, loadLatestKyc, preparePhoto, submitKyc } from '../kyc.js';
+import { turnstileToken } from '../turnstile.js';
 
 const PHOTO_ERRORS = { type: 'kyc.errType', size: 'kyc.errSize', unreadable: 'kyc.errUnreadable', small: 'kyc.errSmall' };
-const SUBMIT_ERRORS = { already_pending: 'kyc.errPending', already_verified: 'kyc.errVerified', upload_denied: 'kyc.errUploadLimit', upload_failed: 'kyc.errUploadFailed' };
+const SUBMIT_ERRORS = {
+    already_pending: 'kyc.errPending', already_verified: 'kyc.errVerified', upload_failed: 'kyc.errUploadFailed',
+    member_limit: 'kyc.errUploadLimit', busy: 'kyc.errBusy', check_failed: 'kyc.errCheck', check_load: 'kyc.errCheckLoad',
+};
+const PHASES = { checking: 'kyc.checking', uploading: 'kyc.uploading', submitting: 'kyc.submitting' };
 // Per status: icon, tone, title/body keys and the date the body quotes.
 const STATUS = {
     pending:  { icon: 'history', title: 'kyc.pendingTitle',  body: 'kyc.pendingBody',  date: 'created_at' },
@@ -27,8 +32,9 @@ export default {
         const docs = Object.entries(KYC_DOC_KEYS).map(([k, tkey]) => ({ k, tkey }));
         const photos = reactive({ front: null, back: null });     // { blob, url } from preparePhoto
         const preparing = reactive({ front: false, back: false });
-        const phase = ref('');                                    // '' | uploading | submitting
+        const phase = ref('');                                    // '' | checking | uploading | submitting
         const inputs = {};                                        // side -> its <input type=file>
+        const checkEl = ref(null);                                // where the Turnstile check renders
         let attempt = {};                                         // upload folder + uploaded paths (kyc.js)
         let epoch = 0;                                            // bumped when photos are cleared
         let alive = true;
@@ -123,6 +129,7 @@ export default {
             try {
                 const sub = await submitKyc({
                     country: country.value, docType: docType.value, photos, attempt,
+                    check: (sitekey) => turnstileToken(checkEl.value, { sitekey, action: 'kyc_upload', lang: locale.value }),
                     onPhase: (p) => { phase.value = p; },
                 });
                 if (store.session?.userId !== uid) return;    // another account by now: not its submission
@@ -163,8 +170,8 @@ export default {
 
         return {
             store, state, status, showForm, refresh, go,
-            country, countries, docType, docs, sides, sideLabel, photos, preparing, phase, busy, inputs,
-            pick, onFile, setPhoto, submit, maxMb: KYC_MAX_INPUT_MB,
+            country, countries, docType, docs, sides, sideLabel, photos, preparing, phase, busy, inputs, checkEl,
+            pick, onFile, setPhoto, submit, maxMb: KYC_MAX_INPUT_MB, phaseKey: (p) => PHASES[p] || 'kyc.submit',
         };
     },
     template: /*html*/`
@@ -239,10 +246,13 @@ export default {
                 </div>
 
                 <p class="note"><Icon name="info" :size="15" /> {{ $t('kyc.note') }}</p>
-                <button class="btn btn--brand btn--block btn--lg" :disabled="busy" @click="submit">
-                    <span v-if="phase" class="spinner kyc__btnspin"></span>
-                    {{ phase === 'uploading' ? $t('kyc.uploading') : phase === 'submitting' ? $t('kyc.submitting') : $t('kyc.submit') }}
-                </button>
+                <div>
+                    <div ref="checkEl" class="kyc__check"></div>
+                    <button class="btn btn--brand btn--block btn--lg" :disabled="busy" @click="submit">
+                        <span v-if="phase" class="spinner kyc__btnspin"></span>
+                        {{ $t(phaseKey(phase)) }}
+                    </button>
+                </div>
             </div>
         </template>
     </section>`,

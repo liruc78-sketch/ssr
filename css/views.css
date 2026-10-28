@@ -430,6 +430,9 @@ select.field { appearance: none; cursor: pointer; background-image: url("data:im
 [dir="rtl"] .kyc__remove { right: auto; left: 6px; }
 .kyc__tips { font-size: var(--fs-caption); line-height: 1.5; color: var(--text-3); }
 .kyc__btnspin { border-color: rgba(255, 255, 255, 0.35); border-top-color: #fff; }
+/* The Turnstile check: invisible unless Cloudflare asks for a click. */
+.kyc__check { display: flex; justify-content: center; }
+.kyc__check.is-asking { margin-bottom: var(--sp-3); }
 .kyc__wait { display: grid; justify-items: center; gap: var(--sp-3); padding: var(--sp-8); text-align: center; }
 .kyc__formtitle { font-size: var(--fs-h4); }
 
