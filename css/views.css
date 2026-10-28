@@ -414,8 +414,38 @@ select.field { appearance: none; cursor: pointer; background-image: url("data:im
 .kyc__radio { margin-left: auto; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-strong); }
 .kyc__radio.is-on { border-color: var(--brand); background: radial-gradient(circle at center, var(--brand) 0 5px, transparent 6px); }
 .kyc__uploads { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-.kyc__drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); min-height: 120px; border-radius: var(--r-md); border: 1.5px dashed var(--border-strong); color: var(--text-3); background: var(--surface-2); font-size: var(--fs-small); font-weight: 600; }
+.kyc__uploads--one { grid-template-columns: 1fr; }
+.kyc__uploads--one .kyc__drop { aspect-ratio: 2 / 1; }
+.kyc__slot { position: relative; min-width: 0; }
+.kyc__drop { position: relative; overflow: hidden; width: 100%; aspect-ratio: 16 / 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); min-height: 120px; padding: var(--sp-3); border-radius: var(--r-md); border: 1.5px dashed var(--border-strong); color: var(--text-3); background: var(--surface-2); font-size: var(--fs-small); font-weight: 600; text-align: center; transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.kyc__drop:not(:disabled):hover { border-color: var(--brand); color: var(--brand); }
+.kyc__drop:disabled { cursor: progress; }
 .kyc__drop.is-done { border-style: solid; border-color: var(--up); color: var(--up); }
+.kyc__hint { font-size: var(--fs-caption); font-weight: 400; color: var(--text-muted); }
+.kyc__preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--surface-inset); }   /* whole photo: the corners must show */
+.kyc__slotbar { position: absolute; inset: auto 0 0 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px var(--sp-2); background: rgba(11, 14, 20, 0.72); color: #fff; font-size: var(--fs-caption); }
+.kyc__slotbar svg { flex: none; }
+.kyc__slotbar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kyc__remove { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(11, 14, 20, 0.72); color: #fff; }
+[dir="rtl"] .kyc__remove { right: auto; left: 6px; }
+.kyc__tips { font-size: var(--fs-caption); line-height: 1.5; color: var(--text-3); }
+.kyc__btnspin { border-color: rgba(255, 255, 255, 0.35); border-top-color: #fff; }
+.kyc__wait { display: grid; justify-items: center; gap: var(--sp-3); padding: var(--sp-8); text-align: center; }
+.kyc__formtitle { font-size: var(--fs-h4); }
+
+/* Latest submission: under review (gold), verified (green), not approved (red) */
+.kyc__status { --tone: var(--gold); --tone-weak: var(--gold-weak); display: flex; align-items: flex-start; gap: var(--sp-4); padding: var(--sp-5); margin-bottom: var(--sp-4); }
+.kyc__status--approved { --tone: var(--up); --tone-weak: var(--up-weak); }
+.kyc__status--rejected { --tone: var(--down); --tone-weak: var(--down-weak); }
+.kyc__statusic { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--tone-weak); color: var(--tone); }
+.kyc__statusmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.kyc__statustitle { font-size: var(--fs-h3); }
+.kyc__statusbody { color: var(--text-2); font-size: var(--fs-small); line-height: 1.5; }
+.kyc__chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.kyc__reason, .kyc__note { padding: var(--sp-3); border-radius: var(--r-sm); font-size: var(--fs-small); line-height: 1.5; }
+.kyc__reason { background: var(--tone-weak); }
+.kyc__note { background: var(--surface-2); }
+.kyc__reason p, .kyc__note p { margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
 
 /* ============================ SECURITY ================================= */
 .sec__acct { padding: var(--sp-4); display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }

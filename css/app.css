@@ -353,6 +353,8 @@
 }
 .notif-row:last-child { border-bottom: 0; }
 .notif-row.is-unread { background: var(--brand-weak); }
+.notif-row.is-link { cursor: pointer; transition: background var(--dur-fast) var(--ease-out); }
+.notif-row.is-link:hover { background: var(--surface-2); }
 .notif-ic {
     flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
     display: grid; place-items: center;

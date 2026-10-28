@@ -49,6 +49,7 @@ ul { list-style: none; padding: 0; }
 /* Market semantics */
 .up   { color: var(--up); }
 .down { color: var(--down); }
+.gold { color: var(--gold); }
 
 /* Focus — visible, on-brand, keyboard only */
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: var(--r-xs); }

@@ -21,7 +21,7 @@ export const store = reactive({
     theme: read(THEME_KEY, 'light'),
 
     // ---- session ---------------------------------------------------------
-    // Shape: { userId, authId, walletAddress, email, phone, via, username, displayName }, set once a
+    // Shape: { userId, authId, walletAddress, email, phone, via, username, displayName, kycStatus }, set once a
     // Supabase Auth session is confirmed. Never seeded from the legacy site's
     // `tw_user_session`: that has no JWT, so every read would run as anon.
     session: null,
