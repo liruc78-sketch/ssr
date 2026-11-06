@@ -28,7 +28,7 @@ export const DEPOSIT_COINS = [
 ];
 
 export const WITHDRAW_MIN = 10;
-export const withdrawFee = (amount) => amount * 0.01 + 2;   // 1% + $2 (legacy)
+export const withdrawFee = (amount) => amount * 0.01;   // 1%
 export const withdrawTotal = (amount) => amount + withdrawFee(amount);
 
 // Live rate for a deposit coin (USD per 1 unit); falls back to the configured rate.

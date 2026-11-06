@@ -1,6 +1,6 @@
 // Withdraw — USD-balance withdrawal to an address (real: deduct + pending record).
 // Backend tracks a single usd_balance, so amounts are USD; coin/network guide the
-// payout. Fee 1% + $2, min $10 (matches legacy).
+// payout. Fee 1%, min $10.
 import { ref, computed } from 'vue';
 import { Icon } from '../icons.js';
 import { go } from '../router.js';

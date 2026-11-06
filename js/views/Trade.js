@@ -385,7 +385,7 @@ export default {
                     <div class="optwait__row"><span class="muted">{{ $t('trade.durationPayout') }}</span><b class="num">{{ wait.tierLabel }} · +{{ wait.payoutPct }}%</b></div>
                     <div class="optwait__row"><span class="muted">{{ $t('trade.direction') }}</span><b :class="wait.type === 'up' ? 'up' : 'down'">{{ wait.type === 'up' ? $t('trade.up') + ' ▲' : $t('trade.down') + ' ▼' }}</b></div>
                     <div class="optwait__row"><span class="muted">{{ $t('trade.amount') }}</span><b class="num">{{ fmtNum(wait.amount) }} USDT</b></div>
-                    <div class="optwait__row"><span class="muted">{{ $t('trade.feeRate') }}</span><b class="num">0%</b></div>
+                    <div class="optwait__row"><span class="muted">{{ $t('trade.feeRate') }}</span><b class="num">0.05%</b></div>
                     <div v-if="wait.settled && wait.payout != null" class="optwait__row">
                         <span class="muted">{{ $t('trade.payout') }}</span>
                         <b class="num" :class="wait.status === 'Won' ? 'up' : 'down'">{{ wait.status === 'Won' ? '+' : '' }}{{ fmtNum(wait.payout) }} USDT</b>
