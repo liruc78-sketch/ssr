@@ -24,9 +24,9 @@ const PROFIT_RATE: Record<number, number> = {
 };
 const DEFAULT_PROFIT_RATE = 0.15;
 
-// Trading fee charged at open time (0.2% of stake + $0.5 network fee) — mirrors the frontend.
+// Trading fee charged at open time (0.05% of stake) — mirrors the frontend.
 function tradingFee(amount: number): number {
-  return amount * 0.002 + 0.5;
+  return amount * 0.0005;
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);

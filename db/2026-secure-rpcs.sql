@@ -12,7 +12,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 grant execute on function public.current_app_user_id() to authenticated;
 
--- Withdrawal: deduct principal + (1% + $2) fee, record a pending request.
+-- Withdrawal: deduct principal + 1% fee, record a pending request.
 create or replace function public.request_withdrawal(p_amount numeric, p_address text) returns json
 language plpgsql security definer set search_path = public as $$
 declare uid uuid; bal numeric; fee numeric; total numeric;
@@ -21,7 +21,7 @@ begin
   if uid is null then return json_build_object('ok', false, 'error', 'Please sign in'); end if;
   if p_address is null or length(trim(p_address)) = 0 then return json_build_object('ok', false, 'error', 'Enter a withdrawal address'); end if;
   if p_amount is null or p_amount < 10 then return json_build_object('ok', false, 'error', 'Minimum withdrawal is $10'); end if;
-  fee := p_amount * 0.01 + 2; total := p_amount + fee;
+  fee := p_amount * 0.01; total := p_amount + fee;
   select usd_balance into bal from public.portfolios where user_id = uid for update;
   if bal is null then return json_build_object('ok', false, 'error', 'No account balance'); end if;
   if bal < total then return json_build_object('ok', false, 'error', 'Insufficient balance (incl. fees)'); end if;

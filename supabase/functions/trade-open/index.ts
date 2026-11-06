@@ -21,7 +21,7 @@ const cors = {
 
 // Tier min-balance to unlock a duration (must match the frontend OPTION_TIERS).
 const TIER_MIN: Record<number, number> = { 30: 0, 60: 10000, 120: 200000, 240: 500000, 480: 1000000 };
-const tradingFee = (amt: number) => amt * 0.002 + 0.5;
+const tradingFee = (amt: number) => amt * 0.0005;
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
