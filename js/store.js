@@ -13,7 +13,7 @@ function read(key, fallback) {
     try { const v = localStorage.getItem(key); return v == null ? fallback : v; } catch { return fallback; }
 }
 export function emptyPortfolio() {
-    return { usdBalance: 0, simBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
+    return { usdBalance: 0, tradingBalance: 0, financeBalance: 0, simBalance: 0, totalTrades: 0, totalWon: 0, totalLost: 0, totalPnl: 0, activePositions: [], positionHistory: [] };
 }
 
 export const store = reactive({

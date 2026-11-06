@@ -4,11 +4,12 @@ import { Icon } from '../icons.js';
 import { go } from '../router.js';
 import { store } from '../store.js';
 import { fmtAmt } from '../data.js';
+import { CoinIcon } from '../components/CoinIcon.js';
 import { BalanceStatus } from '../components/common.js';
 
 export default {
     name: 'Assets',
-    components: { Icon, BalanceStatus },
+    components: { Icon, BalanceStatus, CoinIcon },
     setup() {
         const tab = ref('overview');
         const tabs = [
@@ -17,14 +18,19 @@ export default {
             { k: 'trading', tkey: 'assets.tabTrading' },
             { k: 'finance', tkey: 'assets.tabFinance' },
         ];
-        // Backend tracks a single usd_balance -> shown as the Spot account.
-        // Trading/Finance sub-accounts aren't tracked server-side yet (show 0).
+        // usd_balance is the total; trading/finance are sub-account allocations.
+        // Spot (displayed) = total - trading - finance.
         // null = not loaded / fetch failed: shown as "—", never as 0.00.
-        const accounts = computed(() => ({
-            spot: !store.isAuthed ? 0 : store.balanceUnknown ? null : store.portfolio.usdBalance,
-            trading: 0,
-            finance: 0,
-        }));
+        const accounts = computed(() => {
+            if (!store.isAuthed) return { spot: 0, trading: 0, finance: 0 };
+            if (store.balanceUnknown) return { spot: null, trading: null, finance: null };
+            const p = store.portfolio;
+            return {
+                spot: p.usdBalance - p.tradingBalance - p.financeBalance,
+                trading: p.tradingBalance,
+                finance: p.financeBalance,
+            };
+        });
         const total = computed(() => accounts.value.spot == null ? null : accounts.value.spot + accounts.value.trading + accounts.value.finance);
         const segs = computed(() => {
             const t = total.value || 1;
@@ -47,7 +53,14 @@ export default {
             { icon: 'history', tkey: 'assets.history', path: '/history' },
             { icon: 'transfer', tkey: 'assets.transfer', path: '/transfer' },
         ];
-        return { tab, tabs, accounts, total, segs, actions, go, fmtAmt, store };
+
+        // A funded account holds its balance as USDT. >0 -> show a holding row
+        // (fixes the old "no assets" placeholder that showed even with a balance).
+        const usdtRow = (bal) => (bal != null && bal > 0) ? [{ sym: 'USDT', name: 'Tether USD', amt: bal }] : [];
+        const overviewHoldings = computed(() => usdtRow(total.value));
+        const tabHoldings = computed(() => usdtRow(accounts.value[tab.value]));
+
+        return { tab, tabs, accounts, total, segs, actions, overviewHoldings, tabHoldings, go, fmtAmt, store };
     },
     template: /*html*/`
     <section class="assets">
@@ -84,8 +97,17 @@ export default {
             </div>
 
             <div class="sec-head" style="margin-top:var(--sp-5)"><h2>{{ $t('assets.cryptoAssets') }}</h2></div>
-            <div class="card">
-                <div class="placeholder" style="border:0; padding:var(--sp-10)">
+            <div class="card" :style="overviewHoldings.length ? 'padding:var(--sp-1) var(--sp-3)' : ''">
+                <template v-if="overviewHoldings.length">
+                    <div v-for="h in overviewHoldings" :key="h.sym" class="rec-row">
+                        <div style="display:flex; align-items:center; gap:var(--sp-3); min-width:0">
+                            <CoinIcon :sym="h.sym" cls="market__ico" />
+                            <div class="rec-main"><b>{{ h.sym }}</b><span class="muted" style="font-size:var(--fs-caption)">{{ h.name }}</span></div>
+                        </div>
+                        <div style="text-align:right"><b class="num">{{ fmtAmt(h.amt) }}</b><div class="muted" style="font-size:var(--fs-caption)">USDT</div></div>
+                    </div>
+                </template>
+                <div v-else class="placeholder" style="border:0; padding:var(--sp-10)">
                     <Icon name="assets" class="placeholder__icon" :size="44" />
                     <p class="muted">{{ store.isAuthed ? $t('assets.noAssetsYet') : $t('assets.loginToView') }}</p>
                     <button class="btn btn--brand btn--sm btn--pill" @click="go(store.isAuthed ? '/deposit' : '/login')">{{ store.isAuthed ? $t('assets.deposit') : $t('common.login') }}</button>
@@ -99,7 +121,16 @@ export default {
                 <div class="wallet__total num">{{ fmtAmt(accounts[tab]) }} <span class="muted" style="font-size:var(--fs-h4)">USDT</span></div>
                 <BalanceStatus v-if="tab === 'spot'" />
             </div>
-            <div class="placeholder" style="border:0; padding:var(--sp-10)">
+            <template v-if="tabHoldings.length">
+                <div v-for="h in tabHoldings" :key="h.sym" class="rec-row">
+                    <div style="display:flex; align-items:center; gap:var(--sp-3); min-width:0">
+                        <CoinIcon :sym="h.sym" cls="market__ico" />
+                        <div class="rec-main"><b>{{ h.sym }}</b><span class="muted" style="font-size:var(--fs-caption)">{{ h.name }}</span></div>
+                    </div>
+                    <div style="text-align:right"><b class="num">{{ fmtAmt(h.amt) }}</b><div class="muted" style="font-size:var(--fs-caption)">USDT</div></div>
+                </div>
+            </template>
+            <div v-else class="placeholder" style="border:0; padding:var(--sp-10)">
                 <Icon name="assets" class="placeholder__icon" :size="44" />
                 <p class="muted">{{ $t('assets.noAssetsInAccount') }}</p>
             </div>

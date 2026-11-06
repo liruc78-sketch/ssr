@@ -5,6 +5,8 @@ import { go } from '../router.js';
 import { store, toast } from '../store.js';
 import { t } from '../i18n.js';
 import { fmtNum } from '../data.js';
+import { sb } from '../supabase.js';
+import { refreshPortfolio } from '../auth.js';
 import { BalanceStatus } from '../components/common.js';
 
 const ACCOUNTS = [
@@ -21,19 +23,36 @@ export default {
         const to = ref('trading');
         const currency = ref('USDT');
         const amount = ref('');
+        const submitting = ref(false);
+        // Per-account balances. Spot (displayed) = total - trading - finance.
         // null = balance not loaded / fetch failed: shown as "—", and nothing moves.
-        const available = computed(() => store.balanceUnknown ? null : (store.isAuthed && currency.value === 'USDT') ? store.portfolio.usdBalance : 0);
+        const balances = computed(() => {
+            const p = store.portfolio;
+            return { spot: p.usdBalance - p.tradingBalance - p.financeBalance, trading: p.tradingBalance, finance: p.financeBalance };
+        });
+        const available = computed(() => store.balanceUnknown ? null : (store.isAuthed && currency.value === 'USDT') ? balances.value[from.value] : 0);
 
-        const swap = () => { const t = from.value; from.value = to.value; to.value = t; };
+        const swap = () => { const tmp = from.value; from.value = to.value; to.value = tmp; };
         const setAll = () => { if (available.value != null) amount.value = String(available.value); };
-        const confirm = () => {
+        const confirm = async () => {
             if (!store.isAuthed) { go('/login'); return; }
-            if (store.balanceUnknown) return;
+            if (store.balanceUnknown || submitting.value) return;
             if (from.value === to.value) { toast(t('transfer.chooseDifferent'), 'error'); return; }
-            if (!(parseFloat(amount.value) > 0)) { toast(t('transfer.enterAmount'), 'error'); return; }
-            toast(t('transfer.complete'), 'success'); go('/assets');
+            const amt = parseFloat(amount.value);
+            if (!(amt > 0)) { toast(t('transfer.enterAmount'), 'error'); return; }
+            if (available.value != null && amt > available.value) { toast(t('transfer.insufficientBalance'), 'error'); return; }
+            submitting.value = true;
+            try {
+                const { data, error } = await sb.rpc('transfer_funds', { p_from: from.value, p_to: to.value, p_amount: amt });
+                if (error) throw new Error(error.message || t('transfer.failed'));
+                if (data && data.ok === false) throw new Error(data.error || t('transfer.failed'));
+                await refreshPortfolio();
+                toast(t('transfer.complete'), 'success');
+                go('/assets');
+            } catch (e) { toast(e?.message || t('transfer.failed'), 'error', 3600); }
+            finally { submitting.value = false; }
         };
-        return { from, to, currency, amount, available, ACCOUNTS, swap, setAll, confirm, go, fmtNum, store };
+        return { from, to, currency, amount, submitting, available, ACCOUNTS, swap, setAll, confirm, go, fmtNum, store };
     },
     template: /*html*/`
     <section class="pay">
@@ -59,7 +78,7 @@ export default {
             </label>
             <BalanceStatus />
 
-            <button class="btn btn--block btn--lg" :class="store.isAuthed ? 'btn--brand' : 'btn--dark'" :disabled="store.balanceUnknown" @click="confirm">{{ store.isAuthed ? $t('transfer.confirm') : $t('transfer.loginToTransfer') }}</button>
+            <button class="btn btn--block btn--lg" :class="store.isAuthed ? 'btn--brand' : 'btn--dark'" :disabled="store.balanceUnknown || submitting" @click="confirm">{{ !store.isAuthed ? $t('transfer.loginToTransfer') : submitting ? $t('transfer.processing') : $t('transfer.confirm') }}</button>
             <p class="muted" style="text-align:center; font-size:var(--fs-small); margin-top:var(--sp-3)">{{ $t('transfer.insufficient') }} <a style="color:var(--brand); font-weight:600" @click="go('/deposit')">{{ $t('transfer.depositLink') }}</a></p>
         </div>
     </section>`,

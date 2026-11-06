@@ -38,6 +38,10 @@ export async function fetchPortfolio(userId) {
     });
     return {
         usdBalance: parseFloat(pd?.usd_balance || 0),
+        // Sub-account allocations carved out of usd_balance (the total). Spot
+        // (displayed) = usdBalance - tradingBalance - financeBalance.
+        tradingBalance: parseFloat(pd?.trading_balance || 0),
+        financeBalance: parseFloat(pd?.finance_balance || 0),
         simBalance: parseFloat(pd?.sim_balance ?? 1000000),   // simulated-trading funds (default 1M)
         totalTrades: pd?.total_trades || 0, totalWon: pd?.total_won || 0,
         totalLost: pd?.total_lost || 0, totalPnl: parseFloat(pd?.total_pnl || 0),
